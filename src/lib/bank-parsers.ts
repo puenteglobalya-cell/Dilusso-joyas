@@ -166,14 +166,14 @@ export function parseOcaPdf(text: string): BankRow[] {
   const parts = tableText.split(DATE_RE).filter(Boolean);
 
   let prevSaldo: number | null = null;
-  for (let i = 0; i < parts.length - 1; i += 2) {
+  for (let i = 0; i < parts.length; i++) {
     const dateStr = parts[i].trim();
     if (!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) continue;
 
     const fecha = isoFromDMY(dateStr);
     if (!fecha) continue;
 
-    // Normalize content: collapse whitespace/newlines into single spaces
+    // Content is the next part after the date
     const rawContent = parts[i + 1] ?? "";
     const content = rawContent.replace(/\s+/g, " ").trim();
 
