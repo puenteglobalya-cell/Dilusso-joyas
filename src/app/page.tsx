@@ -5,6 +5,7 @@ import { DashboardChart } from "@/components/dashboard/chart";
 import type { Transaction } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Dashboard | Dilusso Joyas" };
 
 interface TrendItem { label: string; negocio: number; personal: number }
 

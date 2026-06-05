@@ -7,6 +7,7 @@ import { NegocioChart } from "@/components/negocio/chart";
 import type { Transaction } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Movimientos de Cecilia | Dilusso Joyas" };
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | undefined }>;

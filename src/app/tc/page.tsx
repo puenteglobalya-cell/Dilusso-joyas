@@ -4,6 +4,7 @@ import { AddTCEntry } from "@/components/tc/add-entry";
 import type { ExchangeRate } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Tipo de cambio | Dilusso Joyas" };
 
 export default async function TCPage() {
   const sb = createServerClient();

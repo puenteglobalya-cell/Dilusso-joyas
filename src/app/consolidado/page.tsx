@@ -6,6 +6,7 @@ import { ExportButton } from "@/components/transactions/export-button";
 import type { Transaction } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Consolidado | Dilusso Joyas" };
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | undefined }>;

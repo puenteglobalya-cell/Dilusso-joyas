@@ -10,7 +10,7 @@ import { LogoutButton } from "./logout-button";
 
 const navContador = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/upload", label: "Importar", icon: Upload },
   { href: "/consolidado", label: "Consolidado", icon: Table2 },
   { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
@@ -80,6 +80,7 @@ export function Sidebar({ role, email, allowedSections }: SidebarProps) {
             <Link
               key={href}
               href={href}
+              prefetch={false}
               className={cn(
                 "flex items-center gap-3 px-5 py-2.5 text-sm transition-colors mx-2 rounded-lg",
                 active

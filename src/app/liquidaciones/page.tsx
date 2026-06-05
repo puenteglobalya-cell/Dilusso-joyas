@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardValue } from "@/components/ui/card";
 import type { Settlement } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Liquidaciones | Dilusso Joyas" };
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | undefined }>;

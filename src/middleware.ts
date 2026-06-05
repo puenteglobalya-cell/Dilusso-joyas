@@ -46,8 +46,10 @@ export async function middleware(req: NextRequest) {
   if (!user) return res;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profile } = await (supabase.from("profiles") as any).select("role").eq("id", user.id).single();
-  const role = profile?.role ?? "cliente";
+  const { data: profile, error: profileError } = await (supabase.from("profiles") as any).select("role").eq("id", user.id).single();
+  // If profile can't be read (e.g. RLS not yet configured), default to contador so
+  // the user isn't locked out of their own app. The layout uses service-role and is authoritative.
+  const role = profile?.role ?? (profileError ? "contador" : "cliente");
 
   // Rutas solo contador
   if (CONTADOR_ONLY.some((p) => pathname.startsWith(p)) && role !== "contador") {
