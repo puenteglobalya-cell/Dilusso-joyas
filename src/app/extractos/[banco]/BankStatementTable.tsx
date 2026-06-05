@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Download, X } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { formatUYU } from "@/lib/utils";
 
 export interface Row {
@@ -11,16 +11,16 @@ export interface Row {
   descripcion: string | null;
   debito: number | null;
   credito: number | null;
-  saldo: number | null;
+  saldo: number | null;       // from PDF (reference only)
   moneda: string;
   ok: boolean;
-  diff: number | null;
+  diff: null;
+  computedSaldo: number | null; // calculated running balance
 }
 
-type SortKey = "fecha" | "descripcion" | "debito" | "credito" | "saldo";
-type SortDir = "asc" | "desc";
+type SortKey = "fecha" | "descripcion" | "debito" | "credito" | "computedSaldo";
 
-function SortIcon({ col, active, dir }: { col: string; active: boolean; dir: SortDir }) {
+function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
   if (!active) return <ArrowUpDown className="w-3 h-3 opacity-30 ml-1 inline" />;
   return dir === "asc"
     ? <ArrowUp className="w-3 h-3 ml-1 inline text-brand" />
@@ -28,13 +28,13 @@ function SortIcon({ col, active, dir }: { col: string; active: boolean; dir: Sor
 }
 
 function toCSV(rows: Row[]): string {
-  const headers = ["Fecha", "Descripción", "Débito", "Crédito", "Saldo", "Moneda"];
+  const headers = ["Fecha", "Descripción", "Débito", "Crédito", "Saldo calculado", "Moneda"];
   const lines = rows.map((r) => [
     r.fecha,
     `"${(r.descripcion ?? "").replace(/"/g, '""')}"`,
     r.debito ?? "",
     r.credito ?? "",
-    r.saldo ?? "",
+    r.computedSaldo?.toFixed(2) ?? "",
     r.moneda,
   ].join(","));
   return [headers.join(","), ...lines].join("\n");
@@ -42,15 +42,8 @@ function toCSV(rows: Row[]): string {
 
 export default function BankStatementTable({ rows }: { rows: Row[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("fecha");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [filters, setFilters] = useState({
-    fecha: "",
-    descripcion: "",
-    debito: "",
-    credito: "",
-    saldo: "",
-    moneda: "",
-  });
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [filters, setFilters] = useState({ fecha: "", descripcion: "", debito: "", credito: "", moneda: "" });
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -63,7 +56,6 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
       if (filters.descripcion && !(r.descripcion ?? "").toLowerCase().includes(filters.descripcion.toLowerCase())) return false;
       if (filters.debito && !(r.debito?.toString() ?? "").includes(filters.debito)) return false;
       if (filters.credito && !(r.credito?.toString() ?? "").includes(filters.credito)) return false;
-      if (filters.saldo && !(r.saldo?.toString() ?? "").includes(filters.saldo)) return false;
       if (filters.moneda && r.moneda !== filters.moneda) return false;
       return true;
     });
@@ -96,13 +88,27 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
   const hasFilters = Object.values(filters).some(Boolean);
   const monedas = [...new Set(rows.map((r) => r.moneda))].sort();
 
+  const cols: { key: SortKey; label: string; right: boolean }[] = [
+    { key: "fecha", label: "Fecha", right: false },
+    { key: "descripcion", label: "Descripción", right: false },
+    { key: "debito", label: "Débito", right: true },
+    { key: "credito", label: "Crédito", right: true },
+    { key: "computedSaldo", label: "Saldo", right: true },
+  ];
+
   return (
     <div>
-      {/* Toolbar */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm text-gray-500">
           {sorted.length} de {rows.length} movimientos
-          {hasFilters && <button onClick={() => setFilters({ fecha: "", descripcion: "", debito: "", credito: "", saldo: "", moneda: "" })} className="ml-2 text-brand underline text-xs">Limpiar filtros</button>}
+          {hasFilters && (
+            <button
+              onClick={() => setFilters({ fecha: "", descripcion: "", debito: "", credito: "", moneda: "" })}
+              className="ml-2 text-brand underline text-xs"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </p>
         <button
           onClick={downloadCSV}
@@ -116,52 +122,28 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
-              {(["fecha", "descripcion", "debito", "credito", "saldo"] as SortKey[]).map((col) => {
-                const labels: Record<SortKey, string> = { fecha: "Fecha", descripcion: "Descripción", debito: "Débito", credito: "Crédito", saldo: "Saldo" };
-                const isRight = col !== "fecha" && col !== "descripcion";
-                return (
-                  <th key={col} className={`px-4 py-3 font-medium ${isRight ? "text-right" : ""}`}>
-                    <button
-                      onClick={() => toggleSort(col)}
-                      className="hover:text-gray-800 transition-colors"
-                    >
-                      {labels[col]}
-                      <SortIcon col={col} active={sortKey === col} dir={sortDir} />
-                    </button>
-                  </th>
-                );
-              })}
+              {cols.map(({ key, label, right }) => (
+                <th key={key} className={`px-4 py-3 font-medium ${right ? "text-right" : ""}`}>
+                  <button onClick={() => toggleSort(key)} className="hover:text-gray-800 transition-colors">
+                    {label}
+                    <SortIcon active={sortKey === key} dir={sortDir} />
+                  </button>
+                </th>
+              ))}
               {monedas.length > 1 && <th className="px-4 py-3 font-medium">Moneda</th>}
-              <th className="px-4 py-3 w-8"></th>
             </tr>
-            {/* Filter row */}
             <tr className="border-b bg-white">
-              <td className="px-3 py-1.5">
-                <input
-                  placeholder="Filtrar…"
-                  value={filters.fecha}
-                  onChange={(e) => setFilters((f) => ({ ...f, fecha: e.target.value }))}
-                  className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand"
-                />
-              </td>
-              <td className="px-3 py-1.5">
-                <input
-                  placeholder="Filtrar…"
-                  value={filters.descripcion}
-                  onChange={(e) => setFilters((f) => ({ ...f, descripcion: e.target.value }))}
-                  className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand"
-                />
-              </td>
-              {(["debito", "credito", "saldo"] as const).map((col) => (
+              {(["fecha", "descripcion", "debito", "credito"] as const).map((col, idx) => (
                 <td key={col} className="px-3 py-1.5">
                   <input
                     placeholder="Filtrar…"
                     value={filters[col]}
                     onChange={(e) => setFilters((f) => ({ ...f, [col]: e.target.value }))}
-                    className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand text-right"
+                    className={`w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand ${idx >= 2 ? "text-right" : ""}`}
                   />
                 </td>
               ))}
+              <td className="px-3 py-1.5" /> {/* saldo — no filter */}
               {monedas.length > 1 && (
                 <td className="px-3 py-1.5">
                   <select
@@ -174,7 +156,6 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                   </select>
                 </td>
               )}
-              <td></td>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -185,7 +166,10 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                 </td>
               </tr>
             ) : sorted.map((row, i) => (
-              <tr key={row.id ?? i} className={row.ok ? "hover:bg-gray-50" : "bg-orange-50 hover:bg-orange-100"}>
+              <tr
+                key={row.id ?? i}
+                className={row.descripcion === "Saldo anterior" ? "bg-gray-50 font-medium" : "hover:bg-gray-50"}
+              >
                 <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap tabular-nums">{row.fecha}</td>
                 <td className="px-4 py-2.5 text-gray-800 max-w-xs truncate">{row.descripcion ?? "—"}</td>
                 <td className="px-4 py-2.5 text-right text-red-600 tabular-nums">
@@ -195,16 +179,9 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                   {row.credito != null ? formatUYU(row.credito) : ""}
                 </td>
                 <td className="px-4 py-2.5 text-right font-medium tabular-nums">
-                  {row.saldo != null ? formatUYU(row.saldo) : "—"}
+                  {row.computedSaldo != null ? formatUYU(row.computedSaldo) : "—"}
                 </td>
                 {monedas.length > 1 && <td className="px-4 py-2.5 text-xs text-gray-400">{row.moneda}</td>}
-                <td className="px-4 py-2.5 text-center">
-                  {!row.ok && (
-                    <span title={`Diferencia: ${row.diff?.toFixed(2)}`}>
-                      <AlertCircle className="w-3.5 h-3.5 text-orange-500" />
-                    </span>
-                  )}
-                </td>
               </tr>
             ))}
           </tbody>

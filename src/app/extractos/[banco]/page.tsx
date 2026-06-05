@@ -13,29 +13,29 @@ interface PeriodGap {
   diff: number;
 }
 
-function checkPeriodContinuity(rows: Row[]): PeriodGap[] {
+function checkPeriodContinuity(rows: Row[], computed: (number | null)[]): PeriodGap[] {
   const gaps: PeriodGap[] = [];
 
   for (let i = 1; i < rows.length; i++) {
     if (rows[i].descripcion !== "Saldo anterior") continue;
 
-    // Find last non-"Saldo anterior" row before this one
-    let prevSaldo: number | null = null;
+    // Find the computed saldo of the last transaction row before this "Saldo anterior"
+    let prevComputed: number | null = null;
     for (let j = i - 1; j >= 0; j--) {
-      if (rows[j].descripcion !== "Saldo anterior" && rows[j].saldo !== null) {
-        prevSaldo = rows[j].saldo;
+      if (rows[j].descripcion !== "Saldo anterior") {
+        prevComputed = computed[j];
         break;
       }
     }
 
-    const curSaldo = rows[i].saldo;
-    if (prevSaldo === null || curSaldo === null) continue;
-    if (Math.abs(curSaldo - prevSaldo) > 1) {
+    const declared = rows[i].saldo; // what the new period declares as opening
+    if (prevComputed === null || declared === null) continue;
+    if (Math.abs(declared - prevComputed) > 1) {
       gaps.push({
         fecha: rows[i].fecha,
-        esperado: prevSaldo,
-        recibido: curSaldo,
-        diff: curSaldo - prevSaldo,
+        esperado: prevComputed,
+        recibido: declared,
+        diff: declared - prevComputed,
       });
     }
   }
@@ -68,13 +68,23 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
     );
   }
 
-  // All rows pass individual check (no per-row orange highlighting)
-  const withCheck = rows.map((row) => ({ ...row, ok: true, diff: null as number | null }));
+  // Compute running saldo from Saldo anterior rows + transactions
+  let running: number | null = null;
+  const withCheck = rows.map((row) => {
+    if (row.descripcion === "Saldo anterior") {
+      running = row.saldo; // reset to declared opening balance
+      return { ...row, ok: true, diff: null as null, computedSaldo: row.saldo };
+    }
+    if (running !== null) {
+      running = running - (row.debito ?? 0) + (row.credito ?? 0);
+    }
+    return { ...row, ok: true, diff: null as null, computedSaldo: running };
+  });
 
-  const gaps = checkPeriodContinuity(rows);
+  const gaps = checkPeriodContinuity(rows, withCheck.map((r) => r.computedSaldo));
 
-  const saldoInicial = rows[0].saldo;
-  const saldoFinal = rows[rows.length - 1].saldo;
+  const saldoInicial = withCheck[0].computedSaldo;
+  const saldoFinal = withCheck[withCheck.length - 1].computedSaldo;
   const totalCredito = rows.reduce((s, r) => s + (r.credito ?? 0), 0);
   const totalDebito = rows.reduce((s, r) => s + (r.debito ?? 0), 0);
 
