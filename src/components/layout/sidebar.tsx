@@ -3,18 +3,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Upload,
-  Table2,
-  AlertCircle,
-  Briefcase,
-  User,
-  Receipt,
-  BookOpen,
-  DollarSign,
+  LayoutDashboard, Upload, Table2, AlertCircle, Briefcase,
+  User, Receipt, BookOpen, DollarSign, Users,
 } from "lucide-react";
+import { LogoutButton } from "./logout-button";
 
-const nav = [
+const navContador = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/upload", label: "Upload", icon: Upload },
   { href: "/consolidado", label: "Consolidado", icon: Table2 },
@@ -24,10 +18,42 @@ const nav = [
   { href: "/liquidaciones", label: "Liquidaciones", icon: Receipt },
   { href: "/diccionario", label: "Diccionario", icon: BookOpen },
   { href: "/tc", label: "Tipo de cambio", icon: DollarSign },
+  { href: "/usuarios", label: "Usuarios", icon: Users },
 ];
 
-export function Sidebar() {
+const navCliente = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/negocio", label: "Negocio", icon: Briefcase },
+  { href: "/personal", label: "Personal", icon: User },
+  { href: "/liquidaciones", label: "Liquidaciones", icon: Receipt },
+];
+
+interface SidebarProps {
+  role?: string;
+  email?: string;
+  allowedSections?: string[];
+}
+
+export function Sidebar({ role, email, allowedSections }: SidebarProps) {
   const pathname = usePathname();
+  const isContador = role === "contador";
+
+  let nav = isContador ? navContador : navCliente;
+
+  // Filtrar por permisos si es cliente
+  if (!isContador && allowedSections) {
+    const sectionMap: Record<string, string> = {
+      "/": "dashboard",
+      "/negocio": "negocio",
+      "/personal": "personal",
+      "/liquidaciones": "liquidaciones",
+    };
+    nav = nav.filter((item) => {
+      const key = sectionMap[item.href];
+      return !key || allowedSections.includes(key);
+    });
+  }
+
   return (
     <aside className="w-56 min-h-screen bg-slate-900 text-white flex flex-col">
       <div className="px-6 py-5 border-b border-slate-700">
@@ -49,8 +75,9 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
-      <div className="px-6 py-4 border-t border-slate-700 text-xs text-slate-500">
-        v1.0 · Uruguay
+      <div className="px-6 py-4 border-t border-slate-700 space-y-2">
+        {email && <p className="text-xs text-slate-500 truncate">{email}</p>}
+        <LogoutButton />
       </div>
     </aside>
   );

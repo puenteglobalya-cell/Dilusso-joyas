@@ -1,25 +1,37 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient, createServerClient as createSSRServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import type { Database } from "./database.types";
 
-// Client-side singleton (browser)
-let _client: SupabaseClient<Database> | null = null;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? SUPABASE_ANON_KEY;
 
-export function getSupabaseClient(): SupabaseClient<Database> {
-  if (!_client) {
-    _client = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
-  return _client;
+// Browser client (auth-aware)
+export function getSupabaseBrowserClient() {
+  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// Server-side client (service role, for API routes)
-export function createServerClient(): SupabaseClient<Database> {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+// Server client with auth cookie (for Server Components & Route Handlers)
+export async function getSupabaseServerClient() {
+  const cookieStore = await cookies();
+  return createSSRServerClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        } catch {
+          // Called from Server Component — can be ignored
+        }
+      },
+    },
+  });
 }
 
-export const supabase = typeof window !== "undefined" ? getSupabaseClient() : null;
+// Service role client (bypasses RLS — only for API routes)
+export function createServerClient() {
+  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+}
