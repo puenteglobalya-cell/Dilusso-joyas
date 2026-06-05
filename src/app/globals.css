@@ -7,6 +7,22 @@
     box-sizing: border-box;
   }
   body {
-    @apply antialiased;
+    @apply antialiased bg-gray-50 text-gray-900;
   }
+  h1, h2, h3 {
+    @apply text-gray-900;
+  }
+}
+
+@layer utilities {
+  .text-brand { color: #C8102E; }
+  .bg-brand { background-color: #C8102E; }
+  .bg-brand-dark { background-color: #9B0B22; }
+  .bg-brand-light { background-color: #F9E0E4; }
+  .border-brand { border-color: #C8102E; }
+  .ring-brand { --tw-ring-color: #C8102E; }
+  .hover\:bg-brand-dark:hover { background-color: #9B0B22; }
+  .hover\:text-brand:hover { color: #C8102E; }
+  .focus\:border-brand:focus { border-color: #C8102E; }
+  .focus\:ring-brand\/30:focus { --tw-ring-color: rgb(200 16 46 / 0.3); }
 }
