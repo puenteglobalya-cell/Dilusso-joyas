@@ -170,9 +170,12 @@ export function parseOcaPdf(text: string): BankRow[] {
   // Split by date — content between dates may span multiple lines
   const parts = tableText.split(DATE_RE).filter(Boolean);
 
-  // Number patterns: "1.234,56" (UY with decimal) OR "1.234" (UY integer — saldo/amount without cents)
-  // We match comma-decimal first to avoid ambiguity
+  // Number patterns: "1.234,56" (UY with decimal)
   const NUM_UY = /\d{1,3}(?:\.\d{3})*,\d{2}/g;
+
+  // Extract account number from header area
+  const cuentaMatch = text.match(/\b(\d{7,10})\b/);
+  const cuenta = cuentaMatch ? cuentaMatch[1] : "OCA";
 
   let prevSaldo: number | null = null;
   for (let i = 0; i < parts.length; i++) {
@@ -193,7 +196,7 @@ export function parseOcaPdf(text: string): BankRow[] {
         // Insert "Saldo anterior" as an opening balance row
         rows.push({
           banco: "OCA",
-          cuenta: text.match(/(\d{7,10})/)?.[1] ?? "OCA",
+          cuenta,
           fecha,
           descripcion: "Saldo anterior",
           debito: null,
@@ -205,17 +208,42 @@ export function parseOcaPdf(text: string): BankRow[] {
       continue;
     }
 
-    // Extract all UY-format numbers (X.XXX,XX) from content
-    const allNums = [...content.matchAll(new RegExp(NUM_UY.source, "g"))].map((m) => m[0]);
+    // Extract all UY-format numbers (X.XXX,XX) from content using matchAll to get positions
+    const numMatches = [...content.matchAll(new RegExp(NUM_UY.source, "g"))];
 
-    if (allNums.length < 1) continue;
+    if (numMatches.length < 1) continue;
 
-    const saldo = parseUY(allNums[allNums.length - 1]);
-    const amount = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : null;
+    const last = numMatches[numMatches.length - 1];
+    const secondLast = numMatches.length >= 2 ? numMatches[numMatches.length - 2] : null;
 
-    // Concept = everything before the first number
-    const firstNumIdx = content.indexOf(allNums[0]);
-    const concepto = content.slice(0, firstNumIdx).trim();
+    const saldo = parseUY(last[0]);
+    let rawAmountStr = secondLast ? secondLast[0] : null;
+    let amount = rawAmountStr ? parseUY(rawAmountStr) : null;
+
+    // Concept = everything before the second-to-last number (or last if only one)
+    const numStart = secondLast ? secondLast.index! : last.index!;
+    let concepto = content.slice(0, numStart).trim();
+
+    // Fix digit bleed: op numbers like OP264024 concatenated with amount 7.733,73
+    // become OP2640247.733,73 — detect by checking if stripping leading digits satisfies balance
+    if (rawAmountStr && amount !== null && saldo !== null && prevSaldo !== null) {
+      const diff = Math.abs(saldo - prevSaldo);
+      if (Math.abs(diff - amount) > 1) {
+        // Amount doesn't satisfy balance — try stripping 1, 2, 3 leading chars
+        for (let strip = 1; strip <= 4; strip++) {
+          const candidate = rawAmountStr.slice(strip);
+          if (!/^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(candidate)) continue;
+          const val = parseUY(candidate);
+          if (val === null) continue;
+          if (Math.abs(Math.abs(saldo - prevSaldo) - val) <= 1) {
+            // Restore stripped prefix to description
+            concepto = (concepto + rawAmountStr.slice(0, strip)).trim();
+            amount = val;
+            break;
+          }
+        }
+      }
+    }
 
     // Debit/credit from balance direction
     let debito: number | null = null;
@@ -232,11 +260,6 @@ export function parseOcaPdf(text: string): BankRow[] {
     }
 
     prevSaldo = saldo;
-
-    // Extract account number if present in header area
-    const cuentaMatch = text.match(/(\d{7,10})/);
-    const cuenta = cuentaMatch ? cuentaMatch[1] : "OCA";
-
     rows.push({ banco: "OCA", cuenta, fecha, descripcion: concepto, debito, credito, saldo, moneda: "UYU" });
   }
 
