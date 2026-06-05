@@ -154,36 +154,36 @@ export function parseItauXls(buffer: ArrayBuffer): BankRow[] {
 // ── OCA PDF ──────────────────────────────────────────────────────────────────
 
 export function parseOcaPdf(text: string): BankRow[] {
-  // Format: "DD/MM/YYYYConceptoDebitoCredito(opt)Saldo" all concatenated
-  // Strategy: split on date pattern, then extract trailing numbers
   const DATE_RE = /(\d{2}\/\d{2}\/\d{4})/g;
   const rows: BankRow[] = [];
 
-  // Extract all content after the table header
+  // Find table start
   const headerMarker = "FechaConceptoDébitoCréditoSaldo";
   const startIdx = text.indexOf(headerMarker);
   const tableText = startIdx >= 0 ? text.slice(startIdx + headerMarker.length) : text;
 
-  // Split by date occurrences
+  // Split by date — content between dates may span multiple lines
   const parts = tableText.split(DATE_RE).filter(Boolean);
 
-  // Odd indices are dates, even indices are content after that date
   let prevSaldo: number | null = null;
   for (let i = 0; i < parts.length - 1; i += 2) {
     const dateStr = parts[i].trim();
-    const content = (parts[i + 1] ?? "").trim();
     if (!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) continue;
 
     const fecha = isoFromDMY(dateStr);
     if (!fecha) continue;
 
-    if (content.toLowerCase().startsWith("saldo") || content.toLowerCase().startsWith("saldo final")) {
-      const nums = content.match(/[\d.]+,\d{2}/g);
+    // Normalize content: collapse whitespace/newlines into single spaces
+    const rawContent = parts[i + 1] ?? "";
+    const content = rawContent.replace(/\s+/g, " ").trim();
+
+    if (content.toLowerCase().startsWith("saldo")) {
+      const nums = content.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g);
       if (nums) prevSaldo = parseUY(nums[nums.length - 1]);
       continue;
     }
 
-    // Extract 1 or 2 trailing numbers (last = saldo, second-to-last = amount)
+    // Extract all UY-format numbers from content
     const numPattern = /(\d{1,3}(?:\.\d{3})*,\d{2})/g;
     const allNums = [...content.matchAll(numPattern)].map((m) => m[1]);
 
@@ -192,19 +192,18 @@ export function parseOcaPdf(text: string): BankRow[] {
     const saldo = parseUY(allNums[allNums.length - 1]);
     const amount = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : null;
 
-    // Determine concept = everything before the first number
+    // Concept = everything before the first number
     const firstNumIdx = content.indexOf(allNums[0]);
     const concepto = content.slice(0, firstNumIdx).trim();
 
-    // Determine debit/credit from balance direction
+    // Debit/credit from balance direction
     let debito: number | null = null;
     let credito: number | null = null;
     if (amount !== null && saldo !== null && prevSaldo !== null) {
       if (saldo > prevSaldo) credito = amount;
       else debito = amount;
     } else if (amount !== null) {
-      // Default: TRANSF.ENT = credito
-      if (concepto.toUpperCase().includes("TRANSF.ENT") || concepto.toUpperCase().includes("CREDITO")) {
+      if (concepto.toUpperCase().includes("ENT") || concepto.toUpperCase().includes("CREDITO")) {
         credito = amount;
       } else {
         debito = amount;
