@@ -80,9 +80,11 @@ function UploadCard({
           <ul className="text-sm text-green-700 space-y-0.5 ml-6">
             {result.transacciones != null && <li>✓ {String(result.transacciones)} transacciones del Consolidado</li>}
             {result.liquidaciones != null && <li>✓ {String(result.liquidaciones)} liquidaciones</li>}
-            {result.inserted != null && <li>✓ {String(result.inserted)} movimientos bancarios insertados</li>}
-            {result.parsed != null && String(result.parsed) !== String(result.inserted) && (
-              <li className="text-yellow-600">⚠ {String(result.parsed)} parseados, {String(result.inserted)} insertados</li>
+            {result.deleted != null && <li>✓ {String(result.deleted)} movimientos eliminados</li>}
+            {result.inserted != null && <li>✓ {String(result.inserted)} movimientos nuevos insertados</li>}
+            {result.skipped != null && Number(result.skipped) > 0 && <li className="text-gray-600">— {String(result.skipped)} ya existían (omitidos)</li>}
+            {result.parsed != null && Number(result.parsed) === 0 && (
+              <li className="text-yellow-700">⚠ No se encontraron movimientos en el archivo</li>
             )}
             {result.warning != null && <li className="text-yellow-700">⚠ {String(result.warning)}</li>}
           </ul>
@@ -101,6 +103,7 @@ export default function AdminPage() {
   const [bankResult, setBankResult] = useState<Record<string, unknown> | null>(null);
   const [bankError, setBankError] = useState<string | null>(null);
   const [selectedBank, setSelectedBank] = useState(BANKS[0].value);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function handleExcel(file: File) {
     setExcelLoading(true);
@@ -139,6 +142,23 @@ export default function AdminPage() {
     }
   }
 
+  async function handleDeleteBank() {
+    if (!confirm(`¿Borrar TODOS los datos de ${BANKS.find(b => b.value === selectedBank)?.label}? Esta acción no se puede deshacer.`)) return;
+    setDeleteLoading(true);
+    setBankError(null);
+    setBankResult(null);
+    try {
+      const res = await fetch("/api/admin/delete-bank", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ banco: selectedBank }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      setBankResult({ deleted: data.deleted });
+    } catch (e) {
+      setBankError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   const bankConfig = BANKS.find((b) => b.value === selectedBank) ?? BANKS[0];
 
   return (
@@ -160,24 +180,33 @@ export default function AdminPage() {
 
       <UploadCard
         title="Extracto bancario"
-        description="Importa movimientos de un banco. Reemplaza los movimientos existentes de ese banco."
+        description="Importa movimientos de un banco. Los movimientos ya existentes se omiten automáticamente (acumulativo)."
         accept={bankConfig.accept}
         onSubmit={handleBank}
         loading={bankLoading}
         result={bankResult}
         error={bankError}
       >
-        <div className="relative">
-          <select
-            value={selectedBank}
-            onChange={(e) => setSelectedBank(e.target.value)}
-            className="w-full h-10 pl-3 pr-8 border border-gray-200 rounded-lg text-sm bg-white appearance-none cursor-pointer"
+        <div className="space-y-2">
+          <div className="relative">
+            <select
+              value={selectedBank}
+              onChange={(e) => setSelectedBank(e.target.value)}
+              className="w-full h-10 pl-3 pr-8 border border-gray-200 rounded-lg text-sm bg-white appearance-none cursor-pointer"
+            >
+              {BANKS.map((b) => (
+                <option key={b.value} value={b.value}>{b.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+          <button
+            onClick={handleDeleteBank}
+            disabled={deleteLoading}
+            className="text-xs text-red-500 hover:text-red-700 underline disabled:opacity-50"
           >
-            {BANKS.map((b) => (
-              <option key={b.value} value={b.value}>{b.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+            {deleteLoading ? "Borrando…" : "Borrar todos los datos de este banco"}
+          </button>
         </div>
       </UploadCard>
     </div>

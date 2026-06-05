@@ -54,18 +54,29 @@ export async function POST(req: NextRequest) {
 
   const sb = createServerClient();
 
-  // Delete existing rows for this banco (full replacement per upload)
+  // Fetch existing rows for this banco to deduplicate
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (sb.from("bank_statements") as any).delete().eq("banco", rows[0].banco);
+  const { data: existing } = await (sb.from("bank_statements") as any)
+    .select("fecha, descripcion, debito, credito, saldo")
+    .eq("banco", rows[0].banco);
+
+  const existingKeys = new Set(
+    ((existing ?? []) as { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null }[])
+      .map((r) => `${r.fecha}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}|${r.saldo ?? ""}`)
+  );
+
+  const newRows = rows.filter(
+    (r) => !existingKeys.has(`${r.fecha}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}|${r.saldo ?? ""}`)
+  );
 
   let inserted = 0;
   const CHUNK = 500;
-  for (let i = 0; i < rows.length; i += CHUNK) {
+  for (let i = 0; i < newRows.length; i += CHUNK) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (sb.from("bank_statements") as any).insert(rows.slice(i, i + CHUNK));
-    if (!error) inserted += Math.min(CHUNK, rows.length - i);
+    const { error } = await (sb.from("bank_statements") as any).insert(newRows.slice(i, i + CHUNK));
+    if (!error) inserted += Math.min(CHUNK, newRows.length - i);
     else console.error("insert error:", error);
   }
 
-  return NextResponse.json({ ok: true, inserted, parsed: rows.length });
+  return NextResponse.json({ ok: true, inserted, parsed: rows.length, skipped: rows.length - newRows.length });
 }

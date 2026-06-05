@@ -157,13 +157,22 @@ export function parseOcaPdf(text: string): BankRow[] {
   const DATE_RE = /(\d{2}\/\d{2}\/\d{4})/g;
   const rows: BankRow[] = [];
 
-  // Find table start
+  // Find table start (header may be split across lines)
   const headerMarker = "FechaConceptoDébitoCréditoSaldo";
-  const startIdx = text.indexOf(headerMarker);
-  const tableText = startIdx >= 0 ? text.slice(startIdx + headerMarker.length) : text;
+  const headerMarker2 = "Fecha Concepto";
+  const startIdx1 = text.indexOf(headerMarker);
+  const startIdx2 = text.indexOf(headerMarker2);
+  const startIdx = startIdx1 >= 0 ? startIdx1 + headerMarker.length
+    : startIdx2 >= 0 ? startIdx2 + headerMarker2.length
+    : 0;
+  const tableText = text.slice(startIdx);
 
   // Split by date — content between dates may span multiple lines
   const parts = tableText.split(DATE_RE).filter(Boolean);
+
+  // Number patterns: "1.234,56" (UY with decimal) OR "1.234" (UY integer — saldo/amount without cents)
+  // We match comma-decimal first to avoid ambiguity
+  const NUM_UY = /\d{1,3}(?:\.\d{3})*,\d{2}/g;
 
   let prevSaldo: number | null = null;
   for (let i = 0; i < parts.length; i++) {
@@ -173,19 +182,17 @@ export function parseOcaPdf(text: string): BankRow[] {
     const fecha = isoFromDMY(dateStr);
     if (!fecha) continue;
 
-    // Content is the next part after the date
     const rawContent = parts[i + 1] ?? "";
     const content = rawContent.replace(/\s+/g, " ").trim();
 
     if (content.toLowerCase().startsWith("saldo")) {
-      const nums = content.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g);
+      const nums = content.match(NUM_UY);
       if (nums) prevSaldo = parseUY(nums[nums.length - 1]);
       continue;
     }
 
-    // Extract all UY-format numbers from content
-    const numPattern = /(\d{1,3}(?:\.\d{3})*,\d{2})/g;
-    const allNums = [...content.matchAll(numPattern)].map((m) => m[1]);
+    // Extract all UY-format numbers (X.XXX,XX) from content
+    const allNums = [...content.matchAll(new RegExp(NUM_UY.source, "g"))].map((m) => m[0]);
 
     if (allNums.length < 1) continue;
 
@@ -211,7 +218,12 @@ export function parseOcaPdf(text: string): BankRow[] {
     }
 
     prevSaldo = saldo;
-    rows.push({ banco: "OCA", cuenta: "4154273", fecha, descripcion: concepto, debito, credito, saldo, moneda: "UYU" });
+
+    // Extract account number if present in header area
+    const cuentaMatch = text.match(/(\d{7,10})/);
+    const cuenta = cuentaMatch ? cuentaMatch[1] : "OCA";
+
+    rows.push({ banco: "OCA", cuenta, fecha, descripcion: concepto, debito, credito, saldo, moneda: "UYU" });
   }
 
   return rows;
