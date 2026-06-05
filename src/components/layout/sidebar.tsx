@@ -58,11 +58,10 @@ export function Sidebar({ role, email, allowedSections }: SidebarProps) {
       {/* Logo */}
       <div className="px-6 py-6 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          {/* Red L mark */}
-          <div className="w-8 h-8 flex items-end justify-start shrink-0">
-            <svg viewBox="0 0 40 44" fill="none" className="w-full h-full">
-              <path d="M8 2 C6 2 4 4 4 6 L4 36 C4 38 6 40 8 40 L32 40 C34 40 36 38 36 36 C36 34 34 32 32 32 L14 32 L14 6 C14 4 12 2 10 2 Z" fill="#C8102E"/>
-              <path d="M4 28 C4 26 6 24 8 23 L32 18 C34 17 36 19 36 21 C36 23 34 25 32 26 L14 30 L14 32 L4 32 Z" fill="#C8102E"/>
+          {/* Red L mark — caligráfica cursiva */}
+          <div className="w-8 h-10 flex items-end justify-start shrink-0">
+            <svg viewBox="0 0 48 56" fill="none" className="w-full h-full">
+              <path d="M28 3 C25 3 22 5 20 8 L8 44 C7 47 9 50 12 50 L40 50 C43 50 45 48 45 45 C45 42 43 40 40 40 L18 40 L29 8 C30 5 28 3 28 3 Z" fill="#C8102E"/>
             </svg>
           </div>
           <div>
