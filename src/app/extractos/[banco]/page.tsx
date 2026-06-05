@@ -2,20 +2,9 @@ import { createServerClient } from "@/lib/supabase";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import { formatUYU } from "@/lib/utils";
+import BankStatementTable, { type Row } from "./BankStatementTable";
 
 export const dynamic = "force-dynamic";
-
-interface Row {
-  id: string;
-  banco: string;
-  cuenta: string | null;
-  fecha: string;
-  descripcion: string | null;
-  debito: number | null;
-  credito: number | null;
-  saldo: number | null;
-  moneda: string;
-}
 
 function balanceOk(prev: Row, cur: Row): boolean {
   if (prev.saldo === null || cur.saldo === null) return true;
@@ -65,7 +54,6 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
   const totalCredito = rows.reduce((s, r) => s + (r.credito ?? 0), 0);
   const totalDebito = rows.reduce((s, r) => s + (r.debito ?? 0), 0);
 
-  // Group by month for navigation
   const meses = [...new Set(rows.map((r) => r.fecha.slice(0, 7)))].sort();
 
   return (
@@ -79,7 +67,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
           <h1 className="text-2xl font-bold">{bancoDecoded}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{rows[0]?.cuenta && `Cuenta ${rows[0].cuenta} · `}{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
         </div>
-        <Link href="/admin" className="text-xs text-brand underline">Reimportar →</Link>
+        <Link href="/admin" className="text-xs text-brand underline">Importar más →</Link>
       </div>
 
       {/* KPIs */}
@@ -115,45 +103,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
-              <th className="px-4 py-3 font-medium">Fecha</th>
-              <th className="px-4 py-3 font-medium">Descripción</th>
-              <th className="px-4 py-3 font-medium text-right">Débito</th>
-              <th className="px-4 py-3 font-medium text-right">Crédito</th>
-              <th className="px-4 py-3 font-medium text-right">Saldo</th>
-              <th className="px-4 py-3 w-8"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {withCheck.map((row, i) => (
-              <tr key={row.id ?? i} className={row.ok ? "hover:bg-gray-50" : "bg-orange-50 hover:bg-orange-100"}>
-                <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap tabular-nums">{row.fecha}</td>
-                <td className="px-4 py-2.5 text-gray-800 max-w-xs truncate">{row.descripcion ?? "—"}</td>
-                <td className="px-4 py-2.5 text-right text-red-600 tabular-nums">
-                  {row.debito != null ? formatUYU(row.debito) : ""}
-                </td>
-                <td className="px-4 py-2.5 text-right text-green-600 tabular-nums">
-                  {row.credito != null ? formatUYU(row.credito) : ""}
-                </td>
-                <td className="px-4 py-2.5 text-right font-medium tabular-nums">
-                  {row.saldo != null ? formatUYU(row.saldo) : "—"}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  {!row.ok && (
-                    <span title={`Diferencia: ${row.diff?.toFixed(2)}`}>
-                      <AlertCircle className="w-3.5 h-3.5 text-orange-500" />
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <BankStatementTable rows={withCheck} />
     </div>
   );
 }
