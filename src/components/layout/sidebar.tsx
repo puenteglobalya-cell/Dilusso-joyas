@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Upload, Table2, AlertCircle, Briefcase,
-  User, Receipt, BookOpen, DollarSign, Users,
+  User, Receipt, BookOpen, DollarSign, Users, Building2,
 } from "lucide-react";
 import { LogoutButton } from "./logout-button";
 
@@ -14,6 +14,7 @@ const navContador = [
   { href: "/consolidado", label: "Consolidado", icon: Table2 },
   { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
+  { href: "/extractos", label: "Extractos bancarios", icon: Building2 },
   { href: "/personal", label: "Movimientos de Cecilia", icon: User },
   { href: "/liquidaciones", label: "Liquidaciones", icon: Receipt },
   { href: "/diccionario", label: "Diccionario", icon: BookOpen },
