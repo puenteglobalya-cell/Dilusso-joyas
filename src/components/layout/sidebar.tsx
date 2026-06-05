@@ -10,7 +10,7 @@ import { LogoutButton } from "./logout-button";
 
 const navContador = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/upload", label: "Importar", icon: Upload },
+  { href: "/admin", label: "Importar", icon: Upload },
   { href: "/consolidado", label: "Consolidado", icon: Table2 },
   { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
