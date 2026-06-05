@@ -1,6 +1,6 @@
 "use client";
-import { useState, type ReactNode } from "react";
-import { Upload, CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
+import { useState, useEffect, type ReactNode } from "react";
+import { Upload, CheckCircle, AlertCircle, ChevronDown, Trash2 } from "lucide-react";
 
 const BANKS = [
   { value: "bbva-xls", label: "BBVA — Excel (.xls/.xlsx)", accept: ".xls,.xlsx" },
@@ -104,6 +104,14 @@ export default function AdminPage() {
   const [bankError, setBankError] = useState<string | null>(null);
   const [selectedBank, setSelectedBank] = useState(BANKS[0].value);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+
+  useEffect(() => {
+    fetch(`/api/admin/bank-months?banco=${selectedBank}`)
+      .then((r) => r.json())
+      .then((d) => { setAvailableMonths(d.months ?? []); setSelectedMonth(""); });
+  }, [selectedBank]);
 
   async function handleExcel(file: File) {
     setExcelLoading(true);
@@ -142,16 +150,26 @@ export default function AdminPage() {
     }
   }
 
-  async function handleDeleteBank() {
-    if (!confirm(`¿Borrar TODOS los datos de ${BANKS.find(b => b.value === selectedBank)?.label}? Esta acción no se puede deshacer.`)) return;
+  async function handleDeleteBank(mes?: string) {
+    const label = BANKS.find(b => b.value === selectedBank)?.label ?? selectedBank;
+    const what = mes ? `el mes ${mes} de ${label}` : `TODOS los datos de ${label}`;
+    if (!confirm(`¿Borrar ${what}? Esta acción no se puede deshacer.`)) return;
     setDeleteLoading(true);
     setBankError(null);
     setBankResult(null);
     try {
-      const res = await fetch("/api/admin/delete-bank", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ banco: selectedBank }) });
+      const res = await fetch("/api/admin/delete-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ banco: selectedBank, mes: mes ?? null }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error");
       setBankResult({ deleted: data.deleted });
+      // Refresh available months
+      fetch(`/api/admin/bank-months?banco=${selectedBank}`)
+        .then((r) => r.json())
+        .then((d) => { setAvailableMonths(d.months ?? []); setSelectedMonth(""); });
     } catch (e) {
       setBankError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -187,7 +205,8 @@ export default function AdminPage() {
         result={bankResult}
         error={bankError}
       >
-        <div className="space-y-2">
+        <div className="space-y-3">
+          {/* Bank selector */}
           <div className="relative">
             <select
               value={selectedBank}
@@ -200,13 +219,43 @@ export default function AdminPage() {
             </select>
             <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
-          <button
-            onClick={handleDeleteBank}
-            disabled={deleteLoading}
-            className="text-xs text-red-500 hover:text-red-700 underline disabled:opacity-50"
-          >
-            {deleteLoading ? "Borrando…" : "Borrar todos los datos de este banco"}
-          </button>
+
+          {/* Delete section */}
+          {availableMonths.length > 0 && (
+            <div className="border border-red-100 rounded-lg p-3 space-y-2 bg-red-50/40">
+              <p className="text-xs text-gray-500 font-medium">Borrar datos cargados</p>
+              <div className="flex gap-2 items-center">
+                <div className="relative flex-1">
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="w-full h-8 pl-3 pr-8 border border-gray-200 rounded text-xs bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="">— Seleccionar mes —</option>
+                    {availableMonths.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-2 w-3 h-3 text-gray-400 pointer-events-none" />
+                </div>
+                <button
+                  onClick={() => selectedMonth && handleDeleteBank(selectedMonth)}
+                  disabled={deleteLoading || !selectedMonth}
+                  className="flex items-center gap-1 text-xs px-3 h-8 border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-40 transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  {deleteLoading ? "…" : "Borrar mes"}
+                </button>
+              </div>
+              <button
+                onClick={() => handleDeleteBank()}
+                disabled={deleteLoading}
+                className="text-xs text-red-400 hover:text-red-600 underline disabled:opacity-50"
+              >
+                Borrar todos los datos de este banco
+              </button>
+            </div>
+          )}
         </div>
       </UploadCard>
     </div>
