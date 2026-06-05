@@ -4,6 +4,7 @@ import { AddDictionaryEntry } from "@/components/dictionary/add-entry";
 import type { VendorDictionary, Category } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Diccionario | Dilusso Joyas" };
 
 export default async function DiccionarioPage() {
   const sb = createServerClient();
@@ -47,7 +48,12 @@ export default async function DiccionarioPage() {
               </tr>
             ))}
             {!entries.length && (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-slate-400">El diccionario está vacío</td></tr>
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
+                  <p className="font-medium text-slate-500 mb-1">El diccionario está vacío</p>
+                  <p className="text-xs">Agregá palabras clave para clasificar transacciones automáticamente al importar</p>
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

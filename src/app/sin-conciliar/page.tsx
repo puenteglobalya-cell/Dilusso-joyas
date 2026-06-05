@@ -4,6 +4,7 @@ import { ClassifyForm } from "@/components/transactions/classify-form";
 import type { Transaction, Category } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Sin conciliar | Dilusso Joyas" };
 
 export default async function SinConciliarPage() {
   const sb = createServerClient();
@@ -30,8 +31,9 @@ export default async function SinConciliarPage() {
 
       {!transactions.length ? (
         <div className="text-center py-16 text-slate-400">
-          <p className="text-lg">✓ Todo conciliado</p>
-          <p className="text-sm mt-1">No hay transacciones pendientes</p>
+          <p className="text-2xl mb-2">✓</p>
+          <p className="text-base font-medium text-slate-600">Todo conciliado</p>
+          <p className="text-sm mt-1">No hay transacciones pendientes de clasificar</p>
         </div>
       ) : (
         <div className="space-y-3">

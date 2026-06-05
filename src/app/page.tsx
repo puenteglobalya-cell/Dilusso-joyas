@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
 import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/components/ui/card";
 import { formatUYU, monthName } from "@/lib/utils";
 import { DashboardChart } from "@/components/dashboard/chart";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import type { Transaction } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -79,44 +81,61 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-slate-500 mt-1">{monthName(stats.mes)} {stats.año}</p>
         </div>
-        <div className="text-sm text-slate-500">
-          TC USD/UYU: <span className="font-semibold text-slate-900">{stats.latestTC.toFixed(3)}</span>
+        <div className="text-sm text-slate-500 flex items-center gap-2">
+          {stats.latestTC === 0 ? (
+            <Link href="/tc" className="flex items-center gap-1.5 text-orange-600 hover:text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              TC no configurado — configurar
+            </Link>
+          ) : (
+            <Link href="/tc" className="hover:text-slate-700 transition-colors">
+              TC USD/UYU: <span className="font-semibold text-slate-900">{stats.latestTC.toFixed(3)}</span>
+            </Link>
+          )}
         </div>
       </div>
 
       {stats.unclassifiedCount > 0 && (
-        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex items-center gap-3">
-          <span className="text-yellow-600 font-semibold">{stats.unclassifiedCount}</span>
-          <span className="text-yellow-800 text-sm">transacciones sin conciliar —</span>
-          <a href="/sin-conciliar" className="text-yellow-700 underline text-sm font-medium">Revisar ahora</a>
-        </div>
+        <Link href="/sin-conciliar" className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex items-center gap-3 hover:bg-yellow-100 transition-colors">
+          <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0" />
+          <span className="text-yellow-800 text-sm font-medium">{stats.unclassifiedCount} transacciones sin conciliar</span>
+          <span className="text-yellow-600 text-sm underline ml-auto">Revisar ahora →</span>
+        </Link>
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Facturado (mes)</CardTitle>
-            <CardValue>{formatUYU(stats.facturado)}</CardValue>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Gastos negocio</CardTitle>
-            <CardValue className="text-red-600">{formatUYU(stats.negocioSalidas)}</CardValue>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Gastos personales</CardTitle>
-            <CardValue className="text-orange-600">{formatUYU(stats.personalSalidas)}</CardValue>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Ingresos negocio</CardTitle>
-            <CardValue className="text-green-600">{formatUYU(stats.negocioIngresos)}</CardValue>
-          </CardHeader>
-        </Card>
+        <Link href="/liquidaciones" className="block hover:scale-[1.02] transition-transform">
+          <Card>
+            <CardHeader>
+              <CardTitle>Facturado (mes)</CardTitle>
+              <CardValue>{formatUYU(stats.facturado)}</CardValue>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/negocio" className="block hover:scale-[1.02] transition-transform">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gastos negocio</CardTitle>
+              <CardValue className="text-red-600">{formatUYU(stats.negocioSalidas)}</CardValue>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/personal" className="block hover:scale-[1.02] transition-transform">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gastos personales</CardTitle>
+              <CardValue className="text-orange-600">{formatUYU(stats.personalSalidas)}</CardValue>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/negocio" className="block hover:scale-[1.02] transition-transform">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ingresos negocio</CardTitle>
+              <CardValue className="text-green-600">{formatUYU(stats.negocioIngresos)}</CardValue>
+            </CardHeader>
+          </Card>
+        </Link>
       </div>
 
       <Card>
@@ -124,7 +143,14 @@ export default async function DashboardPage() {
           <CardTitle>Gastos por mes (últimos 6 meses)</CardTitle>
         </CardHeader>
         <CardContent>
-          <DashboardChart data={stats.trend} />
+          {stats.trend.length > 0 ? (
+            <DashboardChart data={stats.trend} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-40 text-slate-400">
+              <p className="text-sm">Sin datos aún</p>
+              <Link href="/admin" className="text-xs text-brand underline mt-1">Importar Excel maestro →</Link>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -102,7 +103,8 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
             {!transactions.length && (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
-                  Sin transacciones para este período
+                  <p className="font-medium text-slate-500 mb-1">Sin transacciones para este período</p>
+                  <Link href="/admin" className="text-xs text-brand underline">Importar Excel maestro →</Link>
                 </td>
               </tr>
             )}

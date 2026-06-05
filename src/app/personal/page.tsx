@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/components/ui/card";
@@ -86,6 +87,14 @@ export default async function PersonalPage({ searchParams }: Props) {
                 </td>
               </tr>
             ))}
+            {!txs.length && (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
+                  <p className="font-medium text-slate-500 mb-1">Sin movimientos para este período</p>
+                  <Link href="/admin" className="text-xs text-brand underline">Importar Excel maestro →</Link>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
