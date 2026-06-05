@@ -42,7 +42,7 @@ export default async function PersonalPage({ searchParams }: Props) {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Personal</h1>
+          <h1 className="text-2xl font-bold">Movimientos de Cecilia</h1>
           <p className="text-sm text-slate-500 mt-1">Itaú · Tarjeta Itaú · Scotiabank · Efectivo personal</p>
         </div>
         <ExportButton />

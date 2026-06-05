@@ -14,7 +14,7 @@ const navContador = [
   { href: "/consolidado", label: "Consolidado", icon: Table2 },
   { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
-  { href: "/personal", label: "Personal", icon: User },
+  { href: "/personal", label: "Movimientos de Cecilia", icon: User },
   { href: "/liquidaciones", label: "Liquidaciones", icon: Receipt },
   { href: "/diccionario", label: "Diccionario", icon: BookOpen },
   { href: "/tc", label: "Tipo de cambio", icon: DollarSign },
@@ -24,7 +24,7 @@ const navContador = [
 const navCliente = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
-  { href: "/personal", label: "Personal", icon: User },
+  { href: "/personal", label: "Movimientos de Cecilia", icon: User },
   { href: "/liquidaciones", label: "Liquidaciones", icon: Receipt },
 ];
 
