@@ -24,19 +24,19 @@ export async function POST(req: NextRequest) {
         rows = parseItauXls(buffer);
         break;
       case "oca-pdf": {
-        const pdf = require("pdf-parse");
+        const pdf = require("pdf-parse/lib/pdf-parse");
         const data = await pdf(Buffer.from(buffer));
         rows = parseOcaPdf(data.text);
         break;
       }
       case "bbva-pdf": {
-        const pdf = require("pdf-parse");
+        const pdf = require("pdf-parse/lib/pdf-parse");
         const data = await pdf(Buffer.from(buffer));
         rows = parseBBVAPdf(data.text);
         break;
       }
       case "scotiabank-pdf": {
-        const pdf = require("pdf-parse");
+        const pdf = require("pdf-parse/lib/pdf-parse");
         const data = await pdf(Buffer.from(buffer));
         rows = parseScotiabankPdf(data.text);
         break;

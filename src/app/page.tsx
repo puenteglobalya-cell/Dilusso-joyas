@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase";
 import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/components/ui/card";
 import { formatUYU, monthName } from "@/lib/utils";
 import { DashboardChart } from "@/components/dashboard/chart";
-import { AlertCircle, AlertTriangle } from "lucide-react";
+import { AlertCircle, AlertTriangle, Upload } from "lucide-react";
 import type { Transaction } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +81,11 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-slate-500 mt-1">{monthName(stats.mes)} {stats.año}</p>
         </div>
-        <div className="text-sm text-slate-500 flex items-center gap-2">
+        <div className="text-sm text-slate-500 flex items-center gap-3">
+          <Link href="/admin" className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors">
+            <Upload className="w-3.5 h-3.5" />
+            Importar datos
+          </Link>
           {stats.latestTC === 0 ? (
             <Link href="/tc" className="flex items-center gap-1.5 text-orange-600 hover:text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
               <AlertTriangle className="w-3.5 h-3.5" />
