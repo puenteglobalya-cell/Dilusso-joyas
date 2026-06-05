@@ -6,12 +6,41 @@ import BankStatementTable, { type Row } from "./BankStatementTable";
 
 export const dynamic = "force-dynamic";
 
-function balanceOk(prev: Row, cur: Row): boolean {
-  // Skip check when either row is an opening balance marker
-  if (cur.descripcion === "Saldo anterior" || prev.descripcion === "Saldo anterior") return true;
-  if (prev.saldo === null || cur.saldo === null) return true;
-  const esperado = prev.saldo + (cur.credito ?? 0) - (cur.debito ?? 0);
-  return Math.abs(esperado - cur.saldo) <= 1;
+interface PeriodGap {
+  fecha: string;       // fecha of the Saldo anterior row
+  esperado: number;    // last saldo of previous period
+  recibido: number;    // saldo of this Saldo anterior
+  diff: number;
+}
+
+function checkPeriodContinuity(rows: Row[]): PeriodGap[] {
+  const gaps: PeriodGap[] = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i].descripcion !== "Saldo anterior") continue;
+
+    // Find last non-"Saldo anterior" row before this one
+    let prevSaldo: number | null = null;
+    for (let j = i - 1; j >= 0; j--) {
+      if (rows[j].descripcion !== "Saldo anterior" && rows[j].saldo !== null) {
+        prevSaldo = rows[j].saldo;
+        break;
+      }
+    }
+
+    const curSaldo = rows[i].saldo;
+    if (prevSaldo === null || curSaldo === null) continue;
+    if (Math.abs(curSaldo - prevSaldo) > 1) {
+      gaps.push({
+        fecha: rows[i].fecha,
+        esperado: prevSaldo,
+        recibido: curSaldo,
+        diff: curSaldo - prevSaldo,
+      });
+    }
+  }
+
+  return gaps;
 }
 
 export default async function ExtractoBancoPage({ params }: { params: Promise<{ banco: string }> }) {
@@ -39,18 +68,11 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
     );
   }
 
-  // Compute balance consistency per row
-  const withCheck = rows.map((row, i) => {
-    if (i === 0) return { ...row, ok: true, diff: null as number | null };
-    const prev = rows[i - 1];
-    const ok = balanceOk(prev, row);
-    const diff = row.saldo !== null && prev.saldo !== null
-      ? row.saldo - (prev.saldo + (row.credito ?? 0) - (row.debito ?? 0))
-      : null;
-    return { ...row, ok, diff };
-  });
+  // All rows pass individual check (no per-row orange highlighting)
+  const withCheck = rows.map((row) => ({ ...row, ok: true, diff: null as number | null }));
 
-  const errores = withCheck.filter((r) => !r.ok).length;
+  const gaps = checkPeriodContinuity(rows);
+
   const saldoInicial = rows[0].saldo;
   const saldoFinal = rows[rows.length - 1].saldo;
   const totalCredito = rows.reduce((s, r) => s + (r.credito ?? 0), 0);
@@ -92,16 +114,24 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Validation banner */}
-      {errores === 0 ? (
+      {/* Period continuity validation */}
+      {gaps.length === 0 ? (
         <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-6 text-sm text-green-700">
           <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-          Saldos consistentes — todos los movimientos cuadran cronológicamente
+          Continuidad de saldos OK — el saldo final de cada período coincide con el saldo inicial del siguiente
         </div>
       ) : (
-        <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 mb-6 text-sm text-orange-700">
-          <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
-          {errores} inconsistencia{errores > 1 ? "s" : ""} de saldo detectada{errores > 1 ? "s" : ""} — filas marcadas en naranja
+        <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 mb-6 text-sm text-orange-700 space-y-1">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
+            {gaps.length} corte{gaps.length > 1 ? "s" : ""} de continuidad entre períodos
+          </div>
+          {gaps.map((g) => (
+            <p key={g.fecha} className="ml-6 text-xs">
+              {g.fecha}: saldo anterior declarado {formatUYU(g.recibido)} ≠ último saldo previo {formatUYU(g.esperado)}
+              {" "}({g.diff > 0 ? "+" : ""}{formatUYU(g.diff)})
+            </p>
+          ))}
         </div>
       )}
 
