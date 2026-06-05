@@ -186,7 +186,11 @@ export function parseOcaPdf(text: string): BankRow[] {
     if (!fecha) continue;
 
     const rawContent = parts[i + 1] ?? "";
-    const content = rawContent.replace(/\s+/g, " ").trim();
+    let content = rawContent.replace(/\s+/g, " ").trim();
+
+    // Strip "Saldo final..." suffix (appears at end of last month with no own date)
+    const saldoFinalIdx = content.toLowerCase().indexOf("saldo final");
+    if (saldoFinalIdx >= 0) content = content.slice(0, saldoFinalIdx).trim();
 
     if (content.toLowerCase().startsWith("saldo")) {
       const nums = content.match(NUM_UY);
