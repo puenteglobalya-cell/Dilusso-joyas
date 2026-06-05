@@ -25,6 +25,7 @@
     "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
     "@types/xlsx": "^0.0.35",
+    "autoprefixer": "^10.5.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.7",
     "tailwindcss": "^4.3.0",
