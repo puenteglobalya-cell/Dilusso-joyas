@@ -1,5 +1,5 @@
 "use client";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
