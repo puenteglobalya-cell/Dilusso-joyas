@@ -187,7 +187,21 @@ export function parseOcaPdf(text: string): BankRow[] {
 
     if (content.toLowerCase().startsWith("saldo")) {
       const nums = content.match(NUM_UY);
-      if (nums) prevSaldo = parseUY(nums[nums.length - 1]);
+      if (nums) {
+        const saldoAnterior = parseUY(nums[nums.length - 1]);
+        prevSaldo = saldoAnterior;
+        // Insert "Saldo anterior" as an opening balance row
+        rows.push({
+          banco: "OCA",
+          cuenta: text.match(/(\d{7,10})/)?.[1] ?? "OCA",
+          fecha,
+          descripcion: "Saldo anterior",
+          debito: null,
+          credito: null,
+          saldo: saldoAnterior,
+          moneda: "UYU",
+        });
+      }
       continue;
     }
 
