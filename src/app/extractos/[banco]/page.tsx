@@ -7,6 +7,8 @@ import BankStatementTable, { type Row } from "./BankStatementTable";
 export const dynamic = "force-dynamic";
 
 function balanceOk(prev: Row, cur: Row): boolean {
+  // Skip check when either row is an opening balance marker
+  if (cur.descripcion === "Saldo anterior" || prev.descripcion === "Saldo anterior") return true;
   if (prev.saldo === null || cur.saldo === null) return true;
   const esperado = prev.saldo + (cur.credito ?? 0) - (cur.debito ?? 0);
   return Math.abs(esperado - cur.saldo) <= 1;
