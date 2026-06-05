@@ -26,10 +26,12 @@ function normalizeBanco(b: unknown): string {
   if (s === "bbva") return "BBVA";
   if (s === "itau" || s === "itaú") return "Itaú";
   if (s === "oca") return "OCA";
+  if (s.includes("tarjeta") && (s.includes("oca"))) return "Tarjeta OCA";
   if (s.includes("scotiabank")) return "Scotiabank";
-  if (s.includes("tarjeta") && s.includes("itau")) return "Tarjeta Itaú";
+  if (s.includes("tarjeta") && (s.includes("itau") || s.includes("itaú"))) return "Tarjeta Itaú";
   if (s === "efectivo") return "Efectivo";
   if (s === "fadaval" || s === "fabadal") return "Fadaval";
+  if (s === "prex") return "Prex";
   return String(b ?? "").trim();
 }
 
@@ -67,21 +69,33 @@ export async function POST(req: NextRequest) {
       const impOrigen = parseNum(row["Importe origen"]);
       const mes = parseNum(row["Mes"]);
       const año = parseNum(row["año"]);
+      const moneda = String(row["Moneda"] ?? "UYU").trim().toUpperCase();
+      const tc = parseNum(row["TC"]);
+
+      // Calcular importe_uyu: usar el campo directo, o convertir desde origen con TC si moneda es USD
+      let finalImpUyu: number | null = impUyu != null ? Math.abs(impUyu) : null;
+      if (finalImpUyu == null && impOrigen != null) {
+        if (moneda === "UYU") {
+          finalImpUyu = Math.abs(impOrigen);
+        } else if ((moneda === "USD" || moneda === "US$" || moneda === "U$S") && tc != null && tc > 0) {
+          finalImpUyu = Math.abs(impOrigen) * tc;
+        }
+      }
 
       transactions.push({
         banco: normalizeBanco(row["Banco"]),
         fecha,
-        mes: mes ? Math.round(mes) : null,
-        año: año ? Math.round(año) : null,
+        mes: mes != null ? Math.round(mes) : null,
+        año: año != null ? Math.round(año) : null,
         detalle: row["Detalle"] ? String(row["Detalle"]).substring(0, 500) : null,
         movimiento: String(row["Movimiento"] ?? "").toLowerCase() === "salida" ? "salida" : "ingreso",
         clasificado: String(row["Clasificado"] ?? "").toLowerCase() === "si",
         tipo: tipo === "negocio" ? "negocio" : tipo === "personal" ? "personal" : null,
         categoria,
-        moneda: String(row["Moneda"] ?? "UYU").trim().toUpperCase(),
-        tc: parseNum(row["TC"]),
-        importe_uyu: impUyu ? Math.abs(impUyu) : null,
-        importe_origen: impOrigen ? Math.abs(impOrigen) : null,
+        moneda,
+        tc,
+        importe_uyu: finalImpUyu,
+        importe_origen: impOrigen != null ? Math.abs(impOrigen) : null,
         comentario: row["Comentario 1"] ? String(row["Comentario 1"]).substring(0, 500) : null,
       });
     }
