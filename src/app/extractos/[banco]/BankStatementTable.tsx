@@ -9,13 +9,14 @@ export interface Row {
   cuenta: string | null;
   fecha: string;
   descripcion: string | null;
+  numero: string | null;
   debito: number | null;
   credito: number | null;
-  saldo: number | null;       // from PDF (reference only)
+  saldo: number | null;
   moneda: string;
   ok: boolean;
   diff: null;
-  computedSaldo: number | null; // calculated running balance
+  computedSaldo: number | null;
 }
 
 type SortKey = "fecha" | "descripcion" | "debito" | "credito" | "computedSaldo";
@@ -28,10 +29,12 @@ function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
 }
 
 function toCSV(rows: Row[]): string {
-  const headers = ["Fecha", "Descripción", "Débito", "Crédito", "Saldo calculado", "Moneda"];
+  const hasNum = rows.some((r) => r.numero);
+  const headers = ["Fecha", "Descripción", ...(hasNum ? ["N° cheque"] : []), "Débito", "Crédito", "Saldo calculado", "Moneda"];
   const lines = rows.map((r) => [
     r.fecha,
     `"${(r.descripcion ?? "").replace(/"/g, '""')}"`,
+    ...(hasNum ? [r.numero ?? ""] : []),
     r.debito ?? "",
     r.credito ?? "",
     r.computedSaldo?.toFixed(2) ?? "",
@@ -87,6 +90,7 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
 
   const hasFilters = Object.values(filters).some(Boolean);
   const monedas = [...new Set(rows.map((r) => r.moneda))].sort();
+  const hasNumero = rows.some((r) => r.numero);
 
   const cols: { key: SortKey; label: string; right: boolean }[] = [
     { key: "fecha", label: "Fecha", right: false },
@@ -130,6 +134,7 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                   </button>
                 </th>
               ))}
+              {hasNumero && <th className="px-4 py-3 font-medium text-right">N° cheque</th>}
               {monedas.length > 1 && <th className="px-4 py-3 font-medium">Moneda</th>}
             </tr>
             <tr className="border-b bg-white">
@@ -144,6 +149,7 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                 </td>
               ))}
               <td className="px-3 py-1.5" /> {/* saldo — no filter */}
+              {hasNumero && <td className="px-3 py-1.5" />}
               {monedas.length > 1 && (
                 <td className="px-3 py-1.5">
                   <select
@@ -181,6 +187,11 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                 <td className="px-4 py-2.5 text-right font-medium tabular-nums">
                   {row.computedSaldo != null ? formatUYU(row.computedSaldo) : "—"}
                 </td>
+                {hasNumero && (
+                  <td className="px-4 py-2.5 text-right tabular-nums text-gray-500 text-xs">
+                    {row.numero ?? ""}
+                  </td>
+                )}
                 {monedas.length > 1 && <td className="px-4 py-2.5 text-xs text-gray-400">{row.moneda}</td>}
               </tr>
             ))}

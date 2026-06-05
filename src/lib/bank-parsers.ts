@@ -5,6 +5,7 @@ export interface BankRow {
   cuenta: string;
   fecha: string; // YYYY-MM-DD
   descripcion: string;
+  numero: string | null;   // cheque number or document reference
   debito: number | null;
   credito: number | null;
   saldo: number | null;
@@ -88,9 +89,11 @@ export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
     if (!fecha) continue;
 
     const concepto = String(r[1] ?? "").trim();
-    const debitoRaw = String(r[3] ?? "").trim();
-    const creditoRaw = String(r[4] ?? "").trim();
-    const saldoRaw = String(r[5] ?? "").trim();
+    const numeroRaw = String(r[3] ?? "").trim();  // col D
+    const numero = numeroRaw && numeroRaw !== "0" ? numeroRaw : null;
+    const debitoRaw = String(r[4] ?? "").trim();  // col E
+    const creditoRaw = String(r[5] ?? "").trim(); // col F
+    const saldoRaw = String(r[6] ?? "").trim();   // col G
 
     const debito = parseUY(debitoRaw);
     const credito = parseUY(creditoRaw);
@@ -106,7 +109,7 @@ export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
     }
 
     prevSaldo = saldo;
-    rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, debito: finalDebito, credito: finalCredito, saldo, moneda: "UYU" });
+    rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, numero, debito: finalDebito, credito: finalCredito, saldo, moneda: "UYU" });
   }
   return rows;
 }
@@ -146,7 +149,7 @@ export function parseItauXls(buffer: ArrayBuffer): BankRow[] {
     const credito = parseUY(String(r[5] ?? "").trim());
     const saldo = parseUY(String(r[6] ?? "").trim());
 
-    rows.push({ banco: "Itaú", cuenta, fecha, descripcion: concepto, debito, credito, saldo, moneda: "UYU" });
+    rows.push({ banco: "Itaú", cuenta, fecha, descripcion: concepto, numero: null, debito, credito, saldo, moneda: "UYU" });
   }
   return rows;
 }
@@ -202,7 +205,7 @@ export function parseOcaPdf(text: string): BankRow[] {
           banco: "OCA",
           cuenta,
           fecha,
-          descripcion: "Saldo anterior",
+          descripcion: "Saldo anterior", numero: null,
           debito: null,
           credito: null,
           saldo: saldoAnterior,
@@ -264,7 +267,7 @@ export function parseOcaPdf(text: string): BankRow[] {
     }
 
     prevSaldo = saldo;
-    rows.push({ banco: "OCA", cuenta, fecha, descripcion: concepto, debito, credito, saldo, moneda: "UYU" });
+    rows.push({ banco: "OCA", cuenta, fecha, descripcion: concepto, numero: null, debito, credito, saldo, moneda: "UYU" });
   }
 
   return rows;
@@ -350,7 +353,7 @@ export function parseBBVAPdf(text: string): BankRow[] {
       }
 
       prevSaldo = saldo;
-      rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, debito, credito, saldo, moneda: section.moneda });
+      rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, numero: null, debito, credito, saldo, moneda: section.moneda });
     }
   }
 
@@ -408,7 +411,7 @@ export function parseScotiabankPdf(text: string): BankRow[] {
         banco: "Scotiabank",
         cuenta: "43185955",
         fecha,
-        descripcion: concepto,
+        descripcion: concepto, numero: null,
         debito: isPayment ? null : absImportePesos,
         credito: isPayment ? absImportePesos : null,
         saldo: null,
@@ -422,7 +425,7 @@ export function parseScotiabankPdf(text: string): BankRow[] {
         banco: "Scotiabank",
         cuenta: "43185955",
         fecha,
-        descripcion: concepto,
+        descripcion: concepto, numero: null,
         debito: isPayment ? null : absImporteUsd,
         credito: isPayment ? absImporteUsd : null,
         saldo: null,

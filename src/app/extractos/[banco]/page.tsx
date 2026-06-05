@@ -69,11 +69,17 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
   }
 
   // Compute running saldo from Saldo anterior rows + transactions
+  // For banks without "Saldo anterior" rows (BBVA/Itaú), bootstrap from first row's saldo
   let running: number | null = null;
   const withCheck = rows.map((row) => {
     if (row.descripcion === "Saldo anterior") {
-      running = row.saldo; // reset to declared opening balance
+      running = row.saldo;
       return { ...row, ok: true, diff: null as null, computedSaldo: row.saldo };
+    }
+    // Bootstrap: if no running yet but row has a saldo, back-calculate opening
+    if (running === null && row.saldo !== null) {
+      running = row.saldo; // use first available saldo directly
+      return { ...row, ok: true, diff: null as null, computedSaldo: running };
     }
     if (running !== null) {
       running = running - (row.debito ?? 0) + (row.credito ?? 0);
