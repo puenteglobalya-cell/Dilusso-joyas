@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, parseItauCardPdf, BankRow } from "@/lib/bank-parsers";
+import { clasificar } from "@/lib/clasificador";
+import { getTc } from "@/lib/tipo-cambio";
 
 export const runtime = "nodejs";
 
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
 
   const sb = createServerClient();
 
-  // Fetch existing rows for this banco to deduplicate
+  // Deduplication
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existing } = await (sb.from("bank_statements") as any)
     .select("fecha, descripcion, debito, credito, saldo")
@@ -75,12 +77,31 @@ export async function POST(req: NextRequest) {
     (r) => !existingKeys.has(`${r.fecha}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}|${r.saldo ?? ""}`)
   );
 
+  // Apply auto-classification and TC conversion
+  const enriched = newRows.map((r) => {
+    const clasi = clasificar(r.descripcion ?? "");
+    const tc = r.moneda === "USD" ? getTc(r.fecha) : null;
+    const importe_uyu = r.moneda === "USD" && tc
+      ? ((r.credito ?? 0) - (r.debito ?? 0)) * tc
+      : null;
+
+    return {
+      ...r,
+      clasificado: clasi.clasificado,
+      tipo: clasi.tipo,
+      categoria_negocio: clasi.categoria_negocio,
+      categoria_personal: clasi.categoria_personal,
+      tc,
+      importe_uyu,
+    };
+  });
+
   let inserted = 0;
   const CHUNK = 500;
-  for (let i = 0; i < newRows.length; i += CHUNK) {
+  for (let i = 0; i < enriched.length; i += CHUNK) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (sb.from("bank_statements") as any).insert(newRows.slice(i, i + CHUNK));
-    if (!error) inserted += Math.min(CHUNK, newRows.length - i);
+    const { error } = await (sb.from("bank_statements") as any).insert(enriched.slice(i, i + CHUNK));
+    if (!error) inserted += Math.min(CHUNK, enriched.length - i);
     else console.error("insert error:", error);
   }
 

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, type ReactNode } from "react";
-import { Upload, CheckCircle, AlertCircle, ChevronDown, Trash2 } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, ChevronDown, Trash2, RefreshCw } from "lucide-react";
 
 const BANKS = [
   { value: "bbva-xls", label: "BBVA — Excel (.xls/.xlsx)", accept: ".xls,.xlsx" },
@@ -90,6 +90,76 @@ function UploadCard({
             {result.warning != null && <li className="text-yellow-700">⚠ {String(result.warning)}</li>}
           </ul>
         </div>
+      )}
+    </div>
+  );
+}
+
+function TcPanel() {
+  const [mes, setMes] = useState("");
+  const [tc, setTc] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function handleUpdateTc() {
+    if (!mes || !tc) return;
+    setLoading(true); setMsg(null);
+    try {
+      const res = await fetch("/api/admin/update-tc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mes, tc: parseFloat(tc) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      setMsg(`✓ ${data.updated} movimientos USD actualizados para ${mes}`);
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border p-6 space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Tipo de cambio USD/UYU</h2>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Actualizá el TC mensual para recalcular el importe en UYU de movimientos en dólares.
+        </p>
+      </div>
+      <div className="flex gap-3 items-end">
+        <div className="flex-1">
+          <label className="text-xs text-gray-500 mb-1 block">Mes (YYYY-MM)</label>
+          <input
+            type="month"
+            value={mes}
+            onChange={(e) => setMes(e.target.value)}
+            className="w-full h-9 border border-gray-200 rounded-lg px-3 text-sm"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs text-gray-500 mb-1 block">TC (ej: 41.50)</label>
+          <input
+            type="number"
+            step="0.01"
+            value={tc}
+            onChange={(e) => setTc(e.target.value)}
+            placeholder="41.50"
+            className="w-full h-9 border border-gray-200 rounded-lg px-3 text-sm"
+          />
+        </div>
+        <button
+          onClick={handleUpdateTc}
+          disabled={loading || !mes || !tc}
+          className="flex items-center gap-1.5 h-9 px-4 bg-brand text-white text-sm font-semibold rounded-lg disabled:opacity-50 hover:bg-brand-dark transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "…" : "Actualizar"}
+        </button>
+      </div>
+      {msg && (
+        <p className={`text-sm ${msg.startsWith("Error") ? "text-red-600" : "text-green-700"}`}>{msg}</p>
       )}
     </div>
   );
@@ -259,6 +329,8 @@ export default function AdminPage() {
           )}
         </div>
       </UploadCard>
+
+      <TcPanel />
     </div>
   );
 }
