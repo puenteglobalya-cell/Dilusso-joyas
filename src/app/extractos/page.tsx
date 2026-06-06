@@ -10,6 +10,7 @@ const BANCO_LABELS: Record<string, string> = {
   "Itaú": "Itaú",
   OCA: "OCA",
   Scotiabank: "Scotiabank",
+  "Itau-Card": "Itaú Tarjeta VISA",
 };
 
 export default async function ExtractosPage() {

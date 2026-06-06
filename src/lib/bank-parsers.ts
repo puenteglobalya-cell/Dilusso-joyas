@@ -28,12 +28,34 @@ function isoFromISO(s: string): string | null {
   return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
-/** "1.234,56" or "1234.56" → number */
-function parseUY(s: string): number | null {
+/** "1.234,56" or "1234.56" or raw number → number */
+function parseUY(s: string | number): number | null {
+  if (typeof s === "number") return isNaN(s) ? null : s;
   if (!s || s.trim() === "") return null;
-  // remove thousands dots, replace decimal comma
-  const clean = s.trim().replace(/\./g, "").replace(",", ".");
-  const n = parseFloat(clean);
+  const t = s.trim();
+
+  if (t.includes(",")) {
+    // UY format: dots = thousands separator, comma = decimal
+    const clean = t.replace(/\./g, "").replace(",", ".");
+    const n = parseFloat(clean);
+    return isNaN(n) ? null : n;
+  }
+
+  // No comma: check if dot is decimal (≤2 digits after) or thousands (3 digits after)
+  const lastDot = t.lastIndexOf(".");
+  if (lastDot >= 0) {
+    const decimals = t.length - lastDot - 1;
+    if (decimals <= 2) {
+      // e.g. "700.34" → 700.34 (US decimal from raw XLS number)
+      const n = parseFloat(t);
+      return isNaN(n) ? null : n;
+    }
+    // e.g. "26.150" → 26150 (UY thousands, no decimal part)
+    const n = parseFloat(t.replace(/\./g, ""));
+    return isNaN(n) ? null : n;
+  }
+
+  const n = parseFloat(t);
   return isNaN(n) ? null : n;
 }
 
@@ -476,6 +498,80 @@ export function parseScotiabankPdf(text: string): BankRow[] {
         moneda: "USD",
       });
     }
+  }
+
+  return rows;
+}
+
+// ── Itaú Tarjeta (Credit Card PDF) ───────────────────────────────────────────
+const _ITAU_CARD_INGRESO = ["PAGOS", "REVERSAL", "DEV.", "DEVOLUCION", "REVERSION"];
+const _ITAU_CARD_IGNORAR = [
+  "SALDO DEL ESTADO", "** TOTAL", "TOTAL TRANSACCIONES", "INTERESES COMPENSATORIO",
+  "INTERESES MORATORIO", "SEGURO DE VIDA SOBRE", "IVA INC", "IVA SOBRE",
+  "SALDO CONTADO", "UD. HA GENERADO", "REDUC. IVA", "FECHA DETALLE", "En este mes",
+];
+
+export function parseItauCardPdf(text: string): BankRow[] {
+  const rows: BankRow[] = [];
+
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (_ITAU_CARD_IGNORAR.some((ign) => trimmed.toUpperCase().includes(ign.toUpperCase()))) continue;
+
+    // Match: DD MM YY rest
+    const m = trimmed.match(/^(\d{2})\s(\d{2})\s(\d{2})\s+(.+)$/);
+    if (!m) continue;
+
+    const [, d, mo, y2, rest] = m;
+    const year = 2000 + parseInt(y2);
+    const fecha = `${year}-${mo}-${d}`;
+
+    let detail = rest;
+    if (/^\d{4}\s/.test(detail)) detail = detail.slice(5).trim();
+
+    const numPat = /(-?\d{1,3}(?:\.\d{3})*,\d{2})/g;
+    const allNums = [...detail.matchAll(numPat)].map((x) => x[1]);
+    if (allNums.length === 0) continue;
+
+    const firstNumIdx = detail.indexOf(allNums[0]);
+    let concepto = detail.slice(0, firstNumIdx).trim();
+    concepto = concepto.replace(/\d+\/\s*\d+/g, "").replace(/\s{2,}/g, " ").trim();
+    if (!concepto || concepto.length < 2) continue;
+
+    let moneda: string;
+    let importe: number;
+
+    if (allNums.length >= 2) {
+      const v1 = Math.abs(parseUY(allNums[allNums.length - 2]) ?? 0);
+      const v2 = Math.abs(parseUY(allNums[allNums.length - 1]) ?? 0);
+      if (v1 > 0 && v2 > 0) {
+        const ratio = v1 / v2;
+        if (ratio >= 30 && ratio <= 60) { moneda = "UYU"; importe = v1; }
+        else if (Math.abs(v1 - v2) < 0.01) { moneda = "USD"; importe = v2; }
+        else { moneda = "UYU"; importe = v1 > v2 ? v1 : v2; }
+      } else { moneda = "UYU"; importe = v1 > 0 ? v1 : v2; }
+    } else {
+      moneda = "UYU";
+      importe = Math.abs(parseUY(allNums[0]) ?? 0);
+    }
+
+    if (importe === 0) continue;
+
+    const isIngreso = _ITAU_CARD_INGRESO.some((kw) => concepto.toUpperCase().includes(kw));
+
+    rows.push({
+      banco: "Itau-Card",
+      cuenta: "tarjeta",
+      fecha,
+      descripcion: concepto,
+      numero: null,
+      debito: isIngreso ? null : importe,
+      credito: isIngreso ? importe : null,
+      saldo: null,
+      moneda,
+    });
   }
 
   return rows;

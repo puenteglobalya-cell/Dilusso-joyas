@@ -8,6 +8,7 @@ const BANKS = [
   { value: "oca-pdf", label: "OCA — PDF (.pdf)", accept: ".pdf" },
   { value: "bbva-pdf", label: "BBVA — PDF (.pdf)", accept: ".pdf" },
   { value: "scotiabank-pdf", label: "Scotiabank — PDF (.pdf)", accept: ".pdf" },
+  { value: "itau-card-pdf", label: "Itaú Tarjeta VISA — PDF (.pdf)", accept: ".pdf" },
 ];
 
 function UploadCard({

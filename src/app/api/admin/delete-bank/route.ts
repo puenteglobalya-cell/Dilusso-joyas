@@ -9,6 +9,7 @@ const BANCO_MAP: Record<string, string> = {
   "itau-xls": "Itaú",
   "oca-pdf": "OCA",
   "scotiabank-pdf": "Scotiabank",
+  "itau-card-pdf": "Itau-Card",
 };
 
 export async function POST(req: NextRequest) {

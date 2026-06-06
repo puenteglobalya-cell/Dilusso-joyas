@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, BankRow } from "@/lib/bank-parsers";
+import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, parseItauCardPdf, BankRow } from "@/lib/bank-parsers";
 
 export const runtime = "nodejs";
 
@@ -39,6 +39,12 @@ export async function POST(req: NextRequest) {
         const pdf = require("pdf-parse/lib/pdf-parse");
         const data = await pdf(Buffer.from(buffer));
         rows = parseScotiabankPdf(data.text);
+        break;
+      }
+      case "itau-card-pdf": {
+        const pdf = require("pdf-parse/lib/pdf-parse");
+        const data = await pdf(Buffer.from(buffer));
+        rows = parseItauCardPdf(data.text);
         break;
       }
       default:
