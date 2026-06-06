@@ -665,15 +665,9 @@ export function parseItauCardPdf(text: string): BankRow[] {
         moneda = "UYU"; importe = v1 > 0 ? v1 : v2;
       }
     } else {
-      // Single amount: check whitespace before it
-      const onlyMatch = allMatches[0];
-      let wsCount = 0;
-      for (let i = onlyMatch.index! - 1; i >= 0; i--) {
-        if (detail[i] === " " || detail[i] === "\t") wsCount++;
-        else break;
-      }
-      moneda = wsCount >= 15 ? "USD" : "UYU";
-      importe = Math.abs(parseUY(onlyMatch[1]) ?? 0);
+      // Single amount → always UYU (USD transactions always have 2 amounts)
+      moneda = "UYU";
+      importe = Math.abs(parseUY(allMatches[0][1]) ?? 0);
     }
 
     if (importe === 0) continue;
