@@ -43,11 +43,15 @@ function checkPeriodContinuity(rows: Row[], computed: (number | null)[]): Period
   return gaps;
 }
 
+const CREDIT_CARD_BANKS = ["Scotiabank", "Itau-Card"];
+
 export default async function ExtractoBancoPage({ params }: { params: Promise<{ banco: string }> }) {
   const { banco } = await params;
   // Slug format: "BBVA||UYU" (banco + moneda separated by ||)
   const slug = decodeURIComponent(banco);
   const [bancoNombre, moneda] = slug.includes("||") ? slug.split("||") : [slug, null];
+
+  const isCreditCard = CREDIT_CARD_BANKS.includes(bancoNombre);
 
   const sb = createServerClient();
 
@@ -76,17 +80,61 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
     );
   }
 
-  // Compute running saldo from Saldo anterior rows + transactions
-  // For banks without "Saldo anterior" rows (BBVA/Itaú), bootstrap from first row's saldo
+  const meses = [...new Set(rows.map((r) => r.fecha.slice(0, 7)))].sort();
+
+  // Credit cards: no running saldo, no period continuity check
+  if (isCreditCard) {
+    const rowsWithSaldo = rows.map((r) => ({ ...r, ok: true, diff: null as null, computedSaldo: null as null }));
+
+    const gastosUYU = rows.filter((r) => r.moneda === "UYU").reduce((s, r) => s + (r.debito ?? 0), 0);
+    const gastosUSD = rows.filter((r) => r.moneda === "USD").reduce((s, r) => s + (r.debito ?? 0), 0);
+    const pagosUYU = rows.filter((r) => r.moneda === "UYU").reduce((s, r) => s + (r.credito ?? 0), 0);
+    const pagosUSD = rows.filter((r) => r.moneda === "USD").reduce((s, r) => s + (r.credito ?? 0), 0);
+
+    return (
+      <div className="p-8 max-w-5xl">
+        <Link href="/extractos" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
+          <ArrowLeft className="w-4 h-4" /> Extractos
+        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">{pageTitle}</h1>
+            <p className="text-sm text-gray-500 mt-0.5">{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
+          </div>
+          <Link href="/admin" className="text-xs text-brand underline">Importar más →</Link>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl border p-4">
+            <p className="text-xs text-gray-500 mb-1">Gastos UYU</p>
+            <p className="text-lg font-bold text-red-600">{formatUYU(gastosUYU)}</p>
+          </div>
+          <div className="bg-white rounded-xl border p-4">
+            <p className="text-xs text-gray-500 mb-1">Gastos USD</p>
+            <p className="text-lg font-bold text-red-600">U$ {gastosUSD.toFixed(2)}</p>
+          </div>
+          <div className="bg-white rounded-xl border p-4">
+            <p className="text-xs text-gray-500 mb-1">Pagos UYU</p>
+            <p className="text-lg font-bold text-green-600">{formatUYU(pagosUYU)}</p>
+          </div>
+          <div className="bg-white rounded-xl border p-4">
+            <p className="text-xs text-gray-500 mb-1">Pagos USD</p>
+            <p className="text-lg font-bold text-green-600">U$ {pagosUSD.toFixed(2)}</p>
+          </div>
+        </div>
+        <BankStatementTable rows={rowsWithSaldo} isCreditCard />
+      </div>
+    );
+  }
+
+  // Bank accounts: compute running saldo + period continuity
   let running: number | null = null;
   const withCheck = rows.map((row) => {
     if (row.descripcion === "Saldo anterior") {
       running = row.saldo;
       return { ...row, ok: true, diff: null as null, computedSaldo: row.saldo };
     }
-    // Bootstrap: if no running yet but row has a saldo, back-calculate opening
     if (running === null && row.saldo !== null) {
-      running = row.saldo; // use first available saldo directly
+      running = row.saldo;
       return { ...row, ok: true, diff: null as null, computedSaldo: running };
     }
     if (running !== null) {
@@ -101,8 +149,6 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
   const saldoFinal = withCheck[withCheck.length - 1].computedSaldo;
   const totalCredito = rows.reduce((s, r) => s + (r.credito ?? 0), 0);
   const totalDebito = rows.reduce((s, r) => s + (r.debito ?? 0), 0);
-
-  const meses = [...new Set(rows.map((r) => r.fecha.slice(0, 7)))].sort();
 
   return (
     <div className="p-8 max-w-5xl">
@@ -159,7 +205,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      <BankStatementTable rows={withCheck} />
+      <BankStatementTable rows={withCheck} isCreditCard={false} />
     </div>
   );
 }
