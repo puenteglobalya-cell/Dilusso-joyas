@@ -10,8 +10,8 @@ export function formatUYU(value: number | null | undefined): string {
   return new Intl.NumberFormat("es-UY", {
     style: "currency",
     currency: "UYU",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
