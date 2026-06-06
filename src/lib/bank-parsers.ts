@@ -397,83 +397,76 @@ export function parseOcaPdf(text: string): BankRow[] {
 export function parseBBVAPdf(text: string): BankRow[] {
   const rows: BankRow[] = [];
 
-  // Split into sections by currency
-  const sections: Array<{ moneda: string; text: string }> = [];
-  const usdIdx = text.indexOf("DOLARES U.S.A.");
-  const puyIdx = text.indexOf("PESOS URUGUAYOS");
-
-  if (usdIdx >= 0 && puyIdx >= 0) {
-    const firstIdx = Math.min(usdIdx, puyIdx);
-    const secondIdx = Math.max(usdIdx, puyIdx);
-    const first = usdIdx < puyIdx ? "USD" : "UYU";
-    const second = usdIdx < puyIdx ? "UYU" : "USD";
-    // Find next section boundaries (next occurrence of header patterns)
-    const nextAfterFirst = text.indexOf(first === "USD" ? "PESOS URUGUAYOS" : "DOLARES U.S.A.", firstIdx + 1);
-    sections.push({ moneda: first, text: text.slice(firstIdx, nextAfterFirst > 0 ? nextAfterFirst : undefined) });
-    sections.push({ moneda: second, text: text.slice(secondIdx) });
-  } else if (usdIdx >= 0) {
-    sections.push({ moneda: "USD", text: text.slice(usdIdx) });
-  } else if (puyIdx >= 0) {
-    sections.push({ moneda: "UYU", text: text.slice(puyIdx) });
+  // Account number: label "Cuenta :" is on one line, number on the next
+  const lines = text.split("\n");
+  let cuenta = "";
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (/^Cuenta\s*:?\s*$/.test(lines[i].trim())) {
+      const next = lines[i + 1].trim();
+      if (/^\d{6,12}$/.test(next)) { cuenta = next; break; }
+    }
+    // Also try inline: "Cuenta : 15051382"
+    const inlineM = lines[i].match(/Cuenta\s*:?\s*(\d{6,12})/);
+    if (inlineM) { cuenta = inlineM[1]; break; }
   }
 
-  // Extract account number
-  const cuentaMatch = text.match(/Cuenta\s*:\s*(\d{6,12})/);
-  const cuenta = cuentaMatch ? cuentaMatch[1] : "15051382";
+  const NUM_PAT = /(\d{1,3}(?:\.\d{3})*,\d{2})/g;
+  interface Pending { date: string; moneda: string; parts: string[] }
+  const pending: Pending[] = [];
+  let currentMoneda = "UYU";
 
-  const DATE_LINE = /^\s*(\d{1,2})\/(\d{2})\/(\d{2,4})\s+(.+?)(?:\s+(\d{1,2}\/\d{2}\/\d{2,4}))?\s+([\d.,]+)\s+([\d.,]+)\s*$/;
-  const DATE_LINE_ONE = /^\s*(\d{1,2})\/(\d{2})\/(\d{2,4})\s+(.+?)\s+([\d.,]+)\s*$/;
+  // Single pass: update moneda when currency header found, collect transactions
+  const SKIP = /^(Fecha|Per[ií]odo|P[aá]gina|Cuenta|BBVA|Rogamos|También|casilla|consultar|través|Oficinas|Uruguay|respecto|comisiones|último|Comunicamos)/i;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.includes("PESOS URUGUAYOS")) { currentMoneda = "UYU"; continue; }
+    if (trimmed.includes("DOLARES U.S.A.")) { currentMoneda = "USD"; continue; }
+    if (trimmed.includes("Fecha  Descripcion")) continue;
+    if (SKIP.test(trimmed)) continue;
 
-  for (const section of sections) {
-    let prevSaldo: number | null = null;
-    const lines = section.text.split("\n");
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      // Try to match date at start
-      const dateMatch = trimmed.match(/^(\d{1,2})\/(\d{2})\/(\d{2,4})\b/);
-      if (!dateMatch) continue;
-
-      const y = dateMatch[3].length === 2 ? "20" + dateMatch[3] : dateMatch[3];
-      const fecha = `${y}-${dateMatch[2].padStart(2, "0")}-${dateMatch[1].padStart(2, "0")}`;
-
-      const rest = trimmed.slice(dateMatch[0].length).trim();
-
-      // Extract trailing numbers
-      const numPattern = /(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/g;
-      const allNums = [...rest.matchAll(numPattern)].map((m) => m[1]);
-
-      if (allNums.length === 0) continue;
-
-      const saldo = parseUY(allNums[allNums.length - 1]);
-      const amount = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : null;
-
-      // Concept: everything before first number, removing fecha valor if present
-      const firstNumIdx = rest.indexOf(allNums[0]);
-      let concepto = rest.slice(0, firstNumIdx).trim();
-      // Remove "fecha valor" date if at end of concept
-      concepto = concepto.replace(/\s+\d{1,2}\/\d{2}\/\d{2,4}\s*$/, "").trim();
-
-      let debito: number | null = null;
-      let credito: number | null = null;
-
-      if (amount !== null && saldo !== null) {
-        if (prevSaldo !== null) {
-          const diff = saldo - prevSaldo;
-          if (diff > 0) credito = amount;
-          else debito = amount;
-        } else if (allNums.length >= 2) {
-          // First transaction: can't determine direction, use columns
-          debito = null;
-          credito = null;
-        }
-      }
-
-      prevSaldo = saldo;
-      rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, numero: null, debito, credito, saldo, moneda: section.moneda });
+    const dm = trimmed.match(/^(\d{1,2})\/(\d{2})\/(\d{2,4})\s/);
+    if (dm) {
+      const y = dm[3].length === 2 ? "20" + dm[3] : dm[3];
+      const fecha = `${y}-${dm[2].padStart(2, "0")}-${dm[1].padStart(2, "0")}`;
+      pending.push({ date: fecha, moneda: currentMoneda, parts: [trimmed.slice(dm[0].length)] });
+    } else if (pending.length > 0) {
+      pending[pending.length - 1].parts.push(trimmed);
     }
+  }
+
+  // Process each transaction grouped by moneda (track prevSaldo per moneda)
+  const prevSaldoMap: Record<string, number | null> = { UYU: null, USD: null };
+
+  for (const tx of pending) {
+    const combined = tx.parts.join(" ").trim();
+    const allNums = [...combined.matchAll(NUM_PAT)].map(m => m[1]);
+    if (allNums.length === 0) continue;
+
+    const saldo = parseUY(allNums[allNums.length - 1]);
+    const amount = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : null;
+
+    // Concept: everything before first number, strip embedded "fecha valor"
+    const firstNumIdx = combined.search(NUM_PAT);
+    let concepto = combined.slice(0, firstNumIdx).trim();
+    concepto = concepto.replace(/\s+\d{1,2}\/\d{2}\/\d{2,4}\s*$/, "").trim();
+    if (!concepto) { prevSaldoMap[tx.moneda] = saldo; continue; } // saldo anterior
+
+    const chequeMatch = concepto.match(/CLEARING\s+(\d{6,})/i) ?? concepto.match(/CHEQUE.*?(\d{6,})/i);
+    const numero = chequeMatch ? chequeMatch[1] : null;
+
+    let debito: number | null = null;
+    let credito: number | null = null;
+    const prevSaldo = prevSaldoMap[tx.moneda];
+
+    if (amount !== null && saldo !== null && prevSaldo !== null) {
+      const diff = Math.round((saldo - prevSaldo) * 100) / 100;
+      if (diff >= 0) credito = amount;
+      else debito = amount;
+    }
+
+    prevSaldoMap[tx.moneda] = saldo;
+    rows.push({ banco: "BBVA", cuenta, fecha: tx.date, descripcion: concepto, numero, debito, credito, saldo, moneda: tx.moneda });
   }
 
   return rows;
