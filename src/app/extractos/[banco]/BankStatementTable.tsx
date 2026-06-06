@@ -269,7 +269,7 @@ function toCSV(rows: Row[]): string {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function BankStatementTable({ rows: initialRows }: { rows: Row[] }) {
+export default function BankStatementTable({ rows: initialRows, isCreditCard = false }: { rows: Row[]; isCreditCard?: boolean }) {
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [sortKey, setSortKey] = useState<SortKey>("fecha");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -385,7 +385,7 @@ export default function BankStatementTable({ rows: initialRows }: { rows: Row[] 
               {hasNumero && <th className="px-4 py-3 font-medium text-right">N° cheque</th>}
               <Th k="debito" label="Débito" right />
               <Th k="credito" label="Crédito" right />
-              <Th k="computedSaldo" label="Saldo" right />
+              {!isCreditCard && <Th k="computedSaldo" label="Saldo" right />}
               {monedas.length > 1 && <th className="px-4 py-3 font-medium">Mon.</th>}
               {hasUsd && <th className="px-4 py-3 font-medium text-right">Imp. UYU</th>}
               <Th k="tipo" label="Tipo" />
@@ -407,7 +407,7 @@ export default function BankStatementTable({ rows: initialRows }: { rows: Row[] 
               {hasNumero && <td className="px-3 py-1.5" />}
               <td className="px-3 py-1.5" />
               <td className="px-3 py-1.5" />
-              <td className="px-3 py-1.5" />
+              {!isCreditCard && <td className="px-3 py-1.5" />}
               {monedas.length > 1 && (
                 <td className="px-3 py-1.5">
                   <select value={filters.moneda}
@@ -470,9 +470,11 @@ export default function BankStatementTable({ rows: initialRows }: { rows: Row[] 
                   <td className="px-4 py-2 text-right text-green-600 tabular-nums">
                     {row.credito != null ? formatUYU(row.credito) : ""}
                   </td>
-                  <td className="px-4 py-2 text-right font-medium tabular-nums">
-                    {row.computedSaldo != null ? formatUYU(row.computedSaldo) : "—"}
-                  </td>
+                  {!isCreditCard && (
+                    <td className="px-4 py-2 text-right font-medium tabular-nums">
+                      {row.computedSaldo != null ? formatUYU(row.computedSaldo) : "—"}
+                    </td>
+                  )}
                   {monedas.length > 1 && (
                     <td className="px-4 py-2 text-xs text-gray-400">{row.moneda}</td>
                   )}

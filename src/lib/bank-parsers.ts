@@ -473,73 +473,73 @@ export function parseBBVAPdf(text: string): BankRow[] {
 export function parseScotiabankPdf(text: string): BankRow[] {
   const rows: BankRow[] = [];
 
-  // Find the transactions header line
-  const headerIdx = text.indexOf("Fecha");
-  const tableText = headerIdx >= 0 ? text.slice(headerIdx) : text;
+  // Extract account number from header (e.g. "43185955")
+  const cuentaMatch = text.match(/\b(4318\d{4,})\b/);
+  const cuenta = cuentaMatch ? cuentaMatch[1] : "43185955";
 
-  // Each line: DD/MM/YY DETAIL MONTO_ORIGEN IMPORTE_$ IMPORTE_U$S
-  const lines = tableText.split("\n");
+  const lines = text.split("\n");
 
   for (const line of lines) {
+    // Skip totals lines starting with **
+    if (line.trimStart().startsWith("**")) continue;
+
     const trimmed = line.trim();
     if (!trimmed) continue;
 
+    // Must start with DD/MM/YY date
     const dateMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{2,4})\b/);
     if (!dateMatch) continue;
 
     const y = dateMatch[3].length === 2 ? "20" + dateMatch[3] : dateMatch[3];
     const fecha = `${y}-${dateMatch[2].padStart(2, "0")}-${dateMatch[1].padStart(2, "0")}`;
 
-    const rest = trimmed.slice(dateMatch[0].length).trim();
+    // Find where date ends in original line to preserve whitespace after it
+    const lineStart = line.indexOf(trimmed);
+    const dateEndInLine = lineStart + dateMatch[0].length;
+    const rest = line.slice(dateEndInLine); // preserve whitespace for column detection
 
-    // Extract all numbers from rest
+    // Find the last number in the rest and how much whitespace precedes it
     const numPattern = /(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})/g;
-    const allNums = [...rest.matchAll(numPattern)].map((m) => m[1]);
+    const allMatches = [...rest.matchAll(numPattern)];
+    if (allMatches.length === 0) continue;
 
-    if (allNums.length === 0) continue;
+    const lastMatch = allMatches[allMatches.length - 1];
+    const lastMatchIdx = lastMatch.index!;
 
-    // Last two numbers are Importe$ and ImporteU$S (one may be absent)
-    // Second-to-last may be Monto origen
-    // For simplicity: use last $ amount as debito (credit card = expense)
-    const firstNumIdx = rest.indexOf(allNums[0]);
-    const concepto = rest.slice(0, firstNumIdx).trim();
-
-    // The $ amount (second-to-last or last if only one currency)
-    const importePesos = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : parseUY(allNums[0]);
-    const importeUsd = allNums.length >= 1 ? parseUY(allNums[allNums.length - 1]) : null;
-
-    // Negative = payment/abono, positive = purchase
-    const isPayment = concepto.toUpperCase().includes("PAGO") || (importePesos !== null && importePesos < 0);
-    const absImportePesos = importePesos !== null ? Math.abs(importePesos) : null;
-    const absImporteUsd = importeUsd !== null ? Math.abs(importeUsd) : null;
-
-    // Store in pesos row
-    if (absImportePesos && absImportePesos > 0) {
-      rows.push({
-        banco: "Scotiabank",
-        cuenta: "43185955",
-        fecha,
-        descripcion: concepto, numero: null,
-        debito: isPayment ? null : absImportePesos,
-        credito: isPayment ? absImportePesos : null,
-        saldo: null,
-        moneda: "UYU",
-      });
+    // Count whitespace chars immediately before this number
+    let wsCount = 0;
+    for (let i = lastMatchIdx - 1; i >= 0; i--) {
+      if (rest[i] === " " || rest[i] === "\t") wsCount++;
+      else break;
     }
 
-    // Store USD row separately if has USD amount
-    if (absImporteUsd && absImporteUsd > 0 && allNums.length >= 2) {
-      rows.push({
-        banco: "Scotiabank",
-        cuenta: "43185955",
-        fecha,
-        descripcion: concepto, numero: null,
-        debito: isPayment ? null : absImporteUsd,
-        credito: isPayment ? absImporteUsd : null,
-        saldo: null,
-        moneda: "USD",
-      });
-    }
+    // Determine currency: 15+ spaces before last number → USD, else UYU
+    const moneda = wsCount >= 15 ? "USD" : "UYU";
+
+    const rawAmount = lastMatch[1];
+    const amount = parseUY(rawAmount);
+    if (amount === null) continue;
+
+    // Description: everything before the last number, stripped of leading/trailing whitespace
+    const concepto = rest.slice(0, lastMatchIdx).trim();
+    if (!concepto) continue;
+
+    // Payments ("PAGO") are credits; negative sign also indicates payment
+    const isPayment = concepto.toUpperCase().includes("PAGO") || amount < 0;
+    const absAmount = Math.abs(amount);
+    if (absAmount === 0) continue;
+
+    rows.push({
+      banco: "Scotiabank",
+      cuenta,
+      fecha,
+      descripcion: concepto,
+      numero: null,
+      debito: isPayment ? null : absAmount,
+      credito: isPayment ? absAmount : null,
+      saldo: null,
+      moneda,
+    });
   }
 
   return rows;
@@ -562,7 +562,7 @@ export function parseItauCardPdf(text: string): BankRow[] {
 
     if (_ITAU_CARD_IGNORAR.some((ign) => trimmed.toUpperCase().includes(ign.toUpperCase()))) continue;
 
-    // Match: DD MM YY rest
+    // Match lines with leading spaces then: DD MM YY rest (date with spaces between components)
     const m = trimmed.match(/^(\d{2})\s(\d{2})\s(\d{2})\s+(.+)$/);
     if (!m) continue;
 
@@ -570,33 +570,66 @@ export function parseItauCardPdf(text: string): BankRow[] {
     const year = 2000 + parseInt(y2);
     const fecha = `${year}-${mo}-${d}`;
 
+    // Strip leading card number like "9008 "
     let detail = rest;
-    if (/^\d{4}\s/.test(detail)) detail = detail.slice(5).trim();
+    if (/^\d{4}\s/.test(detail)) detail = detail.slice(5);
+    // detail still has original spacing for whitespace-column detection
 
     const numPat = /(-?\d{1,3}(?:\.\d{3})*,\d{2})/g;
-    const allNums = [...detail.matchAll(numPat)].map((x) => x[1]);
-    if (allNums.length === 0) continue;
+    const allMatches = [...detail.matchAll(numPat)];
+    if (allMatches.length === 0) continue;
 
-    const firstNumIdx = detail.indexOf(allNums[0]);
-    let concepto = detail.slice(0, firstNumIdx).trim();
-    concepto = concepto.replace(/\d+\/\s*\d+/g, "").replace(/\s{2,}/g, " ").trim();
+    // Build concept: everything before the first number, strip cuota notation X/ Y or X/Y
+    const firstMatch = allMatches[0];
+    let concepto = detail.slice(0, firstMatch.index!).trim();
+    concepto = concepto.replace(/\s+\d+\/\s*\d+\s*$/, "").replace(/\s{2,}/g, " ").trim();
     if (!concepto || concepto.length < 2) continue;
 
+    // Determine currency and amount using whitespace-position rules on last two numbers
     let moneda: string;
     let importe: number;
 
-    if (allNums.length >= 2) {
-      const v1 = Math.abs(parseUY(allNums[allNums.length - 2]) ?? 0);
-      const v2 = Math.abs(parseUY(allNums[allNums.length - 1]) ?? 0);
+    if (allMatches.length >= 2) {
+      const secondLastMatch = allMatches[allMatches.length - 2];
+      const lastMatch = allMatches[allMatches.length - 1];
+      const v1 = Math.abs(parseUY(secondLastMatch[1]) ?? 0); // Importe $ (UYU column)
+      const v2 = Math.abs(parseUY(lastMatch[1]) ?? 0);       // Importe U$S column
+
+      // Count whitespace before last number to detect USD-only single entry
+      let wsBeforeLast = 0;
+      for (let i = lastMatch.index! - 1; i >= 0; i--) {
+        if (detail[i] === " " || detail[i] === "\t") wsBeforeLast++;
+        else break;
+      }
+
       if (v1 > 0 && v2 > 0) {
-        const ratio = v1 / v2;
-        if (ratio >= 30 && ratio <= 60) { moneda = "UYU"; importe = v1; }
-        else if (Math.abs(v1 - v2) < 0.01) { moneda = "USD"; importe = v2; }
-        else { moneda = "UYU"; importe = v1 > v2 ? v1 : v2; }
-      } else { moneda = "UYU"; importe = v1 > 0 ? v1 : v2; }
+        if (Math.abs(v1 - v2) < 0.01) {
+          // Two equal amounts → USD
+          moneda = "USD"; importe = v2;
+        } else {
+          const ratio = v1 / v2;
+          if (ratio >= 30 && ratio <= 60) {
+            // TC conversion: first is UYU, second is USD equivalent
+            moneda = "UYU"; importe = v1;
+          } else {
+            // Unclear: take larger as UYU
+            moneda = "UYU"; importe = v1 > v2 ? v1 : v2;
+          }
+        }
+      } else {
+        // One of them is zero
+        moneda = "UYU"; importe = v1 > 0 ? v1 : v2;
+      }
     } else {
-      moneda = "UYU";
-      importe = Math.abs(parseUY(allNums[0]) ?? 0);
+      // Single amount: check whitespace before it
+      const onlyMatch = allMatches[0];
+      let wsCount = 0;
+      for (let i = onlyMatch.index! - 1; i >= 0; i--) {
+        if (detail[i] === " " || detail[i] === "\t") wsCount++;
+        else break;
+      }
+      moneda = wsCount >= 15 ? "USD" : "UYU";
+      importe = Math.abs(parseUY(onlyMatch[1]) ?? 0);
     }
 
     if (importe === 0) continue;
