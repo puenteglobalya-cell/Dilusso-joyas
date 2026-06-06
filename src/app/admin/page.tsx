@@ -331,6 +331,51 @@ export default function AdminPage() {
       </UploadCard>
 
       <TcPanel />
+      <TransferPanel />
+    </div>
+  );
+}
+
+function TransferPanel() {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function detect() {
+    setLoading(true); setMsg(null);
+    try {
+      const res = await fetch("/api/admin/match-transfers", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      setMsg(`✓ ${data.pares} pares detectados, ${data.updated} movimientos marcados como traspaso`);
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border p-6 space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Transferencias entre cuentas propias</h2>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Detecta automáticamente movimientos espejo entre BBVA, Itaú, OCA y Scotiabank
+          (mismo monto, distinto banco, fecha ±2 días) y los marca como traspaso.
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={detect}
+          disabled={loading}
+          className="flex items-center gap-1.5 h-9 px-4 bg-brand text-white text-sm font-semibold rounded-lg disabled:opacity-50 hover:bg-brand-dark transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "Detectando…" : "Detectar traspasos"}
+        </button>
+        {msg && (
+          <p className={`text-sm ${msg.startsWith("Error") ? "text-red-600" : "text-green-700"}`}>{msg}</p>
+        )}
+      </div>
     </div>
   );
 }

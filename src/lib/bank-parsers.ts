@@ -82,64 +82,73 @@ function extractTrailingNumbers(s: string): { nums: number[]; rest: string } {
 
 // ── BBVA XLS ─────────────────────────────────────────────────────────────────
 
+// Cuentas propias conocidas (para detección de transferencias entre cuentas)
+export const CUENTAS_PROPIAS: Record<string, { banco: string; moneda: string; label: string }> = {
+  "15051382-USD": { banco: "BBVA", moneda: "USD", label: "BBVA CC USD" },
+  "15051382-UYU": { banco: "BBVA", moneda: "UYU", label: "BBVA CC UYU" },
+  "365921":       { banco: "Itaú", moneda: "UYU", label: "Itaú 365921 UYU" },
+  "365913":       { banco: "Itaú", moneda: "USD", label: "Itaú 365913 USD" },
+};
+
 export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const all = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: false, defval: "" });
 
-  // Scan header rows for account number and Saldo Anterior
+  // ── Detectar moneda desde celda C5 (row 4, col 2) ──────────────────────────
+  // "15051382 - CUENTAS CORRIENTES - 1 - USD" → USD
+  // "15051382 - CUENTAS CORRIENTES - 0 - $"   → UYU
+  const row4 = (all[4] ?? []) as string[];
+  const c5 = String(row4[2] ?? "").trim().toUpperCase();
+  const moneda: string = /USD|US\$/.test(c5) ? "USD" : "UYU";
+
+  // Extraer cuenta (número antes de " - CUENTAS")
   let cuenta = "";
+  const cuentaMatch = c5.match(/(\d{6,12})\s*-\s*CUENTAS/);
+  if (cuentaMatch) cuenta = cuentaMatch[1];
+
+  // ── Escanear header para Saldo Anterior y fecha del período ────────────────
   let saldoAnterior: number | null = null;
   let periodoFecha: string | null = null;
 
   for (let i = 0; i < Math.min(15, all.length); i++) {
     const r = all[i] as string[];
     const rowText = r.join(" ");
-    // Account number: "15051382 - CUENTAS CORRIENTES"
-    if (!cuenta) {
-      const m = rowText.match(/(\d{6,12})\s*-\s*CUENTAS/i);
-      if (m) cuenta = m[1];
-    }
-    // Saldo Anterior value (may be in same row or next cell)
     if (!saldoAnterior) {
       const saIdx = r.findIndex((c) => String(c).toLowerCase().includes("saldo anterior"));
       if (saIdx >= 0) {
-        // Value is in the next non-empty cell after "Saldo Anterior"
         for (let j = saIdx + 1; j < r.length; j++) {
           const v = parseUY(String(r[j] ?? "").trim());
           if (v !== null && v > 0) { saldoAnterior = v; break; }
         }
       }
     }
-    // Period start date for the Saldo Anterior row date
     if (!periodoFecha) {
       const pm = rowText.match(/(\d{2}\/\d{2}\/\d{4})\s*-/);
       if (pm) periodoFecha = isoFromDMY(pm[1]);
     }
   }
 
-  // Find header row — detect by looking for "fecha" anywhere in the row
+  // ── Encontrar fila de encabezado de tabla ───────────────────────────────────
   const headerIdx = all.findIndex((r) => {
     const row = r as string[];
     return row.some((c) => String(c).toLowerCase().trim() === "fecha");
   });
   if (headerIdx < 0) return [];
 
-  // Detect column positions dynamically from header
   const headerRow = all[headerIdx] as string[];
   const colIdx = (names: string[]) =>
     headerRow.findIndex((c) => names.some((n) => String(c).toLowerCase().trim().includes(n)));
 
-  const iFecha = colIdx(["fecha"]);
+  const iFecha   = colIdx(["fecha"]);
   const iConcepto = colIdx(["concepto"]);
-  const iRef = colIdx(["referencia", "número", "numero", "nro"]);
-  const iDebito = colIdx(["débito", "debito"]);
+  const iRef     = colIdx(["referencia", "número", "numero", "nro"]);
+  const iDebito  = colIdx(["débito", "debito"]);
   const iCredito = colIdx(["crédito", "credito"]);
-  const iSaldo = colIdx(["saldo"]);
+  const iSaldo   = colIdx(["saldo"]);
 
   const rows: BankRow[] = [];
 
-  // Insert Saldo Anterior as opening balance row if found
   if (saldoAnterior !== null && periodoFecha) {
     rows.push({
       banco: "BBVA", cuenta,
@@ -148,7 +157,7 @@ export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
       numero: null,
       debito: null, credito: null,
       saldo: saldoAnterior,
-      moneda: "UYU",
+      moneda,
     });
   }
 
@@ -163,14 +172,13 @@ export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
     const concepto = iConcepto >= 0 ? String(r[iConcepto] ?? "").trim() : "";
     const numeroRaw = iRef >= 0 ? String(r[iRef] ?? "").trim() : "";
     const numero = numeroRaw && numeroRaw !== "0" ? numeroRaw : null;
-    const debito = iDebito >= 0 ? parseUY(String(r[iDebito] ?? "").trim()) : null;
+    const debito  = iDebito  >= 0 ? parseUY(String(r[iDebito]  ?? "").trim()) : null;
     const credito = iCredito >= 0 ? parseUY(String(r[iCredito] ?? "").trim()) : null;
-    const saldo = iSaldo >= 0 ? parseUY(String(r[iSaldo] ?? "").trim()) : null;
+    const saldo   = iSaldo   >= 0 ? parseUY(String(r[iSaldo]   ?? "").trim()) : null;
 
-    rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, numero, debito, credito, saldo, moneda: "UYU" });
+    rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, numero, debito, credito, saldo, moneda });
   }
 
-  // BBVA XLS is often in DESC order — sort ASC by fecha
   rows.sort((a, b) => {
     if (a.descripcion === "Saldo anterior") return -1;
     if (b.descripcion === "Saldo anterior") return 1;
@@ -187,35 +195,57 @@ export function parseItauXls(buffer: ArrayBuffer): BankRow[] {
   const ws = wb.Sheets[wb.SheetNames[0]];
   const all = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: false, defval: "" });
 
-  // Row 4 (index 4): cuenta 365921
+  // ── Detectar moneda y cuenta desde celda G5 (row 4, col 6) ─────────────────
+  // "365921"              → UYU, cuenta 365921
+  // "Dólares\t365913"     → USD, cuenta 365913
+  const row4 = (all[4] ?? []) as string[];
+  const g5 = String(row4[6] ?? "").trim();
   let cuenta = "";
-  const cuentaRow = all[4] as string[];
-  if (cuentaRow) cuenta = String(cuentaRow[6] ?? "").trim();
+  let moneda = "UYU";
 
-  // Header row: col B="Fecha", col D="Débito", col E="Crédito"
+  // Buscar número de cuenta (6+ dígitos) en la celda
+  const nroCuentaMatch = g5.match(/(\d{6,})/);
+  if (nroCuentaMatch) cuenta = nroCuentaMatch[1];
+
+  if (/dólar|dollar|usd/i.test(g5) || cuenta === "365913") moneda = "USD";
+  if (cuenta === "365921") moneda = "UYU";
+
+  // ── Header row ──────────────────────────────────────────────────────────────
   const headerIdx = all.findIndex((r) => {
     const row = r as string[];
-    return String(row[1]).toLowerCase().includes("fecha") && String(row[4]).toLowerCase().includes("bito");
+    return row.some((c) => String(c).toLowerCase().trim() === "fecha");
   });
   if (headerIdx < 0) return [];
+
+  const headerRow = all[headerIdx] as string[];
+  const colIdx = (names: string[]) =>
+    headerRow.findIndex((c) => names.some((n) => String(c).toLowerCase().trim().includes(n)));
+
+  const iFecha   = colIdx(["fecha"]);
+  const iConcepto = colIdx(["concepto", "descripci"]);
+  const iDebito  = colIdx(["débito", "debito"]);
+  const iCredito = colIdx(["crédito", "credito"]);
+  const iSaldo   = colIdx(["saldo"]);
 
   const rows: BankRow[] = [];
   for (let i = headerIdx + 1; i < all.length; i++) {
     const r = all[i] as string[];
-    const fechaRaw = String(r[1] ?? "").trim();
+    const fechaRaw = iFecha >= 0 ? String(r[iFecha] ?? "").trim() : String(r[1] ?? "").trim();
     if (!fechaRaw) continue;
 
     const fecha = isoFromDMY(fechaRaw) ?? isoFromISO(fechaRaw);
     if (!fecha) continue;
 
-    const concepto = String(r[2] ?? "").trim();
-    if (concepto.toLowerCase().includes("saldo anterior")) continue;
+    const concepto = iConcepto >= 0 ? String(r[iConcepto] ?? "").trim() : String(r[2] ?? "").trim();
+    if (concepto.toLowerCase().includes("saldo anterior") || concepto.toLowerCase().includes("saldo final")) continue;
 
-    const debito = parseUY(String(r[4] ?? "").trim());
-    const credito = parseUY(String(r[5] ?? "").trim());
-    const saldo = parseUY(String(r[6] ?? "").trim());
+    const debito  = iDebito  >= 0 ? parseUY(r[iDebito])  : parseUY(r[4]);
+    const credito = iCredito >= 0 ? parseUY(r[iCredito]) : parseUY(r[5]);
+    const saldo   = iSaldo   >= 0 ? parseUY(r[iSaldo])   : parseUY(r[6]);
 
-    rows.push({ banco: "Itaú", cuenta, fecha, descripcion: concepto, numero: null, debito, credito, saldo, moneda: "UYU" });
+    if (!concepto && debito === null && credito === null) continue;
+
+    rows.push({ banco: "Itaú", cuenta, fecha, descripcion: concepto, numero: null, debito, credito, saldo, moneda });
   }
   return rows;
 }
