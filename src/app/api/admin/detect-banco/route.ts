@@ -20,26 +20,32 @@ const BANCO_LABELS: Record<string, string> = {
 };
 
 function detectFromPdfText(text: string): string | null {
-  const upper = text.toUpperCase();
+  // Normalize: remove accents and uppercase for robust matching
+  const upper = text
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, ""); // strip diacritics: Ú→U, Á→A, etc.
 
-  if (upper.includes("SCOTIABANK URUGUAY") || upper.includes("SCOTIABANK")) {
+  if (upper.includes("SCOTIABANK")) {
     return "scotiabank-pdf";
   }
   if (upper.includes("OCA S.A") || upper.includes("OCA BLUE") || upper.includes("OCA VISA") ||
       (upper.includes("OCA") && (upper.includes("ESTADO DE CUENTA") || upper.includes("LIQUIDACION") || upper.includes("TARJETA OCA")))) {
     return "oca-pdf";
   }
-  if (upper.includes("BANCO ITA") && (upper.includes("VISA") || upper.includes("TARJETA") || upper.includes("LIQUIDACION"))) {
+  // Itaú card: "BANCO ITAU" + card keywords, or "LIQUIDACION VISA" alone
+  const isItau = upper.includes("BANCO ITAU") || upper.includes("ITAU");
+  const isCard = upper.includes("VISA") || upper.includes("TARJETA") || upper.includes("LIQUIDACION") || upper.includes("ESTADO DE CUENTA TARJETA");
+  if (isItau && isCard) {
     return "itau-card-pdf";
   }
   if (upper.includes("BBVA") && (upper.includes("PESOS URUGUAYOS") || upper.includes("DOLARES U.S.A") ||
       upper.includes("CUENTAS CORRIENTES") || upper.includes("CAJA DE AHORROS") || upper.includes("CUENTA CORRIENTE"))) {
     return "bbva-pdf";
   }
-  if (upper.includes("BANCO ITA")) {
+  if (upper.includes("BANCO ITAU") || upper.includes("ITAU")) {
     return "itau-card-pdf";
   }
-  // Fallback: filename-based for BBVA (account numbers in filename)
   return null;
 }
 
