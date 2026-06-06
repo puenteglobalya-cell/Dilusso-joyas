@@ -2,8 +2,10 @@
 
 ## Stack
 - Next.js 15 App Router + TypeScript
-- Supabase (PostgreSQL) — proyecto `acruykhrkugckpjcqwmb`
-- Vercel deploy, branch de trabajo: `claude/magical-mendel-VpSUG`
+- Supabase (PostgreSQL) — proyecto `acruykhrkugckpjcqwmb` — `https://acruykhrkugckpjcqwmb.supabase.co`
+- Vercel deploy: `https://dilusso-joyas.vercel.app`
+- Repo: `puenteglobalya-cell/Dilusso-joyas`
+- Branch de trabajo: `claude/magical-mendel-VpSUG`
 
 ## Tarea recurrente: Importar extractos bancarios desde Gmail
 
@@ -16,8 +18,8 @@
 
 ### URL del sistema
 
-La app está en producción en Vercel. Para importar, usar la URL de producción (ver `.env` o Vercel dashboard).
-En desarrollo local: `http://localhost:3000`
+- Producción: `https://dilusso-joyas.vercel.app`
+- Local: `http://localhost:3000`
 
 ### Búsquedas de Gmail por banco
 
@@ -53,7 +55,7 @@ Itaú Tarjeta VISA (PDF):
 
 ```bash
 # El endpoint acepta POST con JSON:
-POST /api/admin/import-from-base64
+POST https://dilusso-joyas.vercel.app/api/admin/import-from-base64
 Content-Type: application/json
 
 {
