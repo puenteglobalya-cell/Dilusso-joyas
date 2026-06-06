@@ -17,13 +17,22 @@ export default async function ExtractosPage() {
   const sb = createServerClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (sb.from("bank_statements") as any)
-    .select("banco, fecha, saldo, debito, credito")
+    .select("banco, cuenta, moneda, fecha, saldo, debito, credito")
     .order("fecha", { ascending: false });
 
-  const rows = (data ?? []) as { banco: string; fecha: string; saldo: number | null; debito: number | null; credito: number | null }[];
+  type BankRow = { banco: string; cuenta: string | null; moneda: string; fecha: string; saldo: number | null; debito: number | null; credito: number | null };
+  const rows = (data ?? []) as BankRow[];
 
-  // Group by banco
-  const byBanco = rows.reduce<Record<string, typeof rows>>((acc, r) => {
+  // Group by banco + cuenta + moneda (cada combinación es una "cuenta" distinta)
+  const byCuenta = rows.reduce<Record<string, BankRow[]>>((acc, r) => {
+    const key = `${r.banco}||${r.cuenta ?? ""}||${r.moneda}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(r);
+    return acc;
+  }, {});
+
+  // Also group just by banco for the card header label
+  const byBanco = rows.reduce<Record<string, BankRow[]>>((acc, r) => {
     if (!acc[r.banco]) acc[r.banco] = [];
     acc[r.banco].push(r);
     return acc;
@@ -55,23 +64,29 @@ export default async function ExtractosPage() {
           const movs = byBanco[banco];
           const total = movs.length;
           const fechas = movs.map((r) => r.fecha).sort();
-          const desde = fechas[fechas.length - 1]; // most recent first (desc order)
+          const desde = fechas[fechas.length - 1];
           const hasta = fechas[0];
-          const sinSaldo = movs.filter((r) => r.saldo === null).length;
 
-          // Quick balance consistency check
+          // Cuentas/monedas distintas dentro de este banco
+          const cuentasMonedas = [...new Set(movs.map((r) => {
+            const cuenta = r.cuenta && r.cuenta !== "0" ? r.cuenta : null;
+            return cuenta ? `${cuenta} · ${r.moneda}` : r.moneda;
+          }))].sort();
+
+          // Balance consistency (simple check on rows with saldo)
           const conSaldo = movs.filter((r) => r.saldo !== null).sort((a, b) => a.fecha.localeCompare(b.fecha));
           let errores = 0;
           for (let i = 1; i < conSaldo.length; i++) {
             const prev = conSaldo[i - 1];
             const cur = conSaldo[i];
+            if (prev.moneda !== cur.moneda) continue; // skip cross-currency comparison
             if (prev.saldo === null || cur.saldo === null) continue;
             const esperado = prev.saldo + (cur.credito ?? 0) - (cur.debito ?? 0);
             if (Math.abs(esperado - cur.saldo) > 1) errores++;
           }
 
-          const ok = errores === 0 && sinSaldo === 0;
-          const warn = errores > 0 || sinSaldo > total * 0.3;
+          const ok = errores === 0;
+          const warn = errores > 0;
 
           return (
             <Link key={banco} href={`/extractos/${encodeURIComponent(banco)}`} className="block">
@@ -89,12 +104,21 @@ export default async function ExtractosPage() {
                     <Clock className="w-4 h-4 text-gray-400" />
                   )}
                 </div>
+
+                {/* Cuentas y monedas */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {cuentasMonedas.map((cm) => (
+                    <span key={cm} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">
+                      {cm}
+                    </span>
+                  ))}
+                </div>
+
                 <p className="text-2xl font-bold text-gray-900 mb-1">{total}</p>
                 <p className="text-xs text-gray-500">movimientos</p>
                 <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400 space-y-0.5">
                   <p>Desde {hasta?.slice(0, 7)} hasta {desde?.slice(0, 7)}</p>
                   {errores > 0 && <p className="text-orange-600">{errores} inconsistencias de saldo</p>}
-                  {sinSaldo > 0 && <p className="text-gray-400">{sinSaldo} sin saldo</p>}
                 </div>
               </div>
             </Link>

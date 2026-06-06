@@ -153,27 +153,34 @@ function EditPopover({
 
             {tipo === "negocio" && (
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Categoría negocio</label>
-                <select
+                <label className="text-xs text-gray-500 mb-1 block">Categoría negocio <span className="text-gray-400">(podés escribir una nueva)</span></label>
+                <input
+                  list="cats-negocio"
                   value={catNeg}
                   onChange={(e) => setCatNeg(e.target.value)}
+                  placeholder="Seleccionar o escribir…"
                   className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand"
-                >
-                  {CATS_NEGOCIO.map((c) => <option key={c} value={c}>{c || "— Sin categoría —"}</option>)}
-                </select>
+                />
+                <datalist id="cats-negocio">
+                  {CATS_NEGOCIO.filter(Boolean).map((c) => <option key={c} value={c} />)}
+                </datalist>
               </div>
             )}
 
             {tipo === "personal" && (
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Categoría personal</label>
-                <select
+                <label className="text-xs text-gray-500 mb-1 block">Categoría personal <span className="text-gray-400">(podés escribir una nueva)</span></label>
+                <input
+                  list="cats-personal"
                   value={catPer}
                   onChange={(e) => setCatPer(e.target.value)}
+                  placeholder="Seleccionar o escribir…"
                   className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand"
-                >
-                  {CATS_PERSONAL.map((c) => <option key={c} value={c}>{c || "— Sin categoría —"}</option>)}
-                </select>
+                />
+                <datalist id="cats-personal">
+                {/* placeholder so the block stays valid — options below */}
+                  {CATS_PERSONAL.filter(Boolean).map((c) => <option key={c} value={c} />)}
+                </datalist>
               </div>
             )}
 

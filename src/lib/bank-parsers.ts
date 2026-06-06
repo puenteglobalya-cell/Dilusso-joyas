@@ -28,6 +28,15 @@ function isoFromISO(s: string): string | null {
   return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
+/** US format: "1,234.56" → 1234.56 (BBVA XLS uses this format) */
+function parseUS(s: string | number): number | null {
+  if (typeof s === "number") return isNaN(s) ? null : s;
+  if (!s || String(s).trim() === "") return null;
+  const t = String(s).trim().replace(/,/g, ""); // strip thousands commas
+  const n = parseFloat(t);
+  return isNaN(n) ? null : n;
+}
+
 /** "1.234,56" or "1234.56" or raw number → number */
 function parseUY(s: string | number): number | null {
   if (typeof s === "number") return isNaN(s) ? null : s;
@@ -96,29 +105,31 @@ export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
   const all = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: false, defval: "" });
 
   // ── Detectar moneda desde celda C5 (row 4, col 2) ──────────────────────────
-  // "15051382 - CUENTAS CORRIENTES - 1 - USD" → USD
-  // "15051382 - CUENTAS CORRIENTES - 0 - $"   → UYU
+  // BBVA XLS usa formato numérico AMERICANO: "1,234.56" (coma=miles, punto=decimal)
+  // Celda B5 (row 4, col 1): "15051382 - CUENTAS CORRIENTES - 1 - USD" → USD
+  //                          "15051382 - CUENTAS CORRIENTES - 0 - $"   → UYU
   const row4 = (all[4] ?? []) as string[];
-  const c5 = String(row4[2] ?? "").trim().toUpperCase();
-  const moneda: string = /USD|US\$/.test(c5) ? "USD" : "UYU";
+  // Buscar en toda la fila 4 la celda que contiene "CUENTAS CORRIENTES"
+  const productoCell = row4.map((c) => String(c).toUpperCase()).find((c) => c.includes("CUENTAS CORRIENTES")) ?? "";
+  const moneda: string = /USD|US\$/.test(productoCell) ? "USD" : "UYU";
 
-  // Extraer cuenta (número antes de " - CUENTAS")
   let cuenta = "";
-  const cuentaMatch = c5.match(/(\d{6,12})\s*-\s*CUENTAS/);
+  const cuentaMatch = productoCell.match(/(\d{6,12})\s*-\s*CUENTAS/);
   if (cuentaMatch) cuenta = cuentaMatch[1];
 
-  // ── Escanear header para Saldo Anterior y fecha del período ────────────────
+  // ── Saldo Anterior: buscarlo en filas 2-6 (junto al label "Saldo Anterior") ──
   let saldoAnterior: number | null = null;
   let periodoFecha: string | null = null;
 
   for (let i = 0; i < Math.min(15, all.length); i++) {
     const r = all[i] as string[];
     const rowText = r.join(" ");
-    if (!saldoAnterior) {
+    if (saldoAnterior === null) {
       const saIdx = r.findIndex((c) => String(c).toLowerCase().includes("saldo anterior"));
       if (saIdx >= 0) {
         for (let j = saIdx + 1; j < r.length; j++) {
-          const v = parseUY(String(r[j] ?? "").trim());
+          // BBVA usa formato US: "144,089.78"
+          const v = parseUS(String(r[j] ?? "").trim());
           if (v !== null && v > 0) { saldoAnterior = v; break; }
         }
       }
@@ -172,9 +183,10 @@ export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
     const concepto = iConcepto >= 0 ? String(r[iConcepto] ?? "").trim() : "";
     const numeroRaw = iRef >= 0 ? String(r[iRef] ?? "").trim() : "";
     const numero = numeroRaw && numeroRaw !== "0" ? numeroRaw : null;
-    const debito  = iDebito  >= 0 ? parseUY(String(r[iDebito]  ?? "").trim()) : null;
-    const credito = iCredito >= 0 ? parseUY(String(r[iCredito] ?? "").trim()) : null;
-    const saldo   = iSaldo   >= 0 ? parseUY(String(r[iSaldo]   ?? "").trim()) : null;
+    // BBVA usa formato US ("1,234.56") — usar parseUS
+    const debito  = iDebito  >= 0 ? parseUS(r[iDebito])  : null;
+    const credito = iCredito >= 0 ? parseUS(r[iCredito]) : null;
+    const saldo   = iSaldo   >= 0 ? parseUS(r[iSaldo])   : null;
 
     rows.push({ banco: "BBVA", cuenta, fecha, descripcion: concepto, numero, debito, credito, saldo, moneda });
   }
