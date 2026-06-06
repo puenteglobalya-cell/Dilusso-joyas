@@ -606,8 +606,8 @@ export function parseItauCardPdf(text: string): BankRow[] {
         const bigSmall = Math.max(v1, v2) / Math.min(v1, v2);
         if (bigSmall < 3) {
           // Both amounts close to each other → USD transaction
-          // Use Importe origen (first of the two = v1)
-          moneda = "USD"; importe = v1;
+          // Use Importe U$S (last column = v2) — actual USD cost
+          moneda = "USD"; importe = v2;
         } else if (bigSmall >= 30 && bigSmall <= 65) {
           // TC conversion: larger is UYU, smaller is USD
           moneda = "UYU"; importe = Math.max(v1, v2);
