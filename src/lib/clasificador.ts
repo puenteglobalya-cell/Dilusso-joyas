@@ -64,8 +64,29 @@ export interface Clasificacion {
   categoria_personal: string;
 }
 
-export function clasificar(detalle: string): Clasificacion {
+export interface ReglaCustom {
+  keyword: string;
+  tipo: string;
+  cat_negocio: string;
+  cat_personal: string;
+}
+
+export function clasificar(detalle: string, customRules: ReglaCustom[] = []): Clasificacion {
   const upper = detalle.toUpperCase();
+
+  // Custom rules (DB) take priority
+  for (const r of customRules) {
+    if (upper.includes(r.keyword.toUpperCase())) {
+      return {
+        clasificado: "Si",
+        tipo: r.tipo,
+        categoria_negocio: r.cat_negocio,
+        categoria_personal: r.cat_personal,
+      };
+    }
+  }
+
+  // Static rules
   for (const regla of REGLAS) {
     for (const kw of regla.keywords) {
       if (upper.includes(kw.toUpperCase())) {

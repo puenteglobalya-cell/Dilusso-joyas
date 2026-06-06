@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Download, X, Save, BookMarked } from "lucide-react";
 import { formatUYU } from "@/lib/utils";
 
 export interface Row {
@@ -27,6 +27,206 @@ export interface Row {
 
 type SortKey = "fecha" | "descripcion" | "debito" | "credito" | "computedSaldo" | "tipo" | "categoria_negocio" | "categoria_personal";
 
+// ── Tipos y categorías disponibles ────────────────────────────────────────────
+const TIPOS = ["negocio", "personal"];
+const CATS_NEGOCIO = [
+  "", "Publicidad", "Mercadería de reventa", "Servicios contratados",
+  "Venta tarjeta", "Gastos generales", "Sueldos", "Impuestos",
+];
+const CATS_PERSONAL = [
+  "", "3. ALIMENTOS", "4. SERVICIOS HOGAR", "5. TRANSPORTE",
+  "6. SALUD", "7. ENTRETENIMIENTO", "8. INDUMENTARIA",
+  "9. SERVICIOS DIGITALES", "10. TRASPASO", "11. BANCO/FINANCIERO", "12. SEGUROS",
+];
+
+const TIPO_BADGE: Record<string, string> = {
+  negocio: "bg-blue-100 text-blue-700",
+  personal: "bg-purple-100 text-purple-700",
+};
+
+// ── Edit modal ────────────────────────────────────────────────────────────────
+interface EditState {
+  row: Row;
+  anchor: { top: number; left: number };
+}
+
+function EditPopover({
+  row,
+  anchor,
+  onClose,
+  onSaved,
+}: {
+  row: Row;
+  anchor: { top: number; left: number };
+  onClose: () => void;
+  onSaved: (updated: Partial<Row>) => void;
+}) {
+  const [tipo, setTipo] = useState(row.tipo ?? "");
+  const [catNeg, setCatNeg] = useState(row.categoria_negocio ?? "");
+  const [catPer, setCatPer] = useState(row.categoria_personal ?? "");
+  const [keyword, setKeyword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [askDict, setAskDict] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function save(guardarEnDiccionario: boolean) {
+    setSaving(true);
+    try {
+      const body = {
+        id: row.id,
+        clasificado: tipo ? "Si" : "No",
+        tipo,
+        categoria_negocio: catNeg,
+        categoria_personal: catPer,
+        ...(guardarEnDiccionario && keyword.trim()
+          ? { guardar_regla: { keyword: keyword.trim() } }
+          : {}),
+      };
+      const res = await fetch("/api/admin/clasificar-row", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        onSaved({ tipo, categoria_negocio: catNeg, categoria_personal: catPer, clasificado: tipo ? "Si" : "No" });
+        onClose();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleSaveClick() {
+    // Ask about dictionary only if something changed
+    setAskDict(true);
+  }
+
+  const style: React.CSSProperties = {
+    position: "fixed",
+    top: Math.min(anchor.top, window.innerHeight - 360),
+    left: Math.min(anchor.left, window.innerWidth - 340),
+    zIndex: 50,
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div ref={ref} style={style} className="w-80 bg-white rounded-xl shadow-xl border p-4 z-50 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-800">Clasificar movimiento</p>
+          <button onClick={onClose}><X className="w-4 h-4 text-gray-400 hover:text-gray-600" /></button>
+        </div>
+
+        <p className="text-xs text-gray-500 truncate" title={row.descripcion ?? ""}>{row.descripcion}</p>
+
+        {!askDict ? (
+          <>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Tipo</label>
+              <div className="flex gap-2">
+                {TIPOS.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTipo(t)}
+                    className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors
+                      ${tipo === t
+                        ? t === "negocio" ? "bg-blue-100 border-blue-300 text-blue-700" : "bg-purple-100 border-purple-300 text-purple-700"
+                        : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setTipo("")}
+                  className={`px-2 py-1.5 text-xs rounded-lg border transition-colors ${tipo === "" ? "bg-gray-100 border-gray-300" : "border-gray-200 text-gray-400 hover:bg-gray-50"}`}
+                >
+                  —
+                </button>
+              </div>
+            </div>
+
+            {tipo === "negocio" && (
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Categoría negocio</label>
+                <select
+                  value={catNeg}
+                  onChange={(e) => setCatNeg(e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand"
+                >
+                  {CATS_NEGOCIO.map((c) => <option key={c} value={c}>{c || "— Sin categoría —"}</option>)}
+                </select>
+              </div>
+            )}
+
+            {tipo === "personal" && (
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Categoría personal</label>
+                <select
+                  value={catPer}
+                  onChange={(e) => setCatPer(e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand"
+                >
+                  {CATS_PERSONAL.map((c) => <option key={c} value={c}>{c || "— Sin categoría —"}</option>)}
+                </select>
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveClick}
+              disabled={saving}
+              className="w-full py-2 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors"
+            >
+              <Save className="w-3 h-3 inline mr-1" />
+              Guardar
+            </button>
+          </>
+        ) : (
+          /* ── Preguntar si guardar en diccionario ── */
+          <div className="space-y-3">
+            <p className="text-xs text-gray-700 font-medium">
+              ¿Querés guardar una regla en el diccionario para clasificar automáticamente en el futuro?
+            </p>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Keyword (parte del texto a detectar)</label>
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder={`ej: ${(row.descripcion ?? "").slice(0, 20)}`}
+                className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => save(false)}
+                disabled={saving}
+                className="flex-1 py-2 border border-gray-200 text-xs font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Solo esta vez
+              </button>
+              <button
+                onClick={() => save(true)}
+                disabled={saving || !keyword.trim()}
+                className="flex-1 py-2 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors"
+              >
+                <BookMarked className="w-3 h-3 inline mr-1" />
+                Guardar en diccionario
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
   if (!active) return <ArrowUpDown className="w-3 h-3 opacity-30 ml-1 inline" />;
   return dir === "asc"
@@ -61,17 +261,25 @@ function toCSV(rows: Row[]): string {
   return [headers.join(","), ...lines].join("\n");
 }
 
-const TIPO_BADGE: Record<string, string> = {
-  negocio: "bg-blue-100 text-blue-700",
-  personal: "bg-purple-100 text-purple-700",
-};
-
-export default function BankStatementTable({ rows }: { rows: Row[] }) {
+// ── Main component ─────────────────────────────────────────────────────────────
+export default function BankStatementTable({ rows: initialRows }: { rows: Row[] }) {
+  const [rows, setRows] = useState<Row[]>(initialRows);
   const [sortKey, setSortKey] = useState<SortKey>("fecha");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState({
     fecha: "", descripcion: "", moneda: "", tipo: "", categoria: "", clasificado: "",
   });
+  const [editState, setEditState] = useState<EditState | null>(null);
+
+  function openEdit(row: Row, e: React.MouseEvent) {
+    if (row.descripcion === "Saldo anterior") return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setEditState({ row, anchor: { top: rect.bottom + 4, left: rect.left } });
+  }
+
+  function handleSaved(id: string, updated: Partial<Row>) {
+    setRows((prev) => prev.map((r) => r.id === id ? { ...r, ...updated } : r));
+  }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -132,6 +340,15 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
 
   return (
     <div>
+      {editState && (
+        <EditPopover
+          row={editState.row}
+          anchor={editState.anchor}
+          onClose={() => setEditState(null)}
+          onSaved={(updated) => handleSaved(editState.row.id, updated)}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm text-gray-500">
           {sorted.length} de {rows.length} movimientos
@@ -201,7 +418,6 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                   className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand">
                   <option value="">Todos</option>
                   {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
-                  <option value="">Sin tipo</option>
                 </select>
               </td>
               <td className="px-3 py-1.5">
@@ -235,7 +451,7 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                   className={isSaldoAnterior ? "bg-gray-50 font-medium" : "hover:bg-gray-50"}
                 >
                   <td className="px-4 py-2 text-gray-500 whitespace-nowrap tabular-nums text-xs">{row.fecha}</td>
-                  <td className="px-4 py-2 text-gray-800 max-w-[220px] truncate" title={row.descripcion ?? ""}>
+                  <td className="px-4 py-2 text-gray-800 max-w-[200px] truncate" title={row.descripcion ?? ""}>
                     {row.descripcion ?? "—"}
                   </td>
                   {hasNumero && (
@@ -258,20 +474,41 @@ export default function BankStatementTable({ rows }: { rows: Row[] }) {
                       {row.importe_uyu != null ? formatUYU(Math.abs(row.importe_uyu)) : ""}
                     </td>
                   )}
+                  {/* Tipo — clickeable para editar */}
                   <td className="px-4 py-2">
-                    {row.tipo ? (
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${TIPO_BADGE[row.tipo] ?? "bg-gray-100 text-gray-600"}`}>
-                        {row.tipo}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-300">—</span>
-                    )}
+                    {!isSaldoAnterior ? (
+                      <button
+                        onClick={(e) => openEdit(row, e)}
+                        title="Clic para editar clasificación"
+                        className="text-left"
+                      >
+                        {row.tipo ? (
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium cursor-pointer hover:opacity-80 ${TIPO_BADGE[row.tipo] ?? "bg-gray-100 text-gray-600"}`}>
+                            {row.tipo}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300 hover:text-gray-500 cursor-pointer">+ clasificar</span>
+                        )}
+                      </button>
+                    ) : null}
                   </td>
-                  <td className="px-4 py-2 text-xs text-gray-500 max-w-[140px] truncate" title={row.categoria_negocio ?? ""}>
+                  <td
+                    className="px-4 py-2 text-xs text-gray-500 max-w-[130px] truncate cursor-pointer hover:bg-gray-100 rounded"
+                    title={(row.categoria_negocio ?? "") + " — clic para editar"}
+                    onClick={(e) => !isSaldoAnterior && openEdit(row, e)}
+                  >
                     {row.categoria_negocio || ""}
                   </td>
-                  <td className="px-4 py-2 text-xs text-gray-500 max-w-[140px] truncate" title={row.categoria_personal ?? ""}>
-                    {row.categoria_personal || (row.clasificado === "No" ? <span className="text-orange-400">Sin clasificar</span> : "")}
+                  <td
+                    className="px-4 py-2 text-xs max-w-[130px] truncate cursor-pointer hover:bg-gray-100 rounded"
+                    title={(row.categoria_personal ?? "") + " — clic para editar"}
+                    onClick={(e) => !isSaldoAnterior && openEdit(row, e)}
+                  >
+                    {row.categoria_personal
+                      ? <span className="text-gray-500">{row.categoria_personal}</span>
+                      : row.clasificado === "No" && !isSaldoAnterior
+                        ? <span className="text-orange-400">Sin clasificar</span>
+                        : null}
                   </td>
                 </tr>
               );

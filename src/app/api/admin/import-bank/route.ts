@@ -77,9 +77,17 @@ export async function POST(req: NextRequest) {
     (r) => !existingKeys.has(`${r.fecha}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}|${r.saldo ?? ""}`)
   );
 
+  // Fetch custom rules from DB and merge into classifier
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: customRules } = await (sb.from("clasificacion_reglas") as any)
+    .select("keyword, tipo, cat_negocio, cat_personal");
+
   // Apply auto-classification and TC conversion
   const enriched = newRows.map((r) => {
-    const clasi = clasificar(r.descripcion ?? "");
+    const isSaldoAnterior = r.descripcion === "Saldo anterior";
+    const clasi = isSaldoAnterior
+      ? { clasificado: "No" as const, tipo: "", categoria_negocio: "", categoria_personal: "" }
+      : clasificar(r.descripcion ?? "", customRules ?? []);
     const tc = r.moneda === "USD" ? getTc(r.fecha) : null;
     const importe_uyu = r.moneda === "USD" && tc
       ? ((r.credito ?? 0) - (r.debito ?? 0)) * tc
