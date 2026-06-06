@@ -471,8 +471,7 @@ export function parseBBVAPdf(text: string): BankRow[] {
 // ── Scotiabank PDF ────────────────────────────────────────────────────────────
 
 const _SCOTIABANK_IGNORAR = [
-  "INTERESES FINANCIACION", "MULTA POR PAGO", "DB - IMPUESTO", "SEG.VIDA",
-  "COMISION PAGO RED", "TOTAL Tarjeta", "Total Transacciones", "IVA sobre",
+  "TOTAL Tarjeta", "Total Transacciones", "IVA sobre",
   "CARGO COMPRA EN EL EXTERI",
 ];
 
@@ -579,9 +578,8 @@ export function parseScotiabankPdf(text: string): BankRow[] {
 // ── Itaú Tarjeta (Credit Card PDF) ───────────────────────────────────────────
 const _ITAU_CARD_INGRESO = ["PAGOS", "REVERSAL", "DEV.", "DEVOLUCION", "REVERSION"];
 const _ITAU_CARD_IGNORAR = [
-  "SALDO DEL ESTADO", "** TOTAL", "TOTAL TRANSACCIONES", "INTERESES COMPENSATORIO",
-  "INTERESES MORATORIO", "SEGURO DE VIDA SOBRE", "IVA INC", "IVA SOBRE",
-  "SALDO CONTADO", "UD. HA GENERADO", "REDUC. IVA", "FECHA DETALLE", "En este mes",
+  "SALDO DEL ESTADO", "** TOTAL", "TOTAL TRANSACCIONES",
+  "SALDO CONTADO", "UD. HA GENERADO", "FECHA DETALLE", "En este mes",
 ];
 
 export function parseItauCardPdf(text: string): BankRow[] {
