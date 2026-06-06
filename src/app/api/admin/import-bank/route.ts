@@ -62,20 +62,20 @@ export async function POST(req: NextRequest) {
 
   const sb = createServerClient();
 
-  // Deduplication
+  // Deduplication — key includes moneda y cuenta para separar correctamente
+  // bloques USD/UYU de BBVA e Itaú
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existing } = await (sb.from("bank_statements") as any)
-    .select("fecha, descripcion, debito, credito, saldo")
+    .select("fecha, descripcion, debito, credito, saldo, moneda, cuenta")
     .eq("banco", rows[0].banco);
 
-  const existingKeys = new Set(
-    ((existing ?? []) as { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null }[])
-      .map((r) => `${r.fecha}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}|${r.saldo ?? ""}`)
-  );
+  type ExRow = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; moneda: string; cuenta: string | null };
+  function dedupKey(r: ExRow | typeof rows[0]) {
+    return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}`;
+  }
 
-  const newRows = rows.filter(
-    (r) => !existingKeys.has(`${r.fecha}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}|${r.saldo ?? ""}`)
-  );
+  const existingKeys = new Set(((existing ?? []) as ExRow[]).map(dedupKey));
+  const newRows = rows.filter((r) => !existingKeys.has(dedupKey(r)));
 
   // Fetch custom rules from DB and merge into classifier
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
