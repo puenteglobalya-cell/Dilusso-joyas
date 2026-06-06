@@ -477,12 +477,22 @@ export function parseScotiabankPdf(text: string): BankRow[] {
   const cuentaMatch = text.match(/\b(4318\d{4,})\b/);
   const cuenta = cuentaMatch ? cuentaMatch[1] : "43185955";
 
-  // Extract emission date (Fecha de emisión / Fecha de liquidación)
-  const emisionMatch = text.match(/[Ff]echa\s+de\s+(?:emisi[oó]n|liquidaci[oó]n)[^\d]*(\d{2})\/(\d{2})\/(\d{2,4})/);
-  const emisionDate = emisionMatch
-    ? `${emisionMatch[3].length === 2 ? "20" + emisionMatch[3] : emisionMatch[3]}-${emisionMatch[2].padStart(2, "0")}-${emisionMatch[1].padStart(2, "0")}`
-    : null;
-  const emisionYM = emisionDate ? emisionDate.slice(0, 7) : null; // "YYYY-MM"
+  // Extract emission date — try flexible patterns
+  let emisionDate: string | null = null;
+  const scPat1 = text.match(/[Ff]echa\s+de\s+(?:emisi.n|liquidaci.n)[\s\S]{0,30}?(\d{2})\/(\d{2})\/(\d{2,4})/);
+  if (scPat1) {
+    const y = scPat1[3].length === 2 ? "20" + scPat1[3] : scPat1[3];
+    emisionDate = `${y}-${scPat1[2].padStart(2, "0")}-${scPat1[1].padStart(2, "0")}`;
+  } else {
+    // Fallback: last date in first 600 chars of doc
+    const scPat2 = text.slice(0, 600).match(/(\d{2})\/(\d{2})\/(\d{2,4})/g);
+    if (scPat2 && scPat2.length > 0) {
+      const last = scPat2[scPat2.length - 1].match(/(\d{2})\/(\d{2})\/(\d{2,4})/)!;
+      const y = last[3].length === 2 ? "20" + last[3] : last[3];
+      emisionDate = `${y}-${last[2].padStart(2, "0")}-${last[1].padStart(2, "0")}`;
+    }
+  }
+  const emisionYM = emisionDate ? emisionDate.slice(0, 7) : null;
 
   const lines = text.split("\n");
 
@@ -567,11 +577,24 @@ const _ITAU_CARD_IGNORAR = [
 export function parseItauCardPdf(text: string): BankRow[] {
   const rows: BankRow[] = [];
 
-  // Extract emission date: "Fecha de emisión\n03/06/25" or inline
-  const emisionMatch = text.match(/[Ff]echa\s+de\s+emisi[oó]n[^\d]*(\d{2})\/(\d{2})\/(\d{2,4})/);
-  const emisionDate = emisionMatch
-    ? `${emisionMatch[3].length === 2 ? "20" + emisionMatch[3] : emisionMatch[3]}-${emisionMatch[2].padStart(2, "0")}-${emisionMatch[1].padStart(2, "0")}`
-    : null;
+  // Extract emission date — try multiple patterns since PDF encoding varies
+  // Pattern 1: "Fecha de emisión" (with or without accent) followed by DD/MM/YY
+  // Pattern 2: standalone date in header area like "03/06/25"
+  let emisionDate: string | null = null;
+  const emPat1 = text.match(/[Ff]echa\s+de\s+emisi.n[\s\S]{0,30}?(\d{2})\/(\d{2})\/(\d{2,4})/);
+  if (emPat1) {
+    const y = emPat1[3].length === 2 ? "20" + emPat1[3] : emPat1[3];
+    emisionDate = `${y}-${emPat1[2].padStart(2, "0")}-${emPat1[1].padStart(2, "0")}`;
+  } else {
+    // Fallback: look for "Pr.ximo vencimiento" or "Vencimiento" date near top of doc
+    const emPat2 = text.slice(0, 600).match(/(\d{2})\/(\d{2})\/(\d{2,4})/g);
+    // Take the last date found in the header (usually emission date is last)
+    if (emPat2 && emPat2.length > 0) {
+      const last = emPat2[emPat2.length - 1].match(/(\d{2})\/(\d{2})\/(\d{2,4})/)!;
+      const y = last[3].length === 2 ? "20" + last[3] : last[3];
+      emisionDate = `${y}-${last[2].padStart(2, "0")}-${last[1].padStart(2, "0")}`;
+    }
+  }
   const emisionYM = emisionDate ? emisionDate.slice(0, 7) : null;
 
   for (const line of text.split("\n")) {
