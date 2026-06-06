@@ -470,26 +470,35 @@ export function parseBBVAPdf(text: string): BankRow[] {
 
 // ── Scotiabank PDF ────────────────────────────────────────────────────────────
 
+const _SCOTIABANK_IGNORAR = [
+  "INTERESES FINANCIACION", "MULTA POR PAGO", "DB - IMPUESTO", "SEG.VIDA",
+  "COMISION PAGO RED", "TOTAL Tarjeta", "Total Transacciones", "IVA sobre",
+  "CARGO COMPRA EN EL EXTERI",
+];
+
 export function parseScotiabankPdf(text: string): BankRow[] {
   const rows: BankRow[] = [];
 
-  // Extract account number from header (e.g. "43185955")
-  const cuentaMatch = text.match(/\b(4318\d{4,})\b/);
+  // Account number: first 8-digit sequence starting with "4318"
+  const cuentaMatch = text.match(/\b(4318\d{4})\b/);
   const cuenta = cuentaMatch ? cuentaMatch[1] : "43185955";
 
-  // Extract emission date — try flexible patterns
+  // Emission date: Scotiabank encodes it as account+DDMMYYYY on line 3
+  // e.g. "4318595513062025" = account(43185955) + date(13062025)
   let emisionDate: string | null = null;
-  const scPat1 = text.match(/[Ff]echa\s+de\s+(?:emisi.n|liquidaci.n)[\s\S]{0,30}?(\d{2})\/(\d{2})\/(\d{2,4})/);
-  if (scPat1) {
-    const y = scPat1[3].length === 2 ? "20" + scPat1[3] : scPat1[3];
-    emisionDate = `${y}-${scPat1[2].padStart(2, "0")}-${scPat1[1].padStart(2, "0")}`;
+  const encodedMatch = text.match(/\b4318\d{4}(\d{2})(\d{2})(\d{4})\b/);
+  if (encodedMatch) {
+    emisionDate = `${encodedMatch[3]}-${encodedMatch[2]}-${encodedMatch[1]}`;
   } else {
-    // Fallback: last date in first 600 chars of doc
-    const scPat2 = text.slice(0, 600).match(/(\d{2})\/(\d{2})\/(\d{2,4})/g);
-    if (scPat2 && scPat2.length > 0) {
-      const last = scPat2[scPat2.length - 1].match(/(\d{2})\/(\d{2})\/(\d{2,4})/)!;
-      const y = last[3].length === 2 ? "20" + last[3] : last[3];
-      emisionDate = `${y}-${last[2].padStart(2, "0")}-${last[1].padStart(2, "0")}`;
+    // Fallback: find "Fecha de emisión" and get the date that precedes it
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+    const emIdx = lines.findIndex(l => l.includes("Fecha de emisi"));
+    if (emIdx > 0) {
+      const m = lines[emIdx - 1].match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+      if (m) {
+        const y = m[3].length === 2 ? "20" + m[3] : m[3];
+        emisionDate = `${y}-${m[2]}-${m[1]}`;
+      }
     }
   }
   const emisionYM = emisionDate ? emisionDate.slice(0, 7) : null;
@@ -497,27 +506,27 @@ export function parseScotiabankPdf(text: string): BankRow[] {
   const lines = text.split("\n");
 
   for (const line of lines) {
-    // Skip totals lines starting with **
+    // Skip totals lines
     if (line.trimStart().startsWith("**")) continue;
 
     const trimmed = line.trim();
     if (!trimmed) continue;
+    if (_SCOTIABANK_IGNORAR.some(ign => trimmed.toUpperCase().includes(ign.toUpperCase()))) continue;
 
-    // Must start with DD/MM/YY date
-    const dateMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{2,4})\b/);
+    // Date is the first 8 chars: DD/MM/YY (NO space after — glued to description)
+    const dateMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{2,4})/);
     if (!dateMatch) continue;
 
     const y = dateMatch[3].length === 2 ? "20" + dateMatch[3] : dateMatch[3];
     const txDate = `${y}-${dateMatch[2].padStart(2, "0")}-${dateMatch[1].padStart(2, "0")}`;
-    // Use emission date if transaction is from a different (older) month
     const fecha = (emisionDate && emisionYM && txDate.slice(0, 7) !== emisionYM)
       ? emisionDate
       : txDate;
 
-    // Find where date ends in original line to preserve whitespace after it
-    const lineStart = line.indexOf(trimmed);
-    const dateEndInLine = lineStart + dateMatch[0].length;
-    const rest = line.slice(dateEndInLine); // preserve whitespace for column detection
+    // Rest: everything after the date — preserve original spacing for column detection
+    // Find position of date in original (unstripped) line
+    const lineOffset = line.indexOf(trimmed);
+    const rest = line.slice(lineOffset + dateMatch[0].length);
 
     // Find the last number in the rest and how much whitespace precedes it
     const numPattern = /(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})/g;
@@ -541,9 +550,10 @@ export function parseScotiabankPdf(text: string): BankRow[] {
     const amount = parseUY(rawAmount);
     if (amount === null) continue;
 
-    // Description: everything before the last number, stripped of leading/trailing whitespace
-    const concepto = rest.slice(0, lastMatchIdx).trim();
-    if (!concepto) continue;
+    // Description: everything before the last number, clean cuota notation (06/06, C04/10, 07/10)
+    let concepto = rest.slice(0, lastMatchIdx).trim();
+    concepto = concepto.replace(/\s*C?\d{1,2}\/\d{1,2}\s*$/, "").trim();
+    if (!concepto || concepto.length < 2) continue;
 
     // Payments ("PAGO") are credits; negative sign also indicates payment
     const isPayment = concepto.toUpperCase().includes("PAGO") || amount < 0;
