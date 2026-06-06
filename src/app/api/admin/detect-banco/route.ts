@@ -19,6 +19,30 @@ const BANCO_LABELS: Record<string, string> = {
   "itau-card-pdf":  "Itaú Tarjeta PDF",
 };
 
+function detectFromPdfText(text: string): string | null {
+  const upper = text.toUpperCase();
+
+  if (upper.includes("SCOTIABANK URUGUAY") || upper.includes("SCOTIABANK")) {
+    return "scotiabank-pdf";
+  }
+  if (upper.includes("OCA S.A") || upper.includes("OCA BLUE") || upper.includes("OCA VISA") ||
+      (upper.includes("OCA") && (upper.includes("ESTADO DE CUENTA") || upper.includes("LIQUIDACION") || upper.includes("TARJETA OCA")))) {
+    return "oca-pdf";
+  }
+  if (upper.includes("BANCO ITA") && (upper.includes("VISA") || upper.includes("TARJETA") || upper.includes("LIQUIDACION"))) {
+    return "itau-card-pdf";
+  }
+  if (upper.includes("BBVA") && (upper.includes("PESOS URUGUAYOS") || upper.includes("DOLARES U.S.A") ||
+      upper.includes("CUENTAS CORRIENTES") || upper.includes("CAJA DE AHORROS") || upper.includes("CUENTA CORRIENTE"))) {
+    return "bbva-pdf";
+  }
+  if (upper.includes("BANCO ITA")) {
+    return "itau-card-pdf";
+  }
+  // Fallback: filename-based for BBVA (account numbers in filename)
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json() as { base64?: string; filename?: string };
   if (!body.base64 || !body.filename) {
@@ -27,33 +51,33 @@ export async function POST(req: NextRequest) {
 
   const filename = body.filename.toLowerCase();
   const ext = filename.split(".").pop() ?? "";
-  const buffer = Buffer.from(body.base64, "base64").buffer as ArrayBuffer;
+  const buf = Buffer.from(body.base64, "base64");
 
   let banco: string | null = null;
 
   if (ext === "xls" || ext === "xlsx") {
-    const detected = detectXlsBanco(buffer);
+    const detected = detectXlsBanco(buf.buffer as ArrayBuffer);
     if (detected === "BBVA") banco = "bbva-xls";
     else if (detected === "Itaú") banco = "itau-xls";
   } else if (ext === "pdf") {
-    // Read PDF as latin-1 text and look for bank markers
-    const bytes = new Uint8Array(buffer);
-    let text = "";
-    for (let i = 0; i < bytes.length; i++) {
-      text += String.fromCharCode(bytes[i]);
+    // First try: use pdf-parse to extract real text (handles all PDF encodings)
+    try {
+      const pdf = require("pdf-parse/lib/pdf-parse");
+      const data = await pdf(buf);
+      banco = detectFromPdfText(data.text as string);
+    } catch {
+      // Fallback: scan raw bytes as latin-1
+      let raw = "";
+      for (let i = 0; i < buf.length; i++) raw += String.fromCharCode(buf[i]);
+      banco = detectFromPdfText(raw);
     }
-    const upper = text.toUpperCase();
 
-    if (upper.includes("SCOTIABANK URUGUAY")) {
-      banco = "scotiabank-pdf";
-    } else if (upper.includes("OCA S.A") || upper.includes("OCA BLUE") || (upper.includes("OCA") && upper.includes("ESTADO DE CUENTA"))) {
-      banco = "oca-pdf";
-    } else if (upper.includes("BANCO ITA") && upper.includes("VISA")) {
-      banco = "itau-card-pdf";
-    } else if (upper.includes("BBVA") && (upper.includes("PESOS URUGUAYOS") || upper.includes("DOLARES U.S.A") || upper.includes("CUENTAS CORRIENTES") || upper.includes("CAJA DE AHORROS"))) {
-      banco = "bbva-pdf";
-    } else if (upper.includes("BANCO ITA")) {
-      banco = "itau-card-pdf";
+    // Last resort: detect by filename patterns
+    if (!banco) {
+      if (filename.includes("43185955") || filename.includes("scotia")) banco = "scotiabank-pdf";
+      else if (filename.includes("bbva") || filename.includes("15051382")) banco = "bbva-pdf";
+      else if (filename.includes("oca")) banco = "oca-pdf";
+      else if (filename.includes("365921") || filename.includes("365913") || filename.includes("itau")) banco = "itau-card-pdf";
     }
   }
 
