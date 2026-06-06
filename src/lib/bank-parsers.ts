@@ -477,6 +477,13 @@ export function parseScotiabankPdf(text: string): BankRow[] {
   const cuentaMatch = text.match(/\b(4318\d{4,})\b/);
   const cuenta = cuentaMatch ? cuentaMatch[1] : "43185955";
 
+  // Extract emission date (Fecha de emisión / Fecha de liquidación)
+  const emisionMatch = text.match(/[Ff]echa\s+de\s+(?:emisi[oó]n|liquidaci[oó]n)[^\d]*(\d{2})\/(\d{2})\/(\d{2,4})/);
+  const emisionDate = emisionMatch
+    ? `${emisionMatch[3].length === 2 ? "20" + emisionMatch[3] : emisionMatch[3]}-${emisionMatch[2].padStart(2, "0")}-${emisionMatch[1].padStart(2, "0")}`
+    : null;
+  const emisionYM = emisionDate ? emisionDate.slice(0, 7) : null; // "YYYY-MM"
+
   const lines = text.split("\n");
 
   for (const line of lines) {
@@ -491,7 +498,11 @@ export function parseScotiabankPdf(text: string): BankRow[] {
     if (!dateMatch) continue;
 
     const y = dateMatch[3].length === 2 ? "20" + dateMatch[3] : dateMatch[3];
-    const fecha = `${y}-${dateMatch[2].padStart(2, "0")}-${dateMatch[1].padStart(2, "0")}`;
+    const txDate = `${y}-${dateMatch[2].padStart(2, "0")}-${dateMatch[1].padStart(2, "0")}`;
+    // Use emission date if transaction is from a different (older) month
+    const fecha = (emisionDate && emisionYM && txDate.slice(0, 7) !== emisionYM)
+      ? emisionDate
+      : txDate;
 
     // Find where date ends in original line to preserve whitespace after it
     const lineStart = line.indexOf(trimmed);
@@ -556,6 +567,13 @@ const _ITAU_CARD_IGNORAR = [
 export function parseItauCardPdf(text: string): BankRow[] {
   const rows: BankRow[] = [];
 
+  // Extract emission date: "Fecha de emisión\n03/06/25" or inline
+  const emisionMatch = text.match(/[Ff]echa\s+de\s+emisi[oó]n[^\d]*(\d{2})\/(\d{2})\/(\d{2,4})/);
+  const emisionDate = emisionMatch
+    ? `${emisionMatch[3].length === 2 ? "20" + emisionMatch[3] : emisionMatch[3]}-${emisionMatch[2].padStart(2, "0")}-${emisionMatch[1].padStart(2, "0")}`
+    : null;
+  const emisionYM = emisionDate ? emisionDate.slice(0, 7) : null;
+
   for (const line of text.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -568,7 +586,11 @@ export function parseItauCardPdf(text: string): BankRow[] {
 
     const [, d, mo, y2, rest] = m;
     const year = 2000 + parseInt(y2);
-    const fecha = `${year}-${mo}-${d}`;
+    const txDate = `${year}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    // Use emission date for installments from prior periods
+    const fecha = (emisionDate && emisionYM && txDate.slice(0, 7) !== emisionYM)
+      ? emisionDate
+      : txDate;
 
     // Strip leading card number like "9008 "
     let detail = rest;
