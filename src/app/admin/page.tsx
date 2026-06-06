@@ -3,12 +3,12 @@ import { useState, useEffect, type ReactNode } from "react";
 import { Upload, CheckCircle, AlertCircle, ChevronDown, Trash2, RefreshCw } from "lucide-react";
 
 const BANKS = [
-  { value: "bbva-xls", label: "BBVA — Excel (.xls/.xlsx)", accept: ".xls,.xlsx" },
-  { value: "itau-xls", label: "Itaú — Excel (.xls/.xlsx)", accept: ".xls,.xlsx" },
-  { value: "oca-pdf", label: "OCA — PDF (.pdf)", accept: ".pdf" },
-  { value: "bbva-pdf", label: "BBVA — PDF (.pdf)", accept: ".pdf" },
-  { value: "scotiabank-pdf", label: "Scotiabank — PDF (.pdf)", accept: ".pdf" },
-  { value: "itau-card-pdf", label: "Itaú Tarjeta VISA — PDF (.pdf)", accept: ".pdf" },
+  { value: "bbva-xls", label: "BBVA CC — Excel (detecta moneda del archivo)", accept: ".xls,.xlsx" },
+  { value: "itau-xls", label: "Itaú — Excel (detecta moneda del archivo)", accept: ".xls,.xlsx" },
+  { value: "oca-pdf",  label: "OCA — PDF", accept: ".pdf" },
+  { value: "bbva-pdf", label: "BBVA — PDF", accept: ".pdf" },
+  { value: "scotiabank-pdf",  label: "Scotiabank — PDF", accept: ".pdf" },
+  { value: "itau-card-pdf",   label: "Itaú Tarjeta VISA — PDF", accept: ".pdf" },
 ];
 
 function UploadCard({

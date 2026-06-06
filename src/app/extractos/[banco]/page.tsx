@@ -45,17 +45,25 @@ function checkPeriodContinuity(rows: Row[], computed: (number | null)[]): Period
 
 export default async function ExtractoBancoPage({ params }: { params: Promise<{ banco: string }> }) {
   const { banco } = await params;
-  const bancoDecoded = decodeURIComponent(banco);
+  // Slug format: "BBVA||UYU" (banco + moneda separated by ||)
+  const slug = decodeURIComponent(banco);
+  const [bancoNombre, moneda] = slug.includes("||") ? slug.split("||") : [slug, null];
+
   const sb = createServerClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (sb.from("bank_statements") as any)
+  let query = (sb.from("bank_statements") as any)
     .select("*")
-    .eq("banco", bancoDecoded)
+    .eq("banco", bancoNombre)
     .order("fecha", { ascending: true })
     .order("created_at", { ascending: true });
 
+  if (moneda) query = query.eq("moneda", moneda);
+
+  const { data } = await query;
   const rows = (data ?? []) as Row[];
+
+  const pageTitle = moneda ? `${bancoNombre} — ${moneda}` : bancoNombre;
 
   if (rows.length === 0) {
     return (
@@ -63,7 +71,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
         <Link href="/extractos" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
           <ArrowLeft className="w-4 h-4" /> Extractos
         </Link>
-        <p className="text-gray-500">No hay movimientos para {bancoDecoded}.</p>
+        <p className="text-gray-500">No hay movimientos para {pageTitle}.</p>
       </div>
     );
   }
@@ -104,7 +112,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{bancoDecoded}</h1>
+          <h1 className="text-2xl font-bold">{pageTitle}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{rows[0]?.cuenta && `Cuenta ${rows[0].cuenta} · `}{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
         </div>
         <Link href="/admin" className="text-xs text-brand underline">Importar más →</Link>

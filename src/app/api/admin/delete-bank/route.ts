@@ -3,27 +3,30 @@ import { createServerClient } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
-const BANCO_MAP: Record<string, string> = {
-  "bbva-xls": "BBVA",
-  "bbva-pdf": "BBVA",
-  "itau-xls": "Itaú",
-  "oca-pdf": "OCA",
-  "scotiabank-pdf": "Scotiabank",
-  "itau-card-pdf": "Itau-Card",
+const BANCO_MAP: Record<string, { banco: string; moneda?: string }> = {
+  "bbva-xls":       { banco: "BBVA" },
+  "bbva-xls-uyu":   { banco: "BBVA", moneda: "UYU" },
+  "bbva-xls-usd":   { banco: "BBVA", moneda: "USD" },
+  "bbva-pdf":       { banco: "BBVA" },
+  "itau-xls":       { banco: "Itaú" },
+  "itau-xls-uyu":   { banco: "Itaú", moneda: "UYU" },
+  "itau-xls-usd":   { banco: "Itaú", moneda: "USD" },
+  "oca-pdf":        { banco: "OCA" },
+  "scotiabank-pdf": { banco: "Scotiabank" },
+  "itau-card-pdf":  { banco: "Itau-Card" },
 };
 
 export async function POST(req: NextRequest) {
-  const { banco, mes } = await req.json(); // mes = "YYYY-MM" or null (= all)
+  const { banco, mes } = await req.json();
   if (!banco) return NextResponse.json({ error: "No banco" }, { status: 400 });
 
-  const bancoName = BANCO_MAP[banco] ?? banco;
+  const cfg = BANCO_MAP[banco] ?? { banco };
   const sb = createServerClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (sb.from("bank_statements") as any).delete({ count: "exact" }).eq("banco", bancoName);
-  if (mes) {
-    query = query.gte("fecha", `${mes}-01`).lte("fecha", `${mes}-31`);
-  }
+  let query = (sb.from("bank_statements") as any).delete({ count: "exact" }).eq("banco", cfg.banco);
+  if (cfg.moneda) query = query.eq("moneda", cfg.moneda);
+  if (mes) query = query.gte("fecha", `${mes}-01`).lte("fecha", `${mes}-31`);
 
   const { error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
