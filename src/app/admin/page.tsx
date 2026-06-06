@@ -332,6 +332,52 @@ export default function AdminPage() {
 
       <TcPanel />
       <TransferPanel />
+      <CoveragePanel />
+    </div>
+  );
+}
+
+function CoveragePanel() {
+  const [data, setData] = useState<{ months: string[]; bancos: { label: string; months: { ym: string; loaded: boolean }[] }[] } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/coverage").then(r => r.json()).then(setData);
+  }, []);
+
+  if (!data || data.months.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-xl border p-6 space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Cobertura de meses cargados</h2>
+        <p className="text-sm text-gray-500 mt-0.5">Verde = cargado · Rojo = faltante</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="text-xs w-full">
+          <thead>
+            <tr>
+              <th className="text-left pr-3 pb-1 font-medium text-gray-500 whitespace-nowrap">Banco</th>
+              {data.months.map(m => (
+                <th key={m} className="px-0.5 pb-1 font-normal text-gray-400 whitespace-nowrap">{m.slice(5)}/{m.slice(2,4)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.bancos.map(b => (
+              <tr key={b.label}>
+                <td className="pr-3 py-1 font-medium text-gray-700 whitespace-nowrap">{b.label}</td>
+                {b.months.map(({ ym, loaded }) => (
+                  <td key={ym} className="px-0.5 py-1 text-center">
+                    <span className={`inline-block w-5 h-5 rounded text-white text-[10px] leading-5 font-bold ${loaded ? "bg-green-400" : "bg-red-300"}`}>
+                      {loaded ? "✓" : "✗"}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

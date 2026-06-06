@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, parseItauCardPdf, BankRow } from "@/lib/bank-parsers";
+import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, parseItauCardPdf, detectXlsBanco, BankRow } from "@/lib/bank-parsers";
 import { clasificar } from "@/lib/clasificador";
 import { getTc } from "@/lib/tipo-cambio";
 
@@ -16,6 +16,18 @@ export async function POST(req: NextRequest) {
 
   const buffer = await file.arrayBuffer();
   let rows: BankRow[] = [];
+
+  // Validate XLS files match selected bank
+  if (banco === "bbva-xls" || banco === "itau-xls") {
+    const detected = detectXlsBanco(buffer);
+    const expected = banco === "bbva-xls" ? "BBVA" : "Itaú";
+    if (detected !== "desconocido" && detected !== expected) {
+      return NextResponse.json(
+        { error: `Archivo incorrecto: detectado como ${detected} pero seleccionaste ${expected}. Por favor seleccioná el banco correcto.` },
+        { status: 400 }
+      );
+    }
+  }
 
   try {
     switch (banco) {

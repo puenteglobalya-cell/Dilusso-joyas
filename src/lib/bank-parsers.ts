@@ -99,6 +99,17 @@ export const CUENTAS_PROPIAS: Record<string, { banco: string; moneda: string; la
   "365913":       { banco: "Itaú", moneda: "USD", label: "Itaú 365913 USD" },
 };
 
+export function detectXlsBanco(buffer: ArrayBuffer): "BBVA" | "Itaú" | "desconocido" {
+  const wb = XLSX.read(buffer, { type: "array" });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const all = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+  const row4 = ((all[4] ?? []) as string[]).map(c => String(c).toUpperCase());
+  if (row4.some(c => c.includes("CUENTAS CORRIENTES"))) return "BBVA";
+  const g5 = String(((all[4] ?? []) as string[])[6] ?? "");
+  if (/365921|365913|[Dd][oó]lares/.test(g5)) return "Itaú";
+  return "desconocido";
+}
+
 export function parseBBVAXls(buffer: ArrayBuffer): BankRow[] {
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
