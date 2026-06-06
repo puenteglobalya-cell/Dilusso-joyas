@@ -37,15 +37,17 @@ export async function PATCH(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Optionally save keyword to dictionary
+  let reglaError: string | null = null;
   if (body.guardar_regla?.keyword) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (sb.from("clasificacion_reglas") as any).upsert({
+    const { error: re } = await (sb.from("clasificacion_reglas") as any).upsert({
       keyword: body.guardar_regla.keyword,
       tipo: body.tipo,
       cat_negocio: body.categoria_negocio,
       cat_personal: body.categoria_personal,
     }, { onConflict: "keyword" });
+    if (re) reglaError = re.message;
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ...(reglaError ? { reglaError } : {}) });
 }

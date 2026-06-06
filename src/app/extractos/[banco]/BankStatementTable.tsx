@@ -94,6 +94,8 @@ function EditPopover({
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data.reglaError) alert(`Clasificación guardada, pero error al guardar en diccionario: ${data.reglaError}`);
         onSaved({ tipo, categoria_negocio: catNeg, categoria_personal: catPer, clasificado: tipo ? "Si" : "No" });
         onClose();
       }
