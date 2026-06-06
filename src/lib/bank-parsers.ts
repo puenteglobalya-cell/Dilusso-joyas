@@ -603,18 +603,17 @@ export function parseItauCardPdf(text: string): BankRow[] {
       }
 
       if (v1 > 0 && v2 > 0) {
-        if (Math.abs(v1 - v2) < 0.01) {
-          // Two equal amounts → USD
-          moneda = "USD"; importe = v2;
+        const bigSmall = Math.max(v1, v2) / Math.min(v1, v2);
+        if (bigSmall < 3) {
+          // Both amounts close to each other → USD transaction
+          // (Importe origen + Importe U$S with FX markup)
+          moneda = "USD"; importe = Math.max(v1, v2);
+        } else if (bigSmall >= 30 && bigSmall <= 65) {
+          // TC conversion: larger is UYU, smaller is USD
+          moneda = "UYU"; importe = Math.max(v1, v2);
         } else {
-          const ratio = v1 / v2;
-          if (ratio >= 30 && ratio <= 60) {
-            // TC conversion: first is UYU, second is USD equivalent
-            moneda = "UYU"; importe = v1;
-          } else {
-            // Unclear: take larger as UYU
-            moneda = "UYU"; importe = v1 > v2 ? v1 : v2;
-          }
+          // Unclear: take larger as UYU
+          moneda = "UYU"; importe = Math.max(v1, v2);
         }
       } else {
         // One of them is zero
