@@ -56,6 +56,11 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
   const sb = createServerClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: catData } = await (sb.from("categories") as any).select("name, type").order("name");
+  const catsNegocio: string[] = (catData ?? []).filter((c: { type: string }) => c.type === "negocio").map((c: { name: string }) => c.name);
+  const catsPersonal: string[] = (catData ?? []).filter((c: { type: string }) => c.type === "personal").map((c: { name: string }) => c.name);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (sb.from("bank_statements") as any)
     .select("*")
     .eq("banco", bancoNombre)
@@ -121,7 +126,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
             <p className="text-lg font-bold text-green-600">U$ {pagosUSD.toFixed(2)}</p>
           </div>
         </div>
-        <BankStatementTable rows={rowsWithSaldo} isCreditCard />
+        <BankStatementTable rows={rowsWithSaldo} isCreditCard catsNegocio={catsNegocio} catsPersonal={catsPersonal} />
       </div>
     );
   }
@@ -205,7 +210,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      <BankStatementTable rows={withCheck} isCreditCard={false} />
+      <BankStatementTable rows={withCheck} isCreditCard={false} catsNegocio={catsNegocio} catsPersonal={catsPersonal} />
     </div>
   );
 }

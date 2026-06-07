@@ -53,11 +53,17 @@ interface EditState {
 function EditPopover({
   row,
   anchor,
+  catsNegocio,
+  catsPersonal,
+  onCategoryCreated,
   onClose,
   onSaved,
 }: {
   row: Row;
   anchor: { top: number; left: number };
+  catsNegocio: string[];
+  catsPersonal: string[];
+  onCategoryCreated: (name: string, type: "negocio" | "personal") => void;
   onClose: () => void;
   onSaved: (updated: Partial<Row>) => void;
 }) {
@@ -78,6 +84,24 @@ function EditPopover({
   async function save(guardarEnDiccionario: boolean) {
     setSaving(true);
     try {
+      // Persist new category to DB if not in the known list
+      if (tipo === "negocio" && catNeg && !catsNegocio.includes(catNeg)) {
+        await fetch("/api/admin/categorias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: catNeg, type: "negocio" }),
+        });
+        onCategoryCreated(catNeg, "negocio");
+      }
+      if (tipo === "personal" && catPer && !catsPersonal.includes(catPer)) {
+        await fetch("/api/admin/categorias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: catPer, type: "personal" }),
+        });
+        onCategoryCreated(catPer, "personal");
+      }
+
       const body = {
         id: row.id,
         clasificado: tipo ? "Si" : "No",
@@ -164,7 +188,7 @@ function EditPopover({
                   className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand"
                 />
                 <datalist id="cats-negocio">
-                  {CATS_NEGOCIO.filter(Boolean).map((c) => <option key={c} value={c} />)}
+                  {catsNegocio.map((c) => <option key={c} value={c} />)}
                 </datalist>
               </div>
             )}
@@ -180,8 +204,7 @@ function EditPopover({
                   className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand"
                 />
                 <datalist id="cats-personal">
-                {/* placeholder so the block stays valid — options below */}
-                  {CATS_PERSONAL.filter(Boolean).map((c) => <option key={c} value={c} />)}
+                  {catsPersonal.map((c) => <option key={c} value={c} />)}
                 </datalist>
               </div>
             )}
@@ -271,7 +294,17 @@ function toCSV(rows: Row[]): string {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function BankStatementTable({ rows: initialRows, isCreditCard = false }: { rows: Row[]; isCreditCard?: boolean }) {
+export default function BankStatementTable({
+  rows: initialRows,
+  isCreditCard = false,
+  catsNegocio: initialCatsNegocio = [],
+  catsPersonal: initialCatsPersonal = [],
+}: {
+  rows: Row[];
+  isCreditCard?: boolean;
+  catsNegocio?: string[];
+  catsPersonal?: string[];
+}) {
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [sortKey, setSortKey] = useState<SortKey>("fecha");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -279,6 +312,8 @@ export default function BankStatementTable({ rows: initialRows, isCreditCard = f
     fecha: "", descripcion: "", moneda: "", tipo: "", categoria: "", clasificado: "",
   });
   const [editState, setEditState] = useState<EditState | null>(null);
+  const [catsNegocio, setCatsNegocio] = useState<string[]>(initialCatsNegocio);
+  const [catsPersonal, setCatsPersonal] = useState<string[]>(initialCatsPersonal);
 
   function openEdit(row: Row, e: React.MouseEvent) {
     if (row.descripcion === "Saldo anterior") return;
@@ -353,6 +388,12 @@ export default function BankStatementTable({ rows: initialRows, isCreditCard = f
         <EditPopover
           row={editState.row}
           anchor={editState.anchor}
+          catsNegocio={catsNegocio}
+          catsPersonal={catsPersonal}
+          onCategoryCreated={(name, type) => {
+            if (type === "negocio") setCatsNegocio((p) => [...new Set([...p, name])].sort());
+            else setCatsPersonal((p) => [...new Set([...p, name])].sort());
+          }}
           onClose={() => setEditState(null)}
           onSaved={(updated) => handleSaved(editState.row.id, updated)}
         />
