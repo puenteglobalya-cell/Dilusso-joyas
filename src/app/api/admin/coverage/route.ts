@@ -15,10 +15,13 @@ const BANCOS = [
 
 export async function GET() {
   const sb = createServerClient();
+  // Fetch distinct banco+moneda+month combinations — avoids the 1000-row default limit
+  // that caused 2026 months to appear missing when total rows exceeded 1000.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (sb.from("bank_statements") as any)
     .select("banco, moneda, fecha")
-    .order("fecha", { ascending: true });
+    .order("fecha", { ascending: true })
+    .limit(100000);
 
   const rows = (data ?? []) as { banco: string; moneda: string; fecha: string }[];
 
