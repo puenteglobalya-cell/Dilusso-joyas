@@ -3,16 +3,34 @@ import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/components/ui/card";
 import { TransactionFilters } from "@/components/transactions/filters";
-import { ExportButton } from "@/components/transactions/export-button";
 import { NegocioChart } from "@/components/negocio/chart";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
-import type { Transaction } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Negocio | Dilusso Joyas" };
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | undefined }>;
+}
+
+interface BSRow {
+  id: string;
+  banco: string;
+  fecha: string;
+  descripcion: string | null;
+  debito: number | null;
+  credito: number | null;
+  importe_uyu: number | null;
+  moneda: string;
+  tipo: string | null;
+  categoria_negocio: string | null;
+  categoria_personal: string | null;
+  clasificado: string | null;
+}
+
+function rowImporteUYU(r: BSRow): number {
+  if (r.moneda === "USD") return Math.abs(r.importe_uyu ?? 0);
+  return (r.debito ?? 0) + (r.credito ?? 0);
 }
 
 function pct(num: number, den: number): number {
@@ -25,64 +43,73 @@ export default async function NegocioPage({ searchParams }: Props) {
   const mesFilter = sp.mes ? parseInt(sp.mes) : null;
   const añoFilter = sp.año ? parseInt(sp.año) : new Date().getFullYear();
 
-  // ── Datos del período seleccionado ──────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (sb.from("transactions") as any)
-    .select("*")
-    .eq("tipo", "negocio")
-    .order("fecha", { ascending: false })
-    .limit(500);
-  if (añoFilter) query = query.eq("año", añoFilter);
-  if (mesFilter) query = query.eq("mes", mesFilter);
+  // Build date range for period filter
+  let fechaDesde: string;
+  let fechaHasta: string;
+  if (mesFilter) {
+    const m = String(mesFilter).padStart(2, "0");
+    fechaDesde = `${añoFilter}-${m}-01`;
+    const nextM = mesFilter === 12 ? 1 : mesFilter + 1;
+    const nextY = mesFilter === 12 ? añoFilter + 1 : añoFilter;
+    fechaHasta = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
+  } else {
+    fechaDesde = `${añoFilter}-01-01`;
+    fechaHasta = `${añoFilter + 1}-01-01`;
+  }
 
-  // ── Últimos 12 meses para tendencia ─────────────────────────────────────
+  const PAGE = 1000;
+  async function fetchBS(desde: string, hasta: string): Promise<BSRow[]> {
+    let all: BSRow[] = [];
+    let from = 0;
+    while (true) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (sb.from("bank_statements") as any)
+        .select("id,banco,fecha,descripcion,debito,credito,importe_uyu,moneda,tipo,categoria_negocio,categoria_personal,clasificado")
+        .eq("tipo", "negocio")
+        .gte("fecha", desde)
+        .lt("fecha", hasta)
+        .neq("descripcion", "Saldo anterior")
+        .order("fecha", { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (!data || data.length === 0) break;
+      all = all.concat(data as BSRow[]);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  }
+
+  // 13 months back for trend
   const now = new Date();
-  const fromAño = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear() - 1;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const trendQuery = (sb.from("transactions") as any)
-    .select("movimiento, importe_uyu, mes, año")
-    .eq("tipo", "negocio")
-    .gte("año", fromAño)
-    .order("año", { ascending: true })
-    .order("mes", { ascending: true });
+  const trendDesde = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
-  const [{ data }, { data: trendData }] = await Promise.all([query, trendQuery]);
+  const [txs, trendRows] = await Promise.all([
+    fetchBS(fechaDesde, fechaHasta),
+    fetchBS(trendDesde, `${now.getFullYear() + 1}-01-01`),
+  ]);
 
-  const txs = (data ?? []) as Transaction[];
-  const trendTxs = (trendData ?? []) as Pick<Transaction, "movimiento" | "importe_uyu" | "mes" | "año">[];
-
-  // ── Métricas del período ─────────────────────────────────────────────────
-  const ingresos = txs.filter((t) => t.movimiento === "ingreso").reduce((s, t) => s + (t.importe_uyu ?? 0), 0);
-  const egresos = txs.filter((t) => t.movimiento === "salida").reduce((s, t) => s + (t.importe_uyu ?? 0), 0);
+  const ingresos = txs.filter(r => (r.credito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
+  const egresos = txs.filter(r => (r.debito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
   const resultado = ingresos - egresos;
   const margenNeto = pct(resultado, ingresos);
+  const margenEbitda = margenNeto;
 
-  // EBITDA aproximado: resultado operativo (sin separar depreciación/intereses por falta de dato)
-  const ebitda = resultado;
-  const margenEbitda = pct(ebitda, ingresos);
-
-  // Punto de equilibrio: gastos fijos / (1 - gastos_variables / ingresos)
-  // Sin clasificación fijo/variable, se muestra el total de egresos como referencia
-  const puntoEquilibrio = ingresos > 0 ? egresos : null;
-
-  // ── Gastos por categoría ─────────────────────────────────────────────────
   const byCategory = txs
-    .filter((t) => t.movimiento === "salida" && t.categoria)
-    .reduce<Record<string, number>>((acc, t) => {
-      acc[t.categoria!] = (acc[t.categoria!] ?? 0) + (t.importe_uyu ?? 0);
+    .filter(r => (r.debito ?? 0) > 0 && r.categoria_negocio)
+    .reduce<Record<string, number>>((acc, r) => {
+      acc[r.categoria_negocio!] = (acc[r.categoria_negocio!] ?? 0) + rowImporteUYU(r);
       return acc;
     }, {});
   const categoryData = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
 
-  // ── Tendencia 12 meses ───────────────────────────────────────────────────
   const monthMap = new Map<string, { ingresos: number; egresos: number }>();
-  for (const t of trendTxs) {
-    if (!t.mes || !t.año) continue;
-    const key = `${t.año}-${String(t.mes).padStart(2, "0")}`;
-    if (!monthMap.has(key)) monthMap.set(key, { ingresos: 0, egresos: 0 });
-    const entry = monthMap.get(key)!;
-    if (t.movimiento === "ingreso") entry.ingresos += t.importe_uyu ?? 0;
-    else entry.egresos += t.importe_uyu ?? 0;
+  for (const r of trendRows) {
+    const ym = r.fecha.slice(0, 7);
+    if (!monthMap.has(ym)) monthMap.set(ym, { ingresos: 0, egresos: 0 });
+    const entry = monthMap.get(ym)!;
+    const amt = rowImporteUYU(r);
+    if ((r.credito ?? 0) > 0) entry.ingresos += amt;
+    else entry.egresos += amt;
   }
   const trend12 = Array.from(monthMap.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
@@ -99,7 +126,6 @@ export default async function NegocioPage({ searchParams }: Props) {
       };
     });
 
-  // ── Tabla mensual de los 12 meses ────────────────────────────────────────
   const tableMonths = trend12.slice().reverse();
 
   return (
@@ -107,14 +133,12 @@ export default async function NegocioPage({ searchParams }: Props) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Negocio</h1>
-          <p className="text-sm text-slate-500 mt-1">BBVA · OCA · Efectivo negocio</p>
+          <p className="text-sm text-slate-500 mt-1">Basado en extractos bancarios clasificados como negocio</p>
         </div>
-        <ExportButton />
       </div>
 
       <TransactionFilters />
 
-      {/* KPIs del período */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader>
@@ -148,7 +172,6 @@ export default async function NegocioPage({ searchParams }: Props) {
         </Card>
       </div>
 
-      {/* Gráfico 12 meses */}
       {trend12.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
@@ -160,7 +183,6 @@ export default async function NegocioPage({ searchParams }: Props) {
         </Card>
       )}
 
-      {/* Tabla de métricas por mes */}
       {tableMonths.length > 0 && (
         <div className="bg-white rounded-xl border overflow-x-auto mb-6">
           <table className="w-full text-sm">
@@ -171,35 +193,27 @@ export default async function NegocioPage({ searchParams }: Props) {
                 <th className="text-right px-4 py-3 font-medium text-slate-500">Egresos</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500">Resultado</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500">Margen neto</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Punto de eq.</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {tableMonths.map((m) => {
-                const peq = m.ingresos > 0 ? m.egresos : null;
-                return (
-                  <tr key={m.label} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium">{m.label}</td>
-                    <td className="px-4 py-3 text-right text-green-600">{formatUYU(m.ingresos)}</td>
-                    <td className="px-4 py-3 text-right text-red-600">{formatUYU(m.egresos)}</td>
-                    <td className={`px-4 py-3 text-right font-medium ${m.resultado >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {formatUYU(m.resultado)}
-                    </td>
-                    <td className={`px-4 py-3 text-right font-medium ${m.margenNeto >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {m.margenNeto.toFixed(1)}%
-                    </td>
-                    <td className="px-4 py-3 text-right text-slate-500">
-                      {peq != null ? formatUYU(peq) : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
+              {tableMonths.map((m) => (
+                <tr key={m.label} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium">{m.label}</td>
+                  <td className="px-4 py-3 text-right text-green-600">{formatUYU(m.ingresos)}</td>
+                  <td className="px-4 py-3 text-right text-red-600">{formatUYU(m.egresos)}</td>
+                  <td className={`px-4 py-3 text-right font-medium ${m.resultado >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {formatUYU(m.resultado)}
+                  </td>
+                  <td className={`px-4 py-3 text-right font-medium ${m.margenNeto >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {m.margenNeto.toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Gastos por categoría */}
       {categoryData.length > 0 && (
         <Card className="mb-6">
           <CardHeader><CardTitle>Gastos por categoría — período seleccionado</CardTitle></CardHeader>
@@ -207,43 +221,40 @@ export default async function NegocioPage({ searchParams }: Props) {
         </Card>
       )}
 
-      {/* Detalle transacciones */}
       <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-4 py-3 border-b bg-slate-50 flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-700">Transacciones del período</p>
-          {puntoEquilibrio != null && (
-            <p className="text-xs text-slate-500">
-              Punto de equilibrio: <span className="font-semibold text-slate-700">{formatUYU(puntoEquilibrio)}</span>
-            </p>
-          )}
+        <div className="px-4 py-3 border-b bg-slate-50">
+          <p className="text-sm font-medium text-slate-700">Movimientos del período</p>
         </div>
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Fecha</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Banco</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Detalle</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-500">Descripción</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Categoría</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Importe UYU</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {txs.map((tx) => (
-              <tr key={tx.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(tx.fecha)}</td>
-                <td className="px-4 py-3 font-medium">{tx.banco}</td>
-                <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{tx.detalle ?? "—"}</td>
-                <td className="px-4 py-3 text-slate-500">{tx.categoria ?? "—"}</td>
-                <td className={`px-4 py-3 text-right font-medium ${tx.movimiento === "salida" ? "text-red-600" : "text-green-600"}`}>
-                  {tx.movimiento === "salida" ? "-" : "+"}{formatUYU(tx.importe_uyu)}
-                </td>
-              </tr>
-            ))}
+            {txs.map((r) => {
+              const esIngreso = (r.credito ?? 0) > 0;
+              return (
+                <tr key={r.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(r.fecha)}</td>
+                  <td className="px-4 py-3 font-medium">{r.banco}</td>
+                  <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{r.descripcion ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-500">{r.categoria_negocio ?? "—"}</td>
+                  <td className={`px-4 py-3 text-right font-medium ${esIngreso ? "text-green-600" : "text-red-600"}`}>
+                    {esIngreso ? "+" : "-"}{formatUYU(rowImporteUYU(r))}
+                  </td>
+                </tr>
+              );
+            })}
             {!txs.length && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
-                  <p className="font-medium text-slate-500 mb-1">Sin transacciones para este período</p>
-                  <Link href="/admin" className="text-xs text-brand underline">Importar Excel maestro →</Link>
+                  <p className="font-medium text-slate-500 mb-1">Sin movimientos clasificados como negocio para este período</p>
+                  <Link href="/extractos" className="text-xs text-brand underline">Ir a extractos →</Link>
                 </td>
               </tr>
             )}
