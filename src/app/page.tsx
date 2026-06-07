@@ -52,10 +52,10 @@ async function getStats() {
   }
 
   const [thisMonth, trendRows, unclRes, tcRes, settlRes] = await Promise.all([
-    fetchAll(q => q.gte("fecha", fechaDesde).lt("fecha", fechaHasta).neq("descripcion", "Saldo anterior")),
-    fetchAll(q => q.gte("fecha", `${año - 1}-${mesStr}-01`).neq("descripcion", "Saldo anterior").order("fecha", { ascending: true })),
+    fetchAll(q => q.gte("fecha", fechaDesde).lt("fecha", fechaHasta).neq("descripcion", "Saldo anterior").neq("tipo", "traspaso")),
+    fetchAll(q => q.gte("fecha", `${año - 1}-${mesStr}-01`).neq("descripcion", "Saldo anterior").neq("tipo", "traspaso").order("fecha", { ascending: true })),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (sb.from("bank_statements") as any).select("id", { count: "exact", head: true }).eq("clasificado", "No").neq("descripcion", "Saldo anterior"),
+    (sb.from("bank_statements") as any).select("id", { count: "exact", head: true }).eq("clasificado", "No").neq("descripcion", "Saldo anterior").neq("tipo", "traspaso"),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (sb.from("exchange_rates") as any).select("rate, date").order("date", { ascending: false }).limit(1).single(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
