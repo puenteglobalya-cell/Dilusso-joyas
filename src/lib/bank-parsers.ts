@@ -279,6 +279,23 @@ export function parseOcaPdf(text: string): BankRow[] {
   const DATE_RE = /(\d{2}\/\d{2}\/\d{4})/g;
   const rows: BankRow[] = [];
 
+  // Extract emission date from header (e.g. "Período: noviembre 2025" or a date near top)
+  // OCA PDFs have "Fecha de emisión DD/MM/YYYY" or just a date in header
+  let emisionDate: string | null = null;
+  const emPat = text.match(/[Ff]echa\s+de\s+emisi[oó]n[^\d]*(\d{2})\/(\d{2})\/(\d{4})/);
+  if (emPat) {
+    emisionDate = `${emPat[3]}-${emPat[2]}-${emPat[1]}`;
+  } else {
+    // Fallback: first DD/MM/YYYY date in header area (first 800 chars)
+    const headerMatch = text.slice(0, 800).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if (headerMatch) {
+      const candidate = `${headerMatch[3]}-${headerMatch[2]}-${headerMatch[1]}`;
+      const d = new Date(candidate + "T12:00:00Z");
+      if (!isNaN(d.getTime())) emisionDate = candidate;
+    }
+  }
+  const emisionYM = emisionDate?.slice(0, 7) ?? null;
+
   // Find table start (header may be split across lines)
   const headerMarker = "FechaConceptoDébitoCréditoSaldo";
   const headerMarker2 = "Fecha Concepto";
@@ -304,8 +321,12 @@ export function parseOcaPdf(text: string): BankRow[] {
     const dateStr = parts[i].trim();
     if (!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) continue;
 
-    const fecha = isoFromDMY(dateStr);
-    if (!fecha) continue;
+    const txFecha = isoFromDMY(dateStr);
+    if (!txFecha) continue;
+    // Use emission date for installments from prior periods (same logic as Itaú Card)
+    const fecha = (emisionDate && emisionYM && txFecha.slice(0, 7) !== emisionYM)
+      ? emisionDate
+      : txFecha;
 
     const rawContent = parts[i + 1] ?? "";
     let content = rawContent.replace(/\s+/g, " ").trim();
