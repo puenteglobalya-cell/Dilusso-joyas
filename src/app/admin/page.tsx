@@ -334,6 +334,7 @@ export default function AdminPage() {
       <BulkUploadPanel onImportDone={() => setCoverageKey(k => k + 1)} />
       <TcPanel />
       <TransferPanel />
+      <AplicarReglasPanel />
       <CoveragePanel key={coverageKey} />
     </div>
   );
@@ -621,6 +622,45 @@ function CoveragePanel() {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function AplicarReglasPanel() {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function aplicar() {
+    setLoading(true); setMsg(null);
+    try {
+      const res = await fetch("/api/admin/aplicar-reglas", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      setMsg(`✓ ${data.actualizados} movimientos clasificados automáticamente`);
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border p-6 space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Aplicar reglas a movimientos sin clasificar</h2>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Recorre todos los movimientos con clasificado=No y aplica las reglas del diccionario.
+          Útil después de agregar nuevas reglas o importar extractos masivamente.
+        </p>
+      </div>
+      <button
+        onClick={aplicar}
+        disabled={loading}
+        className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+      >
+        {loading ? "Aplicando…" : "Aplicar reglas del diccionario"}
+      </button>
+      {msg && <p className="text-sm text-gray-700">{msg}</p>}
     </div>
   );
 }
