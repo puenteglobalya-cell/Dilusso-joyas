@@ -177,7 +177,7 @@ export default function AdminPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
-  const [coverageKey, setCoverageKey] = useState(0);
+  const [coverageKey, setCoverageKey] = useState(1);
 
   useEffect(() => {
     fetch(`/api/admin/bank-months?banco=${selectedBank}`)
