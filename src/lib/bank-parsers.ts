@@ -279,20 +279,14 @@ export function parseOcaPdf(text: string): BankRow[] {
   const DATE_RE = /(\d{2}\/\d{2}\/\d{4})/g;
   const rows: BankRow[] = [];
 
-  // Extract emission date from header (e.g. "Período: noviembre 2025" or a date near top)
-  // OCA PDFs have "Fecha de emisión DD/MM/YYYY" or just a date in header
+  // Only apply emission-date reassignment when the PDF explicitly declares "Fecha de emisión"
+  // (credit card statements with cuotas). Web exports / account statements have no such field
+  // and their first date is always the "Saldo anterior" from the prior month — using it as
+  // emisionDate would wrongly reassign all current-month transactions to the prior month.
   let emisionDate: string | null = null;
   const emPat = text.match(/[Ff]echa\s+de\s+emisi[oó]n[^\d]*(\d{2})\/(\d{2})\/(\d{4})/);
   if (emPat) {
     emisionDate = `${emPat[3]}-${emPat[2]}-${emPat[1]}`;
-  } else {
-    // Fallback: first DD/MM/YYYY date in header area (first 800 chars)
-    const headerMatch = text.slice(0, 800).match(/(\d{2})\/(\d{2})\/(\d{4})/);
-    if (headerMatch) {
-      const candidate = `${headerMatch[3]}-${headerMatch[2]}-${headerMatch[1]}`;
-      const d = new Date(candidate + "T12:00:00Z");
-      if (!isNaN(d.getTime())) emisionDate = candidate;
-    }
   }
   const emisionYM = emisionDate?.slice(0, 7) ?? null;
 
