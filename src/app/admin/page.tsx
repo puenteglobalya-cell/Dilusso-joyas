@@ -603,13 +603,19 @@ function CoveragePanel() {
       </div>
 
       {missing.length > 0 && (
-        <div className="border border-orange-200 bg-orange-50 rounded-lg p-4 space-y-2">
-          <p className="text-sm font-semibold text-orange-800">Extractos faltantes para solicitar:</p>
-          <ul className="space-y-1">
+        <div className="border border-orange-200 bg-orange-50 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-orange-800">Extractos faltantes para solicitar:</p>
+            <span className="text-xs font-bold bg-orange-200 text-orange-900 rounded-full px-2.5 py-0.5">
+              {missing.reduce((acc, b) => acc + b.meses.length, 0)} meses en total
+            </span>
+          </div>
+          <ul className="space-y-1.5">
             {missing.map(({ banco, meses }) => (
               <li key={banco} className="text-sm text-orange-700">
-                <span className="font-medium">{banco}:</span>{" "}
-                {meses.join(", ")}
+                <span className="font-medium">{banco}</span>
+                <span className="ml-1.5 text-xs font-semibold bg-orange-200 text-orange-900 rounded-full px-2 py-0.5">{meses.length}</span>
+                <span className="ml-2 text-orange-600">{meses.join(", ")}</span>
               </li>
             ))}
           </ul>
