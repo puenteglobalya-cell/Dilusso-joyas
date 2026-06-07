@@ -359,17 +359,29 @@ export default function BankStatementTable({ rows: initialRows, isCreditCard = f
       )}
 
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-gray-500">
-          {sorted.length} de {rows.length} movimientos
-          {hasFilters && (
-            <button
-              onClick={() => setFilters({ fecha: "", descripcion: "", moneda: "", tipo: "", categoria: "", clasificado: "" })}
-              className="ml-2 text-brand underline text-xs"
-            >
-              Limpiar filtros
-            </button>
-          )}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-gray-500">
+            {sorted.length} de {rows.length} movimientos
+            {hasFilters && (
+              <button
+                onClick={() => setFilters({ fecha: "", descripcion: "", moneda: "", tipo: "", categoria: "", clasificado: "" })}
+                className="ml-2 text-brand underline text-xs"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </p>
+          <button
+            onClick={() => setFilters((f) => ({ ...f, clasificado: f.clasificado === "No" ? "" : "No" }))}
+            className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+              filters.clasificado === "No"
+                ? "bg-orange-100 border-orange-300 text-orange-700"
+                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            {filters.clasificado === "No" ? "✗ Sin clasificar" : "Ver sin clasificar"}
+          </button>
+        </div>
         <button
           onClick={downloadCSV}
           className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
