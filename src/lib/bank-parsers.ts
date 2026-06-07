@@ -632,14 +632,16 @@ export function parseItauCardPdf(text: string): BankRow[] {
     if (/^\d{4}\s/.test(detail)) detail = detail.slice(5);
     // detail still has original spacing for whitespace-column detection
 
-    const numPat = /(-?\d{1,3}(?:\.\d{3})*,\d{2})/g;
+    // Match UY numbers: optional minus, digits (with optional dot-thousands), comma+2decimals
+    // \d[\d.]* allows 4+ digit numbers without thousands separator (e.g. 1267,00)
+    const numPat = /(-?\d[\d.]*,\d{2})/g;
     const allMatches = [...detail.matchAll(numPat)];
     if (allMatches.length === 0) continue;
 
     // Build concept: everything before the first number, strip cuota notation X/ Y or X/Y
     const firstMatch = allMatches[0];
     let concepto = detail.slice(0, firstMatch.index!).trim();
-    concepto = concepto.replace(/\s+\d+\/\s*\d+\s*$/, "").replace(/\s{2,}/g, " ").trim();
+    concepto = concepto.replace(/\s+C?\d+\/\s*\d+\s*$/, "").replace(/\s{2,}/g, " ").trim();
     if (!concepto || concepto.length < 2) continue;
 
     // Determine currency and amount using whitespace-position rules on last two numbers

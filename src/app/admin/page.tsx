@@ -177,6 +177,7 @@ export default function AdminPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [coverageKey, setCoverageKey] = useState(0);
 
   useEffect(() => {
     fetch(`/api/admin/bank-months?banco=${selectedBank}`)
@@ -330,10 +331,10 @@ export default function AdminPage() {
         </div>
       </UploadCard>
 
-      <BulkUploadPanel />
+      <BulkUploadPanel onImportDone={() => setCoverageKey(k => k + 1)} />
       <TcPanel />
       <TransferPanel />
-      <CoveragePanel />
+      <CoveragePanel key={coverageKey} />
     </div>
   );
 }
@@ -361,7 +362,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-function BulkUploadPanel() {
+function BulkUploadPanel({ onImportDone }: { onImportDone?: () => void }) {
   const [files, setFiles] = useState<FileState[]>([]);
   const [importing, setImporting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -442,6 +443,7 @@ function BulkUploadPanel() {
       }
     }
     setImporting(false);
+    onImportDone?.();
   }
 
   const readyCount = files.filter(f => f.status === "ready").length;
