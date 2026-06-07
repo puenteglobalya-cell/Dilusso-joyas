@@ -589,22 +589,31 @@ const _ITAU_CARD_IGNORAR = [
 export function parseItauCardPdf(text: string): BankRow[] {
   const rows: BankRow[] = [];
 
-  // Extract emission date — try multiple patterns since PDF encoding varies
-  // Pattern 1: "Fecha de emisión" (with or without accent) followed by DD/MM/YY
-  // Pattern 2: standalone date in header area like "03/06/25"
+  function isValidDate(iso: string): boolean {
+    const d = new Date(iso + "T12:00:00Z");
+    return !isNaN(d.getTime()) && d.toISOString().startsWith(iso);
+  }
+
+  function buildIso(dd: string, mm: string, yy: string): string | null {
+    const y = yy.length === 2 ? "20" + yy : yy.slice(-4);
+    const iso = `${y}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    return isValidDate(iso) ? iso : null;
+  }
+
+  // Extract emission date — look for "Fecha de emisión" label first,
+  // then fall back to the FIRST valid date in the header (top of page)
   let emisionDate: string | null = null;
   const emPat1 = text.match(/[Ff]echa\s+de\s+emisi.n[\s\S]{0,30}?(\d{2})\/(\d{2})\/(\d{2,4})/);
   if (emPat1) {
-    const y = emPat1[3].length === 2 ? "20" + emPat1[3] : emPat1[3];
-    emisionDate = `${y}-${emPat1[2].padStart(2, "0")}-${emPat1[1].padStart(2, "0")}`;
-  } else {
-    // Fallback: look for "Pr.ximo vencimiento" or "Vencimiento" date near top of doc
-    const emPat2 = text.slice(0, 600).match(/(\d{2})\/(\d{2})\/(\d{2,4})/g);
-    // Take the last date found in the header (usually emission date is last)
-    if (emPat2 && emPat2.length > 0) {
-      const last = emPat2[emPat2.length - 1].match(/(\d{2})\/(\d{2})\/(\d{2,4})/)!;
-      const y = last[3].length === 2 ? "20" + last[3] : last[3];
-      emisionDate = `${y}-${last[2].padStart(2, "0")}-${last[1].padStart(2, "0")}`;
+    emisionDate = buildIso(emPat1[1], emPat1[2], emPat1[3]);
+  }
+  if (!emisionDate) {
+    // Fallback: scan first 600 chars, take the FIRST valid date (emission date appears first)
+    const headerDates = text.slice(0, 600).match(/(\d{2})\/(\d{2})\/(\d{2,4})/g) ?? [];
+    for (const raw of headerDates) {
+      const m = raw.match(/(\d{2})\/(\d{2})\/(\d{2,4})/)!;
+      const candidate = buildIso(m[1], m[2], m[3]);
+      if (candidate) { emisionDate = candidate; break; }
     }
   }
   const emisionYM = emisionDate ? emisionDate.slice(0, 7) : null;
@@ -620,8 +629,8 @@ export function parseItauCardPdf(text: string): BankRow[] {
     if (!m) continue;
 
     const [, d, mo, y2, rest] = m;
-    const year = 2000 + parseInt(y2);
-    const txDate = `${year}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    const txDate = buildIso(d, mo, y2);
+    if (!txDate) continue; // skip lines with invalid dates (e.g. day 31 in Feb)
     // Use emission date for installments from prior periods
     const fecha = (emisionDate && emisionYM && txDate.slice(0, 7) !== emisionYM)
       ? emisionDate
