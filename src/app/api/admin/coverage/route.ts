@@ -15,15 +15,23 @@ const BANCOS = [
 
 export async function GET() {
   const sb = createServerClient();
-  // Fetch distinct banco+moneda+month combinations — avoids the 1000-row default limit
-  // that caused 2026 months to appear missing when total rows exceeded 1000.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (sb.from("bank_statements") as any)
-    .select("banco, moneda, fecha")
-    .order("fecha", { ascending: true })
-    .limit(100000);
 
-  const rows = (data ?? []) as { banco: string; moneda: string; fecha: string }[];
+  // Supabase PostgREST has a server-side max_rows limit (typically 1000).
+  // Paginate to collect all rows regardless of that limit.
+  const PAGE = 1000;
+  let rows: { banco: string; moneda: string; fecha: string }[] = [];
+  let from = 0;
+  while (true) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (sb.from("bank_statements") as any)
+      .select("banco, moneda, fecha")
+      .order("fecha", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    rows = rows.concat(data as { banco: string; moneda: string; fecha: string }[]);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
 
   // Build set of "banco|moneda|YYYY-MM" loaded
   const loaded = new Set(rows.map(r => `${r.banco}|${r.moneda}|${r.fecha.slice(0, 7)}`));
