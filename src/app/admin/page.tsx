@@ -536,6 +536,13 @@ function BulkUploadPanel({ onImportDone }: { onImportDone?: () => void }) {
   );
 }
 
+const MES_LABELS: Record<string, string> = {
+  "01": "ene", "02": "feb", "03": "mar", "04": "abr",
+  "05": "may", "06": "jun", "07": "jul", "08": "ago",
+  "09": "sep", "10": "oct", "11": "nov", "12": "dic",
+};
+function fmtYM(ym: string) { return `${MES_LABELS[ym.slice(5)] ?? ym.slice(5)}-${ym.slice(2, 4)}`; }
+
 function CoveragePanel() {
   const [data, setData] = useState<{ months: string[]; bancos: { label: string; months: { ym: string; loaded: boolean }[] }[] } | null>(null);
 
@@ -545,19 +552,32 @@ function CoveragePanel() {
 
   if (!data || data.months.length === 0) return null;
 
+  // Build missing list — only up to current month (skip future months)
+  const now = new Date();
+  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const missing: { banco: string; meses: string[] }[] = data.bancos
+    .map(b => ({
+      banco: b.label,
+      meses: b.months.filter(({ ym, loaded }) => !loaded && ym <= currentYM).map(({ ym }) => fmtYM(ym)),
+    }))
+    .filter(b => b.meses.length > 0);
+
   return (
-    <div className="bg-white rounded-xl border p-6 space-y-4">
+    <div className="bg-white rounded-xl border p-6 space-y-5">
       <div>
         <h2 className="text-lg font-semibold">Cobertura de meses cargados</h2>
         <p className="text-sm text-gray-500 mt-0.5">Verde = cargado · Rojo = faltante</p>
       </div>
+
       <div className="overflow-x-auto">
         <table className="text-xs w-full">
           <thead>
             <tr>
               <th className="text-left pr-3 pb-1 font-medium text-gray-500 whitespace-nowrap">Banco</th>
               {data.months.map(m => (
-                <th key={m} className="px-0.5 pb-1 font-normal text-gray-400 whitespace-nowrap">{m.slice(5)}/{m.slice(2,4)}</th>
+                <th key={m} className={`px-0.5 pb-1 font-normal whitespace-nowrap ${m > currentYM ? "text-gray-200" : "text-gray-400"}`}>
+                  {fmtYM(m)}
+                </th>
               ))}
             </tr>
           </thead>
@@ -567,9 +587,13 @@ function CoveragePanel() {
                 <td className="pr-3 py-1 font-medium text-gray-700 whitespace-nowrap">{b.label}</td>
                 {b.months.map(({ ym, loaded }) => (
                   <td key={ym} className="px-0.5 py-1 text-center">
-                    <span className={`inline-block w-5 h-5 rounded text-white text-[10px] leading-5 font-bold ${loaded ? "bg-green-400" : "bg-red-300"}`}>
-                      {loaded ? "✓" : "✗"}
-                    </span>
+                    {ym > currentYM ? (
+                      <span className="inline-block w-5 h-5 rounded bg-gray-100 text-gray-300 text-[10px] leading-5">–</span>
+                    ) : (
+                      <span className={`inline-block w-5 h-5 rounded text-white text-[10px] leading-5 font-bold ${loaded ? "bg-green-400" : "bg-red-300"}`}>
+                        {loaded ? "✓" : "✗"}
+                      </span>
+                    )}
                   </td>
                 ))}
               </tr>
@@ -577,6 +601,20 @@ function CoveragePanel() {
           </tbody>
         </table>
       </div>
+
+      {missing.length > 0 && (
+        <div className="border border-orange-200 bg-orange-50 rounded-lg p-4 space-y-2">
+          <p className="text-sm font-semibold text-orange-800">Extractos faltantes para solicitar:</p>
+          <ul className="space-y-1">
+            {missing.map(({ banco, meses }) => (
+              <li key={banco} className="text-sm text-orange-700">
+                <span className="font-medium">{banco}:</span>{" "}
+                {meses.join(", ")}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
