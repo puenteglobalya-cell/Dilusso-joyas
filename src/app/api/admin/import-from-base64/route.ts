@@ -97,9 +97,12 @@ export async function POST(req: NextRequest) {
   const sb = createServerClient();
 
   type ExRow = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; moneda: string; cuenta: string | null };
+  // Normalize description: trim + remove non-ASCII chars (e.g. U+E9D7 from OCA PDFs)
+  function normalizeDesc(s: string | null): string {
+    return (s ?? "").trim().replace(/[^\x00-\x7F]/g, "");
+  }
   function dedupKey(r: ExRow | typeof rows[0]) {
-    const desc = (r.descripcion ?? "").trim();
-    return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${desc}|${r.debito ?? ""}|${r.credito ?? ""}`;
+    return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${normalizeDesc(r.descripcion)}|${r.debito ?? ""}|${r.credito ?? ""}`;
   }
 
   // Paginate to avoid Supabase 1000-row limit when loading existing rows for dedup

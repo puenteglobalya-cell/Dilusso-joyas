@@ -19,16 +19,19 @@ function checkPeriodContinuity(rows: Row[], computed: (number | null)[]): Period
   for (let i = 1; i < rows.length; i++) {
     if (rows[i].descripcion !== "Saldo anterior") continue;
 
-    // Find the computed saldo of the last transaction row before this "Saldo anterior"
+    // Compare against the last non-SA entry from a date STRICTLY before this SA's date.
+    // This avoids false positives when transactions on the same date as the SA belong
+    // to the boundary between two periods (e.g. OCA closing transactions).
+    const saFecha = rows[i].fecha;
     let prevComputed: number | null = null;
     for (let j = i - 1; j >= 0; j--) {
-      if (rows[j].descripcion !== "Saldo anterior") {
+      if (rows[j].descripcion !== "Saldo anterior" && rows[j].fecha < saFecha) {
         prevComputed = computed[j];
         break;
       }
     }
 
-    const declared = rows[i].saldo; // what the new period declares as opening
+    const declared = rows[i].saldo;
     if (prevComputed === null || declared === null) continue;
     if (Math.abs(declared - prevComputed) > 1) {
       gaps.push({
@@ -69,20 +72,9 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
 
   if (moneda) query = query.eq("moneda", moneda);
 
-  // After fetch, sort "Saldo anterior" entries first within each date so continuity
-  // detection doesn't flag false positives when regular rows on the same date were
-  // inserted before the "Saldo anterior" row (different import batch).
-  const sortRows = (rs: Row[]) =>
-    [...rs].sort((a, b) => {
-      if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
-      const aIsSA = a.descripcion === "Saldo anterior" ? 0 : 1;
-      const bIsSA = b.descripcion === "Saldo anterior" ? 0 : 1;
-      if (aIsSA !== bIsSA) return aIsSA - bIsSA;
-      return (a.created_at ?? "").localeCompare(b.created_at ?? "");
-    });
 
   const { data } = await query;
-  const rows = sortRows((data ?? []) as Row[]);
+  const rows = (data ?? []) as Row[];
 
   const pageTitle = moneda ? `${bancoNombre} — ${moneda}` : bancoNombre;
 
