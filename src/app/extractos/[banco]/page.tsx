@@ -69,8 +69,20 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
 
   if (moneda) query = query.eq("moneda", moneda);
 
+  // After fetch, sort "Saldo anterior" entries first within each date so continuity
+  // detection doesn't flag false positives when regular rows on the same date were
+  // inserted before the "Saldo anterior" row (different import batch).
+  const sortRows = (rs: Row[]) =>
+    [...rs].sort((a, b) => {
+      if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
+      const aIsSA = a.descripcion === "Saldo anterior" ? 0 : 1;
+      const bIsSA = b.descripcion === "Saldo anterior" ? 0 : 1;
+      if (aIsSA !== bIsSA) return aIsSA - bIsSA;
+      return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+    });
+
   const { data } = await query;
-  const rows = (data ?? []) as Row[];
+  const rows = sortRows((data ?? []) as Row[]);
 
   const pageTitle = moneda ? `${bancoNombre} — ${moneda}` : bancoNombre;
 
@@ -202,10 +214,18 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
             {gaps.length} corte{gaps.length > 1 ? "s" : ""} de continuidad entre períodos
           </div>
           {gaps.map((g) => (
-            <p key={g.fecha} className="ml-6 text-xs">
-              {g.fecha}: saldo anterior declarado {formatUYU(g.recibido)} ≠ último saldo previo {formatUYU(g.esperado)}
-              {" "}({g.diff > 0 ? "+" : ""}{formatUYU(g.diff)})
-            </p>
+            <div key={g.fecha} className="ml-6 text-xs space-y-0.5">
+              <p>
+                <span className="font-medium">{g.fecha}:</span>{" "}
+                saldo declarado {formatUYU(g.recibido)} ≠ saldo calculado del período anterior {formatUYU(g.esperado)}
+                {" "}(<span className={g.diff > 0 ? "text-green-700 font-medium" : "text-red-700 font-medium"}>{g.diff > 0 ? "+" : ""}{formatUYU(g.diff)}</span>)
+              </p>
+              <p className="text-orange-600">
+                {g.diff > 0
+                  ? `Faltan movimientos por ${formatUYU(g.diff)} que no están en la base — probablemente falta importar el extracto de ese período.`
+                  : `Hay ${formatUYU(Math.abs(g.diff))} más en la base de lo que declara el siguiente período — podría haber movimientos duplicados o un extracto superpuesto.`}
+              </p>
+            </div>
           ))}
         </div>
       )}
