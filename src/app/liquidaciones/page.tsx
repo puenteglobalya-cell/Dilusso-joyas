@@ -2,7 +2,7 @@ import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardValue } from "@/components/ui/card";
 import { CheckCircle, AlertCircle } from "lucide-react";
-import type { Settlement, Transaction } from "@/lib/database.types";
+import type { Settlement } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Liquidaciones | Dilusso Joyas" };
@@ -14,15 +14,20 @@ interface Props {
 interface MonthRecon {
   año: number;
   mes: number;
-  tarjetaLiq: number;   // lo que dice la liquidación
-  tarjetaCob: number;   // lo que entró al banco BBVA
-  fadavalLiq: number;
-  fadavalCob: number;
-  ocaLiq: number;       // Venta tarjeta OCA registrada en consolidado
-  ocaCob: number;       // TRANSF.ENT cobrado en OCA
+  facturadoLiq: number; // efectivo + tarjeta + fadaval + oca de settlements
+  tarjetaCob: number;   // bank_statements BBVA categoria_negocio like "Venta tarjeta%"
+  fadavalCob: number;   // bank_statements BBVA categoria_negocio = "Fadaval cobranza"
+  ocaCob: number;       // bank_statements banco = "OCA" credito > 0
 }
 
-const TARJETA_KEYWORDS = ["CRED.MASTERCARD", "CREDITO VISA", "CRED.MAESTRO", "CRED.MASTER PREPA"];
+interface BSIncome {
+  fecha: string;
+  credito: number | null;
+  importe_uyu: number | null;
+  moneda: string;
+  banco: string;
+  categoria_negocio: string | null;
+}
 
 export default async function LiquidacionesPage({ searchParams }: Props) {
   const sp = await searchParams;
@@ -30,36 +35,52 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
   const mesFilter = sp.mes ? parseInt(sp.mes) : null;
   const añoFilter = sp.año ? parseInt(sp.año) : new Date().getFullYear();
 
+  const fechaDesde = `${añoFilter}-01-01`;
+  const fechaHasta = `${añoFilter + 1}-01-01`;
+
   // ── Liquidaciones del período ─────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (sb.from("settlements") as any).select("*").order("desde", { ascending: false });
   if (añoFilter) query = query.eq("año", añoFilter);
   if (mesFilter) query = query.eq("mes", mesFilter);
 
-  // ── Todas las liquidaciones para reconciliación (sin filtro de mes) ───────
+  // ── Todas las liquidaciones del año para reconciliación ───────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allSettlementsQ = (sb.from("settlements") as any)
-    .select("año, mes, tarjeta, fadaval")
+    .select("año, mes, tarjeta, fadaval, efectivo, oca")
     .eq("año", añoFilter);
 
-  // ── Transacciones de negocio para reconciliar ────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const txReconQ = (sb.from("transactions") as any)
-    .select("año, mes, detalle, categoria, banco, movimiento, importe_uyu")
-    .eq("tipo", "negocio")
-    .eq("movimiento", "ingreso")
-    .eq("año", añoFilter)
-    .in("categoria", ["Venta tarjeta", "Fabadal", "Venta tarjeta OCA"]);
+  // ── Cobros bancarios del año desde bank_statements ────────────────────────
+  const PAGE = 1000;
+  async function fetchBSIncome(): Promise<BSIncome[]> {
+    let all: BSIncome[] = [];
+    let from = 0;
+    while (true) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (sb.from("bank_statements") as any)
+        .select("fecha,credito,importe_uyu,moneda,banco,categoria_negocio")
+        .gt("credito", 0)
+        .gte("fecha", fechaDesde)
+        .lt("fecha", fechaHasta)
+        .neq("descripcion", "Saldo anterior")
+        .range(from, from + PAGE - 1);
+      if (!data || data.length === 0) break;
+      all = all.concat(data as BSIncome[]);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  }
 
-  const [{ data }, { data: allSett }, { data: txRecon }] = await Promise.all([
+  const [{ data }, { data: allSett }, bsIncome] = await Promise.all([
     query,
     allSettlementsQ,
-    txReconQ,
+    fetchBSIncome(),
   ]);
 
   const items = (data ?? []) as Settlement[];
-  const settlements = (allSett ?? []) as Pick<Settlement, "año" | "mes" | "tarjeta" | "fadaval">[];
-  const reconTxs = (txRecon ?? []) as Pick<Transaction, "año" | "mes" | "detalle" | "categoria" | "banco" | "movimiento" | "importe_uyu">[];
+  type SettRow = { año: number; mes: number; tarjeta: number | null; fadaval: number | null; efectivo: number | null; oca: number | null };
+  const settlements = (allSett ?? []) as SettRow[];
 
   const totals = {
     facturado: items.reduce((s, r) => s + (r.facturado ?? 0), 0),
@@ -71,58 +92,53 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
   };
 
   // ── Reconciliación por mes ────────────────────────────────────────────────
-  // Acumular liquidaciones por mes
-  const settlByMonth = new Map<string, { tarjeta: number; fadaval: number }>();
+  // Acumular liquidaciones por mes (tarjeta + fadaval + efectivo + oca = facturado)
+  const settlByMonth = new Map<string, { facturado: number }>();
   for (const s of settlements) {
     if (!s.mes || !s.año) continue;
-    const k = `${s.año}-${s.mes}`;
-    if (!settlByMonth.has(k)) settlByMonth.set(k, { tarjeta: 0, fadaval: 0 });
+    const k = `${s.año}-${String(s.mes).padStart(2, "0")}`;
+    if (!settlByMonth.has(k)) settlByMonth.set(k, { facturado: 0 });
     const e = settlByMonth.get(k)!;
-    e.tarjeta += s.tarjeta ?? 0;
-    e.fadaval += s.fadaval ?? 0;
+    e.facturado += (s.tarjeta ?? 0) + (s.fadaval ?? 0) + (s.efectivo ?? 0) + (s.oca ?? 0);
   }
 
-  // Acumular cobros bancarios por mes
+  // Acumular cobros bancarios por mes desde bank_statements
   const cobByMonth = new Map<string, { tarjeta: number; fadaval: number; oca: number }>();
-  for (const t of reconTxs) {
-    if (!t.mes || !t.año) continue;
-    const k = `${t.año}-${t.mes}`;
-    if (!cobByMonth.has(k)) cobByMonth.set(k, { tarjeta: 0, fadaval: 0, oca: 0 });
-    const e = cobByMonth.get(k)!;
-    const imp = t.importe_uyu ?? 0;
-    if (t.categoria === "Venta tarjeta" && TARJETA_KEYWORDS.some(kw => (t.detalle ?? "").toUpperCase().includes(kw))) {
-      e.tarjeta += imp;
-    } else if (t.categoria === "Venta tarjeta") {
-      e.tarjeta += imp; // cualquier venta tarjeta BBVA
-    } else if (t.categoria === "Fabadal") {
-      e.fadaval += imp;
-    } else if (t.categoria === "Venta tarjeta OCA") {
+  for (const r of bsIncome) {
+    const ym = r.fecha.slice(0, 7); // "YYYY-MM"
+    if (!cobByMonth.has(ym)) cobByMonth.set(ym, { tarjeta: 0, fadaval: 0, oca: 0 });
+    const e = cobByMonth.get(ym)!;
+    const imp = r.moneda === "USD" ? Math.abs(r.importe_uyu ?? 0) : (r.credito ?? 0);
+    const cat = (r.categoria_negocio ?? "").toLowerCase();
+    if (r.banco === "OCA") {
       e.oca += imp;
+    } else if (cat.includes("fadaval")) {
+      e.fadaval += imp;
+    } else if (cat.includes("venta tarjeta")) {
+      e.tarjeta += imp;
     }
   }
 
-  // Construir filas de reconciliación para los meses que tienen liquidación
-  const allMonths = Array.from(new Set([
-    ...Array.from(settlByMonth.keys()),
-    ...Array.from(cobByMonth.keys()),
-  ])).sort();
+  // Construir filas solo para meses con liquidación
+  const allMonths = Array.from(settlByMonth.keys()).sort();
 
   const recon: MonthRecon[] = allMonths.map((k) => {
     const [y, m] = k.split("-").map(Number);
-    const s = settlByMonth.get(k) ?? { tarjeta: 0, fadaval: 0 };
+    const s = settlByMonth.get(k) ?? { facturado: 0 };
     const c = cobByMonth.get(k) ?? { tarjeta: 0, fadaval: 0, oca: 0 };
     return {
       año: y, mes: m,
-      tarjetaLiq: s.tarjeta, tarjetaCob: c.tarjeta,
-      fadavalLiq: s.fadaval, fadavalCob: c.fadaval,
-      ocaLiq: 0, ocaCob: c.oca,
+      facturadoLiq: s.facturado,
+      tarjetaCob: c.tarjeta,
+      fadavalCob: c.fadaval,
+      ocaCob: c.oca,
     };
   });
 
-  // Totales acumulados pendientes
-  const totalPendTarjeta = recon.reduce((s, r) => s + (r.tarjetaLiq - r.tarjetaCob), 0);
-  const totalPendFadaval = recon.reduce((s, r) => s + (r.fadavalLiq - r.fadavalCob), 0);
-  const totalPendOca = recon.reduce((s, r) => s + (r.ocaLiq - r.ocaCob), 0);
+  // Totales
+  const totalCobrado = recon.reduce((s, r) => s + r.tarjetaCob + r.fadavalCob + r.ocaCob, 0);
+  const totalLiquidado = recon.reduce((s, r) => s + r.facturadoLiq, 0);
+  const totalPendiente = totalLiquidado - totalCobrado;
 
   return (
     <div className="p-8">
@@ -185,25 +201,30 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
       <div className="mb-6">
         <h2 className="text-lg font-bold mb-1">Pendiente de cobro</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Compara lo liquidado en caja vs lo acreditado en banco por mes. La diferencia es lo que falta cobrar.
+          Facturado (efectivo + tarjeta + Fadaval + OCA) vs lo acreditado en banco. El efectivo no pasa por banco.
         </p>
 
-        {/* Totales pendientes */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          {[
-            { label: "Tarjeta pendiente", value: totalPendTarjeta, color: "text-blue-600" },
-            { label: "Fadaval pendiente", value: totalPendFadaval, color: "text-purple-600" },
-            { label: "OCA pendiente", value: totalPendOca, color: "text-orange-600" },
-          ].map(({ label, value, color }) => (
-            <Card key={label}>
-              <CardHeader>
-                <CardTitle>{label}</CardTitle>
-                <CardValue className={Math.abs(value) < 500 ? "text-green-600" : color}>
-                  {formatUYU(value)}
-                </CardValue>
-              </CardHeader>
-            </Card>
-          ))}
+          <Card>
+            <CardHeader>
+              <CardTitle>Total liquidado</CardTitle>
+              <CardValue>{formatUYU(totalLiquidado)}</CardValue>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Cobrado en banco</CardTitle>
+              <CardValue className="text-green-600">{formatUYU(totalCobrado)}</CardValue>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Pendiente banco</CardTitle>
+              <CardValue className={Math.abs(totalPendiente) < 500 ? "text-green-600" : totalPendiente > 0 ? "text-red-600" : "text-slate-600"}>
+                {formatUYU(totalPendiente)}
+              </CardValue>
+            </CardHeader>
+          </Card>
         </div>
 
         <div className="bg-white rounded-xl border overflow-x-auto">
@@ -211,38 +232,31 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
             <thead className="bg-slate-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-slate-500">Mes</th>
-                {/* Tarjeta */}
-                <th className="text-right px-4 py-3 font-medium text-blue-500">Tarjeta liq.</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-500">Liquidado</th>
                 <th className="text-right px-4 py-3 font-medium text-blue-500">Tarjeta banco</th>
-                <th className="text-right px-4 py-3 font-medium text-blue-700">Diferencia</th>
-                {/* Fadaval */}
-                <th className="text-right px-4 py-3 font-medium text-purple-500">Fadaval liq.</th>
                 <th className="text-right px-4 py-3 font-medium text-purple-500">Fadaval banco</th>
-                <th className="text-right px-4 py-3 font-medium text-purple-700">Diferencia</th>
-                {/* OCA */}
-                <th className="text-right px-4 py-3 font-medium text-orange-500">OCA cobrado</th>
+                <th className="text-right px-4 py-3 font-medium text-orange-500">OCA banco</th>
+                <th className="text-right px-4 py-3 font-medium text-green-600">Total cobrado</th>
+                <th className="text-right px-4 py-3 font-medium text-red-500">Pendiente</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-500">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {recon.map((r) => {
-                const diffTarjeta = r.tarjetaLiq - r.tarjetaCob;
-                const diffFadaval = r.fadavalLiq - r.fadavalCob;
-                const ok = Math.abs(diffTarjeta) < 500 && Math.abs(diffFadaval) < 500;
+                const cobrado = r.tarjetaCob + r.fadavalCob + r.ocaCob;
+                const diff = r.facturadoLiq - cobrado;
+                const ok = Math.abs(diff) < 500;
                 return (
                   <tr key={`${r.año}-${r.mes}`} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium">{monthName(r.mes)} {r.año}</td>
-                    <td className="px-4 py-3 text-right text-blue-600">{formatUYU(r.tarjetaLiq)}</td>
+                    <td className="px-4 py-3 text-right font-medium">{formatUYU(r.facturadoLiq)}</td>
                     <td className="px-4 py-3 text-right text-blue-600">{formatUYU(r.tarjetaCob)}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${Math.abs(diffTarjeta) < 500 ? "text-green-600" : diffTarjeta > 0 ? "text-red-600" : "text-slate-600"}`}>
-                      {diffTarjeta > 0 ? "+" : ""}{formatUYU(diffTarjeta)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-purple-600">{formatUYU(r.fadavalLiq)}</td>
                     <td className="px-4 py-3 text-right text-purple-600">{formatUYU(r.fadavalCob)}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${Math.abs(diffFadaval) < 500 ? "text-green-600" : diffFadaval > 0 ? "text-red-600" : "text-slate-600"}`}>
-                      {diffFadaval > 0 ? "+" : ""}{formatUYU(diffFadaval)}
-                    </td>
                     <td className="px-4 py-3 text-right text-orange-600">{r.ocaCob > 0 ? formatUYU(r.ocaCob) : "—"}</td>
+                    <td className="px-4 py-3 text-right text-green-600 font-medium">{formatUYU(cobrado)}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${ok ? "text-green-600" : diff > 0 ? "text-red-600" : "text-slate-500"}`}>
+                      {diff > 0 ? "+" : ""}{formatUYU(diff)}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       {ok
                         ? <CheckCircle className="w-4 h-4 text-green-500 mx-auto" />
@@ -253,24 +267,21 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
                 );
               })}
               {recon.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-slate-400">Sin datos de reconciliación</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">Sin datos de reconciliación</td></tr>
               )}
             </tbody>
             {recon.length > 0 && (
               <tfoot className="border-t-2 bg-slate-50">
                 <tr>
                   <td className="px-4 py-3 font-bold text-slate-700">Total</td>
-                  <td className="px-4 py-3 text-right font-bold text-blue-600">{formatUYU(recon.reduce((s, r) => s + r.tarjetaLiq, 0))}</td>
+                  <td className="px-4 py-3 text-right font-bold">{formatUYU(totalLiquidado)}</td>
                   <td className="px-4 py-3 text-right font-bold text-blue-600">{formatUYU(recon.reduce((s, r) => s + r.tarjetaCob, 0))}</td>
-                  <td className={`px-4 py-3 text-right font-bold ${Math.abs(totalPendTarjeta) < 500 ? "text-green-600" : "text-red-600"}`}>
-                    {totalPendTarjeta > 0 ? "+" : ""}{formatUYU(totalPendTarjeta)}
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-purple-600">{formatUYU(recon.reduce((s, r) => s + r.fadavalLiq, 0))}</td>
                   <td className="px-4 py-3 text-right font-bold text-purple-600">{formatUYU(recon.reduce((s, r) => s + r.fadavalCob, 0))}</td>
-                  <td className={`px-4 py-3 text-right font-bold ${Math.abs(totalPendFadaval) < 500 ? "text-green-600" : "text-red-600"}`}>
-                    {totalPendFadaval > 0 ? "+" : ""}{formatUYU(totalPendFadaval)}
-                  </td>
                   <td className="px-4 py-3 text-right font-bold text-orange-600">{formatUYU(recon.reduce((s, r) => s + r.ocaCob, 0))}</td>
+                  <td className="px-4 py-3 text-right font-bold text-green-600">{formatUYU(totalCobrado)}</td>
+                  <td className={`px-4 py-3 text-right font-bold ${Math.abs(totalPendiente) < 500 ? "text-green-600" : "text-red-600"}`}>
+                    {totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}
+                  </td>
                   <td />
                 </tr>
               </tfoot>
@@ -278,7 +289,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
           </table>
         </div>
         <p className="text-xs text-slate-400 mt-2">
-          ✓ = diferencia menor a $500 · Diferencia positiva = falta acreditar · Negativa = acreditado de más (mes anterior)
+          Pendiente positivo = falta acreditar en banco · Negativo = acreditado de más (cobro de mes anterior) · ✓ = diferencia menor a $500
         </p>
       </div>
     </div>
