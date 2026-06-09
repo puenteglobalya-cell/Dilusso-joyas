@@ -76,6 +76,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, inserted: 0, warning: "No se encontraron movimientos en el archivo" });
   }
 
+  // Validate account number matches known accounts
+  const CUENTAS_CONOCIDAS: Record<string, string[]> = {
+    "BBVA":       ["15051382"],
+    "Itaú":       ["365913", "365921"],
+    "Itau-Card":  ["tarjeta"],
+    "OCA":        ["4154265"],
+    "Scotiabank": ["43185955"],
+  };
+  const cuentaArchivo = rows.find(r => r.cuenta && r.cuenta !== "")?.cuenta ?? null;
+  if (cuentaArchivo) {
+    const cuentasValidas = CUENTAS_CONOCIDAS[rows[0].banco] ?? [];
+    if (cuentasValidas.length > 0 && !cuentasValidas.includes(cuentaArchivo)) {
+      return NextResponse.json({
+        error: `Cuenta incorrecta: el archivo tiene cuenta "${cuentaArchivo}" pero para ${rows[0].banco} se esperan: ${cuentasValidas.join(", ")}. ¿Subiste el extracto equivocado?`,
+      }, { status: 400 });
+    }
+  }
+
   const sb = createServerClient();
 
   type ExRow = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; moneda: string; cuenta: string | null };
