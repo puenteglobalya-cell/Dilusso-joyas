@@ -98,7 +98,8 @@ export async function POST(req: NextRequest) {
 
   type ExRow = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; moneda: string; cuenta: string | null };
   function dedupKey(r: ExRow | typeof rows[0]) {
-    return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}`;
+    const desc = (r.descripcion ?? "").trim();
+    return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${desc}|${r.debito ?? ""}|${r.credito ?? ""}`;
   }
 
   // Paginate to avoid Supabase 1000-row limit when loading existing rows for dedup
