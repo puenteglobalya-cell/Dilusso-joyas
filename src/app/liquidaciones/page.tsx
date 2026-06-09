@@ -47,7 +47,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
   // ── Todas las liquidaciones del año para reconciliación ───────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allSettlementsQ = (sb.from("settlements") as any)
-    .select("año, mes, tarjeta, fadaval, efectivo, oca")
+    .select("año, mes, tarjeta, fadaval, efectivo")
     .eq("año", añoFilter);
 
   // ── Cobros bancarios del año desde bank_statements ────────────────────────
@@ -79,7 +79,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
   ]);
 
   const items = (data ?? []) as Settlement[];
-  type SettRow = { año: number; mes: number; tarjeta: number | null; fadaval: number | null; efectivo: number | null; oca: number | null };
+  type SettRow = { año: number; mes: number; tarjeta: number | null; fadaval: number | null; efectivo: number | null };
   const settlements = (allSett ?? []) as SettRow[];
 
   const totals = {
@@ -99,7 +99,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     const k = `${s.año}-${String(s.mes).padStart(2, "0")}`;
     if (!settlByMonth.has(k)) settlByMonth.set(k, { facturado: 0 });
     const e = settlByMonth.get(k)!;
-    e.facturado += (s.tarjeta ?? 0) + (s.fadaval ?? 0) + (s.efectivo ?? 0) + (s.oca ?? 0);
+    e.facturado += (s.tarjeta ?? 0) + (s.fadaval ?? 0) + (s.efectivo ?? 0);
   }
 
   // Acumular cobros bancarios por mes desde bank_statements
