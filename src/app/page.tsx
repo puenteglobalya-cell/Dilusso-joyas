@@ -35,14 +35,19 @@ async function getStats() {
 
   const PAGE = 1000;
 
-  async function fetchAll(filters: (q: ReturnType<typeof sb.from>) => ReturnType<typeof sb.from>): Promise<BSRow[]> {
+  async function fetchAll(opts: { desde?: string; hasta?: string; order?: boolean }): Promise<BSRow[]> {
     let all: BSRow[] = [];
     let from = 0;
     while (true) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await filters((sb.from("bank_statements") as any))
+      let q = (sb.from("bank_statements") as any)
         .select("tipo,debito,credito,importe_uyu,moneda,fecha")
-        .range(from, from + PAGE - 1);
+        .neq("descripcion", "Saldo anterior")
+        .neq("tipo", "traspaso");
+      if (opts.desde) q = q.gte("fecha", opts.desde);
+      if (opts.hasta) q = q.lt("fecha", opts.hasta);
+      if (opts.order) q = q.order("fecha", { ascending: true });
+      const { data } = await q.range(from, from + PAGE - 1);
       if (!data || data.length === 0) break;
       all = all.concat(data as BSRow[]);
       if (data.length < PAGE) break;
@@ -52,8 +57,8 @@ async function getStats() {
   }
 
   const [thisMonth, trendRows, unclRes, tcRes, settlRes] = await Promise.all([
-    fetchAll(q => q.gte("fecha", fechaDesde).lt("fecha", fechaHasta).neq("descripcion", "Saldo anterior").neq("tipo", "traspaso")),
-    fetchAll(q => q.gte("fecha", `${año - 1}-${mesStr}-01`).neq("descripcion", "Saldo anterior").neq("tipo", "traspaso").order("fecha", { ascending: true })),
+    fetchAll({ desde: fechaDesde, hasta: fechaHasta }),
+    fetchAll({ desde: `${año - 1}-${mesStr}-01`, order: true }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (sb.from("bank_statements") as any).select("id", { count: "exact", head: true }).eq("clasificado", "No").neq("descripcion", "Saldo anterior").neq("tipo", "traspaso"),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
