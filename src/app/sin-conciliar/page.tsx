@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { formatUYU, formatDate } from "@/lib/utils";
-import Link from "next/link";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ClassifyPopover } from "@/components/bank/ClassifyPopover";
 
 interface BSRow {
   id: string;
@@ -13,17 +13,15 @@ interface BSRow {
   credito: number | null;
   importe_uyu: number | null;
   moneda: string;
+  tipo: string | null;
+  categoria_negocio: string | null;
+  categoria_personal: string | null;
+  clasificado: string | null;
 }
 
 function rowImporteUYU(r: BSRow): number {
   if (r.moneda === "USD") return Math.abs(r.importe_uyu ?? 0);
   return (r.debito ?? 0) + (r.credito ?? 0);
-}
-
-function rowImporteOriginal(r: BSRow): { monto: number; moneda: string; esIngreso: boolean } {
-  const esIngreso = (r.credito ?? 0) > 0;
-  const monto = esIngreso ? (r.credito ?? 0) : (r.debito ?? 0);
-  return { monto, moneda: r.moneda, esIngreso };
 }
 
 type SortKey = "fecha" | "banco" | "descripcion" | "monto";
@@ -35,33 +33,56 @@ function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
     : <ArrowDown className="w-3 h-3 ml-1 inline text-brand" />;
 }
 
+interface EditState { row: BSRow; anchor: { top: number; left: number } }
+
 export default function SinConciliarPage() {
   const [rows, setRows] = useState<BSRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const [catsNegocio, setCatsNegocio] = useState<string[]>([]);
+  const [catsPersonal, setCatsPersonal] = useState<string[]>([]);
+  const [editState, setEditState] = useState<EditState | null>(null);
 
   const [sortKey, setSortKey] = useState<SortKey>("fecha");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [filterBanco, setFilterBanco] = useState("");
   const [filterDesc, setFilterDesc] = useState("");
   const [filterMoneda, setFilterMoneda] = useState("");
+  const [filterTipo, setFilterTipo] = useState("");
+  const [filterCat, setFilterCat] = useState("");
 
   useEffect(() => {
-    fetch("/api/admin/sin-clasificar")
-      .then(r => r.json())
-      .then(d => { setRows(d.rows ?? []); setTotal(d.total ?? 0); })
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/admin/sin-clasificar").then(r => r.json()),
+      fetch("/api/admin/categorias-list").then(r => r.json()),
+    ]).then(([d, cats]) => {
+      setRows(d.rows ?? []);
+      setCatsNegocio(cats.negocio ?? []);
+      setCatsPersonal(cats.personal ?? []);
+    }).finally(() => setLoading(false));
   }, []);
 
   const bancos = useMemo(() => [...new Set(rows.map(r => r.banco))].sort(), [rows]);
   const monedas = useMemo(() => [...new Set(rows.map(r => r.moneda))].sort(), [rows]);
 
+  // Category options depend on tipo filter
+  const catOptions = useMemo(() => {
+    if (filterTipo === "negocio") return catsNegocio;
+    if (filterTipo === "personal") return catsPersonal;
+    return [];
+  }, [filterTipo, catsNegocio, catsPersonal]);
+
   const filtered = useMemo(() => rows.filter(r => {
+    if (r.clasificado === "Si") return false;
     if (filterBanco && r.banco !== filterBanco) return false;
     if (filterMoneda && r.moneda !== filterMoneda) return false;
     if (filterDesc && !(r.descripcion ?? "").toLowerCase().includes(filterDesc.toLowerCase())) return false;
+    if (filterTipo && (r.tipo ?? "") !== filterTipo) return false;
+    if (filterCat) {
+      const cat = filterTipo === "negocio" ? (r.categoria_negocio ?? "") : (r.categoria_personal ?? "");
+      if (!cat.toLowerCase().includes(filterCat.toLowerCase())) return false;
+    }
     return true;
-  }), [rows, filterBanco, filterMoneda, filterDesc]);
+  }), [rows, filterBanco, filterMoneda, filterDesc, filterTipo, filterCat]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     let cmp = 0;
@@ -77,35 +98,59 @@ export default function SinConciliarPage() {
     else { setSortKey(k); setSortDir("asc"); }
   }
 
-  const hasFilters = filterBanco || filterDesc || filterMoneda;
+  function openEdit(row: BSRow, e: React.MouseEvent) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setEditState({ row, anchor: { top: rect.bottom + 4, left: rect.left } });
+  }
+
+  function handleSaved(id: string, updated: Partial<BSRow & { clasificado: string }>) {
+    // Remove from list once classified
+    if (updated.clasificado === "Si") {
+      setRows(prev => prev.filter(r => r.id !== id));
+    } else {
+      setRows(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r));
+    }
+  }
+
+  const hasFilters = filterBanco || filterDesc || filterMoneda || filterTipo || filterCat;
+  const total = rows.filter(r => r.clasificado !== "Si").length;
 
   return (
     <div className="p-8">
+      {editState && (
+        <ClassifyPopover
+          row={editState.row}
+          anchor={editState.anchor}
+          catsNegocio={catsNegocio}
+          catsPersonal={catsPersonal}
+          onCategoryCreated={(name, type) => {
+            if (type === "negocio") setCatsNegocio(p => [...new Set([...p, name])].sort());
+            else setCatsPersonal(p => [...new Set([...p, name])].sort());
+          }}
+          onClose={() => setEditState(null)}
+          onSaved={(updated) => { handleSaved(editState.row.id, updated); }}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Sin clasificar</h1>
           <p className="text-sm text-slate-500 mt-1">
             {loading ? "Cargando…" : `${sorted.length} de ${total} movimientos`}
             {hasFilters && (
-              <button
-                onClick={() => { setFilterBanco(""); setFilterDesc(""); setFilterMoneda(""); }}
-                className="ml-2 text-brand underline text-xs"
-              >
+              <button onClick={() => { setFilterBanco(""); setFilterDesc(""); setFilterMoneda(""); setFilterTipo(""); setFilterCat(""); }}
+                className="ml-2 text-brand underline text-xs">
                 Limpiar filtros
               </button>
             )}
           </p>
         </div>
-        <Link href="/extractos" className="text-xs text-brand underline">
-          Ir a extractos para clasificar →
-        </Link>
       </div>
 
-      {!loading && rows.length === 0 ? (
+      {!loading && total === 0 ? (
         <div className="text-center py-16 text-slate-400">
           <p className="text-2xl mb-2">✓</p>
           <p className="text-base font-medium text-slate-600">Todo clasificado</p>
-          <p className="text-sm mt-1">No hay movimientos pendientes de clasificar</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border overflow-x-auto">
@@ -130,9 +175,11 @@ export default function SinConciliarPage() {
                 <th className="px-4 py-3 font-medium text-right whitespace-nowrap">Importe original</th>
                 <th className="px-4 py-3 font-medium text-right whitespace-nowrap">
                   <button onClick={() => toggleSort("monto")} className="hover:text-gray-800">
-                    Importe UYU <SortIcon active={sortKey === "monto"} dir={sortDir} />
+                    Imp. UYU <SortIcon active={sortKey === "monto"} dir={sortDir} />
                   </button>
                 </th>
+                <th className="px-4 py-3 font-medium">Tipo</th>
+                <th className="px-4 py-3 font-medium">Categoría</th>
               </tr>
               {/* Filter row */}
               <tr className="border-b bg-white text-xs">
@@ -156,33 +203,60 @@ export default function SinConciliarPage() {
                   </select>
                 </td>
                 <td className="px-3 py-1.5" />
+                <td className="px-3 py-1.5">
+                  <select value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setFilterCat(""); }}
+                    className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand">
+                    <option value="">Todos</option>
+                    <option value="negocio">Negocio</option>
+                    <option value="personal">Personal</option>
+                  </select>
+                </td>
+                <td className="px-3 py-1.5">
+                  {catOptions.length > 0 ? (
+                    <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+                      className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand">
+                      <option value="">Todas</option>
+                      {catOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  ) : (
+                    <span className="text-gray-300 text-xs px-2">— elegí tipo —</span>
+                  )}
+                </td>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sorted.map(r => {
-                const { monto, moneda, esIngreso } = rowImporteOriginal(r);
+                const esIngreso = (r.credito ?? 0) > 0;
+                const montoOrig = esIngreso ? (r.credito ?? 0) : (r.debito ?? 0);
                 const importeUYU = rowImporteUYU(r);
-                const esUSD = moneda === "USD";
+                const esUSD = r.moneda === "USD";
+                const cat = r.tipo === "negocio" ? r.categoria_negocio : r.categoria_personal;
                 return (
-                  <tr key={r.id} className="hover:bg-slate-50">
+                  <tr key={r.id} className="hover:bg-blue-50 cursor-pointer" onClick={e => openEdit(r, e)}>
                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(r.fecha)}</td>
                     <td className="px-4 py-3 font-medium">{r.banco}</td>
                     <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{r.descripcion ?? "—"}</td>
                     <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${esIngreso ? "text-green-600" : "text-red-600"}`}>
                       {esIngreso ? "+" : "-"}
-                      {esUSD ? `U$ ${monto.toFixed(2)}` : formatUYU(monto)}
+                      {esUSD ? `U$ ${montoOrig.toFixed(2)}` : formatUYU(montoOrig)}
                     </td>
                     <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${esIngreso ? "text-green-600" : "text-red-600"}`}>
-                      {esUSD ? (
-                        <>{esIngreso ? "+" : "-"}{formatUYU(importeUYU)}</>
-                      ) : "—"}
+                      {esUSD ? <>{esIngreso ? "+" : "-"}{formatUYU(importeUYU)}</> : "—"}
                     </td>
+                    <td className="px-4 py-3">
+                      {r.tipo ? (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.tipo === "negocio" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                          {r.tipo}
+                        </span>
+                      ) : <span className="text-gray-300 text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{cat ?? "—"}</td>
                   </tr>
                 );
               })}
               {!loading && sorted.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
                     Sin resultados para los filtros aplicados
                   </td>
                 </tr>

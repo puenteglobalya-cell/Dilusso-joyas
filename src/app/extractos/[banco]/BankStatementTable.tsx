@@ -2,6 +2,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Download, X, Save, BookMarked } from "lucide-react";
 import { formatUYU } from "@/lib/utils";
+import { ClassifyPopover } from "@/components/bank/ClassifyPopover";
 
 export interface Row {
   id: string;
