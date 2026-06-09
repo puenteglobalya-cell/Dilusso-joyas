@@ -21,6 +21,7 @@ export interface Row {
   categoria_personal: string | null;
   tc: number | null;
   importe_uyu: number | null;
+  created_at?: string | null;
   ok: boolean;
   diff: null;
   computedSaldo: number | null;

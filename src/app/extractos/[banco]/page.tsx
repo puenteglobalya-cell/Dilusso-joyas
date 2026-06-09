@@ -19,13 +19,12 @@ function checkPeriodContinuity(rows: Row[], computed: (number | null)[]): Period
   for (let i = 1; i < rows.length; i++) {
     if (rows[i].descripcion !== "Saldo anterior") continue;
 
-    // Compare against the last non-SA entry from a date STRICTLY before this SA's date.
-    // This avoids false positives when transactions on the same date as the SA belong
-    // to the boundary between two periods (e.g. OCA closing transactions).
-    const saFecha = rows[i].fecha;
+    // Find the computed saldo of the last non-SA entry before this "Saldo anterior".
+    // Rows are sorted SA-first within each date so that same-date regular entries
+    // (belonging to the new period) don't appear before the SA in the comparison.
     let prevComputed: number | null = null;
     for (let j = i - 1; j >= 0; j--) {
-      if (rows[j].descripcion !== "Saldo anterior" && rows[j].fecha < saFecha) {
+      if (rows[j].descripcion !== "Saldo anterior") {
         prevComputed = computed[j];
         break;
       }
@@ -74,7 +73,16 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
 
 
   const { data } = await query;
-  const rows = (data ?? []) as Row[];
+  // Sort SA-first within each date so same-date regular entries (new period)
+  // don't appear before the SA and cause false continuity breaks.
+  const rawRows = (data ?? []) as Row[];
+  const rows = [...rawRows].sort((a, b) => {
+    if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
+    const aIsSA = a.descripcion === "Saldo anterior" ? 0 : 1;
+    const bIsSA = b.descripcion === "Saldo anterior" ? 0 : 1;
+    if (aIsSA !== bIsSA) return aIsSA - bIsSA;
+    return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+  });
 
   const pageTitle = moneda ? `${bancoNombre} — ${moneda}` : bancoNombre;
 
