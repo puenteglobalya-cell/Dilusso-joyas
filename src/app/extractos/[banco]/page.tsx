@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Download } from "lucide-react";
 import { formatUYU } from "@/lib/utils";
 import BankStatementTable, { type Row } from "./BankStatementTable";
 import { GapAdjuster } from "@/components/bank/GapAdjuster";
@@ -119,7 +119,16 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
             <h1 className="text-2xl font-bold">{pageTitle}</h1>
             <p className="text-sm text-gray-500 mt-0.5">{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
           </div>
-          <Link href="/admin" className="text-xs text-brand underline">Importar más →</Link>
+          <div className="flex items-center gap-3">
+            <a
+              href={`/api/admin/export-bank-xlsx?banco=${encodeURIComponent(bancoNombre)}${moneda ? `&moneda=${moneda}` : ""}`}
+              className="flex items-center gap-1.5 text-xs px-3 h-8 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
+              download
+            >
+              <Download className="w-3.5 h-3.5" />Excel
+            </a>
+            <Link href="/admin" className="text-xs text-brand underline">Importar más →</Link>
+          </div>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl border p-4">

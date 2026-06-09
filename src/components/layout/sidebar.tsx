@@ -4,15 +4,16 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Upload, Table2, AlertCircle, Briefcase,
-  User, Receipt, BookOpen, DollarSign, Users, Building2, StickyNote,
+  User, Receipt, BookOpen, DollarSign, Users, Building2, StickyNote, Search,
 } from "lucide-react";
 import { LogoutButton } from "./logout-button";
 
 const navContador = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin", label: "Importar", icon: Upload },
+  { href: "/admin", label: "Importar", icon: Upload, badgeKey: "missingMonths" },
+  { href: "/buscar", label: "Buscar", icon: Search },
   { href: "/consolidado", label: "Consolidado", icon: Table2 },
-  { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle },
+  { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle, badgeKey: "sinClasificar" },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
   { href: "/extractos", label: "Extractos bancarios", icon: Building2 },
   { href: "/personal", label: "Movimientos de Cecilia", icon: User },
@@ -34,11 +35,17 @@ interface SidebarProps {
   role?: string;
   email?: string;
   allowedSections?: string[];
+  missingMonths?: number;
+  sinClasificar?: number;
 }
 
-export function Sidebar({ role, email, allowedSections }: SidebarProps) {
+export function Sidebar({ role, email, allowedSections, missingMonths, sinClasificar }: SidebarProps) {
   const pathname = usePathname();
   const isContador = role === "contador";
+
+  const badges: Record<string, number> = {};
+  if (missingMonths) badges.missingMonths = missingMonths;
+  if (sinClasificar) badges.sinClasificar = sinClasificar;
 
   let nav = isContador ? navContador : navCliente;
 
@@ -60,7 +67,6 @@ export function Sidebar({ role, email, allowedSections }: SidebarProps) {
       {/* Logo */}
       <div className="px-6 py-6 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          {/* Red L mark — caligráfica cursiva */}
           <div className="w-8 h-10 flex items-end justify-start shrink-0">
             <svg viewBox="0 0 48 56" fill="none" className="w-full h-full">
               <path d="M28 3 C25 3 22 5 20 8 L8 44 C7 47 9 50 12 50 L40 50 C43 50 45 48 45 45 C45 42 43 40 40 40 L18 40 L29 8 C30 5 28 3 28 3 Z" fill="#C8102E"/>
@@ -76,8 +82,9 @@ export function Sidebar({ role, email, allowedSections }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 py-3">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon, badgeKey }: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; badgeKey?: string }) => {
           const active = pathname === href;
+          const badgeCount = badgeKey ? (badges[badgeKey] ?? 0) : 0;
           return (
             <Link
               key={href}
@@ -91,7 +98,12 @@ export function Sidebar({ role, email, allowedSections }: SidebarProps) {
               )}
             >
               <Icon className={cn("w-4 h-4 shrink-0", active ? "text-brand" : "")} />
-              {label}
+              <span className="flex-1">{label}</span>
+              {badgeCount > 0 && (
+                <span className="text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </span>
+              )}
             </Link>
           );
         })}

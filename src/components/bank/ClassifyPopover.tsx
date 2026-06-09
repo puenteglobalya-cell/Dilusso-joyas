@@ -1,6 +1,7 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
-import { X, Save, BookMarked } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, Save, BookMarked, RotateCcw } from "lucide-react";
+import { useDebounce } from "@/lib/use-debounce";
 
 export interface ClassifyRow {
   id: string;
@@ -15,15 +16,25 @@ interface Props {
   anchor: { top: number; left: number };
   catsNegocio: string[];
   catsPersonal: string[];
+  userEmail?: string;
   onCategoryCreated: (name: string, type: "negocio" | "personal") => void;
   onClose: () => void;
   onSaved: (updated: Partial<ClassifyRow & { clasificado: string }>) => void;
+  // Optional: called if user undoes the save
+  onUndo?: (id: string) => void;
 }
 
 const TIPOS = ["negocio", "personal"];
 
+interface ToastState {
+  message: string;
+  onUndo?: () => void;
+  timeoutId: ReturnType<typeof setTimeout>;
+}
+
 export function ClassifyPopover({
-  row, anchor, catsNegocio, catsPersonal, onCategoryCreated, onClose, onSaved,
+  row, anchor, catsNegocio, catsPersonal, userEmail,
+  onCategoryCreated, onClose, onSaved, onUndo,
 }: Props) {
   const [tipo, setTipo] = useState(row.tipo ?? "");
   const [catNeg, setCatNeg] = useState(row.categoria_negocio ?? "");
@@ -31,13 +42,37 @@ export function ClassifyPopover({
   const [keyword, setKeyword] = useState("");
   const [saving, setSaving] = useState(false);
   const [askDict, setAskDict] = useState(false);
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [keywordPreview, setKeywordPreview] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+
+  const debouncedKeyword = useDebounce(keyword, 400);
+
+  // Preview how many rows match the keyword
+  useEffect(() => {
+    if (!debouncedKeyword.trim() || debouncedKeyword.length < 2) { setKeywordPreview(null); return; }
+    fetch(`/api/admin/preview-regla?keyword=${encodeURIComponent(debouncedKeyword)}`)
+      .then(r => r.json())
+      .then(d => setKeywordPreview(d.count ?? 0))
+      .catch(() => setKeywordPreview(null));
+  }, [debouncedKeyword]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Dismiss toast and clear its timeout
+  const dismissToast = useCallback(() => {
+    setToast(prev => { if (prev) clearTimeout(prev.timeoutId); return null; });
+  }, []);
+
+  function showToast(message: string, undoFn?: () => void) {
+    setToast(prev => { if (prev) clearTimeout(prev.timeoutId); return null; });
+    const timeoutId = setTimeout(() => setToast(null), 5000);
+    setToast({ message, onUndo: undoFn, timeoutId });
+  }
 
   async function save(guardarEnDiccionario: boolean) {
     setSaving(true);
@@ -66,6 +101,10 @@ export function ClassifyPopover({
         tipo,
         categoria_negocio: catNeg,
         categoria_personal: catPer,
+        usuario_email: userEmail,
+        prev_tipo: row.tipo,
+        prev_cat_negocio: row.categoria_negocio,
+        prev_cat_personal: row.categoria_personal,
         ...(guardarEnDiccionario && keyword.trim()
           ? { guardar_regla: { keyword: keyword.trim() } }
           : {}),
@@ -77,10 +116,36 @@ export function ClassifyPopover({
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.reglaError) alert(`Clasificación guardada, pero error al guardar en diccionario: ${data.reglaError}`);
-        if (data.actualizados > 0) alert(`✓ También se clasificaron ${data.actualizados} movimientos similares`);
+        const prevTipo = row.tipo;
+        const prevCatNeg = row.categoria_negocio;
+        const prevCatPer = row.categoria_personal;
+
+        // Build undo function (only reverts this single row)
+        const undoFn = onUndo ? async () => {
+          await fetch("/api/admin/clasificar-row", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: row.id,
+              descripcion: row.descripcion ?? undefined,
+              clasificado: prevTipo ? "Si" : "No",
+              tipo: prevTipo ?? "",
+              categoria_negocio: prevCatNeg ?? "",
+              categoria_personal: prevCatPer ?? "",
+              usuario_email: userEmail,
+            }),
+          });
+          onUndo(row.id);
+          dismissToast();
+        } : undefined;
+
+        let msg = "Clasificación guardada.";
+        if (data.actualizados > 0) msg += ` También se clasificaron ${data.actualizados} similares.`;
+        if (data.reglaError) msg += ` (error al guardar en diccionario)`;
+
         onSaved({ tipo, categoria_negocio: catNeg, categoria_personal: catPer, clasificado: tipo ? "Si" : "No" });
         onClose();
+        showToast(msg, undoFn);
       }
     } finally {
       setSaving(false);
@@ -96,6 +161,22 @@ export function ClassifyPopover({
 
   return (
     <>
+      {/* Toast — rendered outside popover so it persists after close */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+          <span>{toast.message}</span>
+          {toast.onUndo && (
+            <button
+              onClick={toast.onUndo}
+              className="flex items-center gap-1 text-yellow-300 font-semibold hover:text-yellow-200 shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />Deshacer
+            </button>
+          )}
+          <button onClick={dismissToast} className="text-gray-400 hover:text-white shrink-0"><X className="w-3.5 h-3.5" /></button>
+        </div>
+      )}
+
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div ref={ref} style={style} className="w-80 bg-white rounded-xl shadow-xl border p-4 z-50 space-y-3">
         <div className="flex items-center justify-between">
@@ -165,6 +246,13 @@ export function ClassifyPopover({
               <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)}
                 placeholder={`ej: ${(row.descripcion ?? "").slice(0, 20)}`}
                 className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand" />
+              {keywordPreview !== null && keyword.length >= 2 && (
+                <p className={`text-[11px] mt-1 ${keywordPreview > 0 ? "text-orange-600" : "text-green-600"}`}>
+                  {keywordPreview > 0
+                    ? `⚠ Esta keyword clasificará ${keywordPreview} movimiento${keywordPreview !== 1 ? "s" : ""} sin clasificar`
+                    : "✓ No hay movimientos sin clasificar que matcheen esta keyword"}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <button onClick={() => save(false)} disabled={saving}

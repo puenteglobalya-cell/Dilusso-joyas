@@ -3,6 +3,7 @@
  * Updates classification for a single row AND always bulk-updates all
  * unclassified rows with the same descripcion (exact match).
  * Optionally also saves a keyword to clasificacion_reglas dictionary.
+ * Writes an audit entry to clasificacion_log (best-effort).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
@@ -18,11 +19,38 @@ export async function PATCH(req: NextRequest) {
     categoria_negocio: string;
     categoria_personal: string;
     guardar_regla?: { keyword: string };
+    usuario_email?: string;
+    // Previous values for audit log
+    prev_tipo?: string | null;
+    prev_cat_negocio?: string | null;
+    prev_cat_personal?: string | null;
   };
 
   if (!body.id) return NextResponse.json({ error: "No id" }, { status: 400 });
 
   const sb = createServerClient();
+
+  // Fetch current row for audit (if prev values not supplied)
+  let prevTipo = body.prev_tipo ?? null;
+  let prevCatNeg = body.prev_cat_negocio ?? null;
+  let prevCatPer = body.prev_cat_personal ?? null;
+  let rowBanco = "";
+  let rowFecha = "";
+
+  if (!body.prev_tipo) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: curr } = await (sb.from("bank_statements") as any)
+      .select("tipo, categoria_negocio, categoria_personal, banco, fecha")
+      .eq("id", body.id)
+      .single();
+    if (curr) {
+      prevTipo = curr.tipo;
+      prevCatNeg = curr.categoria_negocio;
+      prevCatPer = curr.categoria_personal;
+      rowBanco = curr.banco;
+      rowFecha = curr.fecha;
+    }
+  }
 
   const update = {
     clasificado: body.clasificado,
@@ -73,6 +101,27 @@ export async function PATCH(req: NextRequest) {
       .ilike("descripcion", `%${keyword}%`)
       .select("id", { count: "exact", head: true });
     actualizados += kwCount ?? 0;
+  }
+
+  // Write audit log (best-effort — silently ignore if table doesn't exist yet)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (sb.from("clasificacion_log") as any).insert({
+      bank_statement_id: body.id,
+      banco: rowBanco || null,
+      fecha: rowFecha || null,
+      descripcion: body.descripcion ?? null,
+      tipo_anterior: prevTipo,
+      tipo_nuevo: body.tipo,
+      cat_negocio_anterior: prevCatNeg,
+      cat_negocio_nueva: body.categoria_negocio,
+      cat_personal_anterior: prevCatPer,
+      cat_personal_nueva: body.categoria_personal,
+      usuario_email: body.usuario_email ?? null,
+      bulk_count: actualizados,
+    });
+  } catch {
+    // Table may not exist yet — non-fatal
   }
 
   return NextResponse.json({ ok: true, actualizados, ...(reglaError ? { reglaError } : {}) });

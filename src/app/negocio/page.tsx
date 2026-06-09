@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/component
 import { TransactionFilters } from "@/components/transactions/filters";
 import { NegocioChart } from "@/components/negocio/chart";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
+import { NegocioHeatmap } from "@/components/negocio/heatmap";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Negocio | Dilusso Joyas" };
@@ -108,6 +109,18 @@ export default async function NegocioPage({ searchParams }: Props) {
       return acc;
     }, {});
   const categoryData = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
+
+  // Heatmap: category × month (egresses only, negocio)
+  const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
+  const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort().slice(-12);
+  const heatMap: Record<string, Record<string, number>> = {};
+  for (const r of trendRows) {
+    if ((r.debito ?? 0) <= 0 || !r.categoria_negocio) continue;
+    const ym = r.fecha.slice(0, 7);
+    const cat = r.categoria_negocio;
+    if (!heatMap[cat]) heatMap[cat] = {};
+    heatMap[cat][ym] = (heatMap[cat][ym] ?? 0) + rowImporteUYU(r);
+  }
 
   const monthMap = new Map<string, { ingresos: number; egresos: number }>();
   for (const r of trendRows) {
@@ -219,6 +232,15 @@ export default async function NegocioPage({ searchParams }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {heatCats.length > 0 && heatMonths.length > 1 && (
+        <Card className="mb-6">
+          <CardHeader><CardTitle>Gastos por categoría × mes</CardTitle></CardHeader>
+          <CardContent>
+            <NegocioHeatmap cats={heatCats} months={heatMonths} data={heatMap} />
+          </CardContent>
+        </Card>
       )}
 
       {categoryData.length > 0 && (
