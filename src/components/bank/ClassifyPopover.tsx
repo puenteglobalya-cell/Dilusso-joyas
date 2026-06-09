@@ -61,6 +61,7 @@ export function ClassifyPopover({
 
       const body = {
         id: row.id,
+        descripcion: row.descripcion ?? undefined,
         clasificado: tipo ? "Si" : "No",
         tipo,
         categoria_negocio: catNeg,

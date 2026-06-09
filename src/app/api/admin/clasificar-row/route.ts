@@ -1,8 +1,8 @@
 /**
  * PATCH /api/admin/clasificar-row
- * Updates classification for a single bank_statement row.
- * When guardar_regla is provided, also bulk-updates all unclassified rows
- * whose descripcion contains the keyword.
+ * Updates classification for a single row AND always bulk-updates all
+ * unclassified rows with the same descripcion (exact match).
+ * Optionally also saves a keyword to clasificacion_reglas dictionary.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
@@ -12,6 +12,7 @@ export const runtime = "nodejs";
 export async function PATCH(req: NextRequest) {
   const body = await req.json() as {
     id: string;
+    descripcion?: string;
     clasificado: string;
     tipo: string;
     categoria_negocio: string;
@@ -23,26 +24,38 @@ export async function PATCH(req: NextRequest) {
 
   const sb = createServerClient();
 
-  // Update the single row
+  const update = {
+    clasificado: body.clasificado,
+    tipo: body.tipo,
+    categoria_negocio: body.categoria_negocio,
+    categoria_personal: body.categoria_personal,
+  };
+
+  // Update the target row
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (sb.from("bank_statements") as any)
-    .update({
-      clasificado: body.clasificado,
-      tipo: body.tipo,
-      categoria_negocio: body.categoria_negocio,
-      categoria_personal: body.categoria_personal,
-    })
+    .update(update)
     .eq("id", body.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  let reglaError: string | null = null;
   let actualizados = 0;
+  let reglaError: string | null = null;
 
+  // Always bulk-update all unclassified rows with the same descripcion
+  if (body.descripcion && body.clasificado === "Si") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { count } = await (sb.from("bank_statements") as any)
+      .update(update)
+      .eq("clasificado", "No")
+      .eq("descripcion", body.descripcion)
+      .select("id", { count: "exact", head: true });
+    actualizados = count ?? 0;
+  }
+
+  // Optionally save keyword to dictionary + also apply by keyword (broader match)
   if (body.guardar_regla?.keyword) {
     const keyword = body.guardar_regla.keyword;
-
-    // Save to dictionary
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: re } = await (sb.from("clasificacion_reglas") as any).upsert({
       keyword,
@@ -52,21 +65,14 @@ export async function PATCH(req: NextRequest) {
     }, { onConflict: "keyword" });
     if (re) reglaError = re.message;
 
-    // Bulk-update all unclassified rows that match the keyword (case-insensitive via ilike)
+    // Apply keyword match (catches variations beyond exact description)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count, error: bulkError } = await (sb.from("bank_statements") as any)
-      .update({
-        clasificado: body.clasificado,
-        tipo: body.tipo,
-        categoria_negocio: body.categoria_negocio,
-        categoria_personal: body.categoria_personal,
-      })
+    const { count: kwCount } = await (sb.from("bank_statements") as any)
+      .update(update)
       .eq("clasificado", "No")
       .ilike("descripcion", `%${keyword}%`)
       .select("id", { count: "exact", head: true });
-
-    if (bulkError) reglaError = (reglaError ? reglaError + "; " : "") + bulkError.message;
-    else actualizados = count ?? 0;
+    actualizados += kwCount ?? 0;
   }
 
   return NextResponse.json({ ok: true, actualizados, ...(reglaError ? { reglaError } : {}) });
