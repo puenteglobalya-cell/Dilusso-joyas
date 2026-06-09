@@ -1,8 +1,9 @@
 import { createServerClient } from "@/lib/supabase";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { formatUYU } from "@/lib/utils";
 import BankStatementTable, { type Row } from "./BankStatementTable";
+import { GapAdjuster } from "@/components/bank/GapAdjuster";
 
 export const dynamic = "force-dynamic";
 
@@ -202,33 +203,7 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
       </div>
 
       {/* Period continuity validation */}
-      {gaps.length === 0 ? (
-        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-6 text-sm text-green-700">
-          <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-          Continuidad de saldos OK — el saldo final de cada período coincide con el saldo inicial del siguiente
-        </div>
-      ) : (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 mb-6 text-sm text-orange-700 space-y-1">
-          <div className="flex items-center gap-2 font-medium">
-            <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
-            {gaps.length} corte{gaps.length > 1 ? "s" : ""} de continuidad entre períodos
-          </div>
-          {gaps.map((g) => (
-            <div key={g.fecha} className="ml-6 text-xs space-y-0.5">
-              <p>
-                <span className="font-medium">{g.fecha}:</span>{" "}
-                saldo declarado {formatUYU(g.recibido)} ≠ saldo calculado del período anterior {formatUYU(g.esperado)}
-                {" "}(<span className={g.diff > 0 ? "text-green-700 font-medium" : "text-red-700 font-medium"}>{g.diff > 0 ? "+" : ""}{formatUYU(g.diff)}</span>)
-              </p>
-              <p className="text-orange-600">
-                {g.diff > 0
-                  ? `Faltan movimientos por ${formatUYU(g.diff)} que no están en la base — probablemente falta importar el extracto de ese período.`
-                  : `Hay ${formatUYU(Math.abs(g.diff))} más en la base de lo que declara el siguiente período — podría haber movimientos duplicados o un extracto superpuesto.`}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+      <GapAdjuster gaps={gaps} banco={bancoNombre} moneda={moneda ?? "UYU"} />
 
       <BankStatementTable rows={withCheck} isCreditCard={false} catsNegocio={catsNegocio} catsPersonal={catsPersonal} />
     </div>
