@@ -78,17 +78,28 @@ export async function POST(req: NextRequest) {
 
   const sb = createServerClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (sb.from("bank_statements") as any)
-    .select("fecha, descripcion, debito, credito, saldo, moneda, cuenta")
-    .eq("banco", rows[0].banco);
-
   type ExRow = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; moneda: string; cuenta: string | null };
   function dedupKey(r: ExRow | typeof rows[0]) {
     return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}`;
   }
 
-  const existingKeys = new Set(((existing ?? []) as ExRow[]).map(dedupKey));
+  // Paginate to avoid Supabase 1000-row limit when loading existing rows for dedup
+  const PAGE = 1000;
+  let existing: ExRow[] = [];
+  let from = 0;
+  while (true) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (sb.from("bank_statements") as any)
+      .select("fecha, descripcion, debito, credito, saldo, moneda, cuenta")
+      .eq("banco", rows[0].banco)
+      .range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    existing = existing.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  const existingKeys = new Set(existing.map(dedupKey));
   const newRows = rows.filter(r => !existingKeys.has(dedupKey(r)));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
