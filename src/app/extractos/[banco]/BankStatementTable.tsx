@@ -332,6 +332,7 @@ export default function BankStatementTable({
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
+      if (r.descripcion === "Saldo anterior") return false;
       if (filters.fecha && !r.fecha.includes(filters.fecha)) return false;
       if (filters.descripcion && !(r.descripcion ?? "").toLowerCase().includes(filters.descripcion.toLowerCase())) return false;
       if (filters.moneda && r.moneda !== filters.moneda) return false;
