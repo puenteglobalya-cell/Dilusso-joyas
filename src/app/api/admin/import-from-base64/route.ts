@@ -12,6 +12,9 @@ import { createServerClient } from "@/lib/supabase";
 import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, parseItauCardPdf, detectXlsBanco, BankRow } from "@/lib/bank-parsers";
 import { clasificar } from "@/lib/clasificador";
 import { getTc } from "@/lib/tipo-cambio";
+import { normalizeDesc } from "@/lib/normalize";
+
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
 
 export const runtime = "nodejs";
 
@@ -21,7 +24,31 @@ export async function POST(req: NextRequest) {
   if (!body.base64) return NextResponse.json({ error: "No base64" }, { status: 400 });
   if (!body.banco)  return NextResponse.json({ error: "No banco" }, { status: 400 });
 
-  const buffer = Buffer.from(body.base64, "base64").buffer as ArrayBuffer;
+  // Validate base64 size before decoding
+  const estimatedBytes = Math.floor(body.base64.length * 0.75);
+  if (estimatedBytes > MAX_FILE_BYTES) {
+    return NextResponse.json(
+      { error: `Archivo demasiado grande (${(estimatedBytes / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 20 MB.` },
+      { status: 413 }
+    );
+  }
+
+  const rawBuffer = Buffer.from(body.base64, "base64");
+
+  // Validate magic bytes for PDFs and XLS files
+  const isPdfMagic = rawBuffer.slice(0, 4).toString("hex") === "25504446"; // %PDF
+  const isXlsMagic = rawBuffer.slice(0, 8).toString("hex") === "d0cf11e0a1b11ae1"; // OLE2 (xls)
+  const isXlsxMagic = rawBuffer.slice(0, 4).toString("hex") === "504b0304"; // ZIP (xlsx)
+  const needsPdf = ["oca-pdf", "bbva-pdf", "scotiabank-pdf", "itau-card-pdf"].includes(body.banco);
+  const needsXls = ["bbva-xls", "itau-xls"].includes(body.banco);
+  if (needsPdf && !isPdfMagic) {
+    return NextResponse.json({ error: "El archivo no es un PDF válido." }, { status: 400 });
+  }
+  if (needsXls && !isXlsMagic && !isXlsxMagic) {
+    return NextResponse.json({ error: "El archivo no es un Excel válido (.xls/.xlsx)." }, { status: 400 });
+  }
+
+  const buffer = rawBuffer.buffer as ArrayBuffer;
   const banco = body.banco;
   let rows: BankRow[] = [];
 
@@ -97,10 +124,6 @@ export async function POST(req: NextRequest) {
   const sb = createServerClient();
 
   type ExRow = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; moneda: string; cuenta: string | null };
-  // Normalize description: trim + remove non-ASCII chars (e.g. U+E9D7 from OCA PDFs)
-  function normalizeDesc(s: string | null): string {
-    return (s ?? "").trim().replace(/[^\x00-\x7F]/g, "");
-  }
   function dedupKey(r: ExRow | typeof rows[0]) {
     return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${normalizeDesc(r.descripcion)}|${r.debito ?? ""}|${r.credito ?? ""}`;
   }
