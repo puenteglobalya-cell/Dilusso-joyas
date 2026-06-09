@@ -79,13 +79,20 @@ export default async function NegocioPage({ searchParams }: Props) {
     return all;
   }
 
-  // 13 months back for trend
+  // Trend: if filtering by year (with or without month), use the filtered range;
+  // otherwise (current year, no explicit año param) show last 12 months from today
   const now = new Date();
-  const trendDesde = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const isCurrentYear = añoFilter === now.getFullYear() && !sp.año;
+  const trendDesde = isCurrentYear
+    ? `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
+    : fechaDesde;
+  const trendHasta = isCurrentYear
+    ? `${now.getFullYear() + 1}-01-01`
+    : fechaHasta;
 
   const [txs, trendRows] = await Promise.all([
     fetchBS(fechaDesde, fechaHasta),
-    fetchBS(trendDesde, `${now.getFullYear() + 1}-01-01`),
+    fetchBS(trendDesde, trendHasta),
   ]);
 
   const ingresos = txs.filter(r => (r.credito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
@@ -175,7 +182,7 @@ export default async function NegocioPage({ searchParams }: Props) {
       {trend12.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Últimos 12 meses — Ingresos vs Egresos y Margen neto</CardTitle>
+            <CardTitle>{isCurrentYear ? "Últimos 12 meses" : añoFilter} — Ingresos vs Egresos y Margen neto</CardTitle>
           </CardHeader>
           <CardContent>
             <NegocioTrendChart data={trend12} />
