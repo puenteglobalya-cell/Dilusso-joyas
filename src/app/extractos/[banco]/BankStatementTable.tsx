@@ -455,7 +455,7 @@ export default function BankStatementTable({
                   onChange={(e) => setFilters((f) => ({ ...f, fecha: e.target.value }))}
                   className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand" />
               </td>
-              <td className="px-3 py-1.5">
+              <td className="px-3 py-1.5 min-w-[280px]">
                 <input placeholder="Descripción…" value={filters.descripcion}
                   onChange={(e) => setFilters((f) => ({ ...f, descripcion: e.target.value }))}
                   className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand" />
@@ -514,7 +514,7 @@ export default function BankStatementTable({
                   className={isSaldoAnterior ? "bg-gray-50 font-medium" : "hover:bg-gray-50"}
                 >
                   <td className="px-4 py-2 text-gray-500 whitespace-nowrap tabular-nums text-xs">{row.fecha}</td>
-                  <td className="px-4 py-2 text-gray-800 max-w-[200px] truncate" title={row.descripcion ?? ""}>
+                  <td className="px-4 py-2 text-gray-800 min-w-[280px] max-w-sm truncate" title={row.descripcion ?? ""}>
                     {row.descripcion ?? "—"}
                   </td>
                   {hasNumero && (
