@@ -339,8 +339,8 @@ export default function BankStatementTable({
       if (filters.moneda && r.moneda !== filters.moneda) return false;
       if (filters.tipo && (r.tipo ?? "") !== filters.tipo) return false;
       if (filters.categoria) {
-        const cat = ((r.categoria_negocio ?? "") + " " + (r.categoria_personal ?? "")).toLowerCase();
-        if (!cat.includes(filters.categoria.toLowerCase())) return false;
+        const cat = filters.tipo === "negocio" ? (r.categoria_negocio ?? "") : (r.categoria_personal ?? "");
+        if (!cat.toLowerCase().includes(filters.categoria.toLowerCase())) return false;
       }
       if (filters.clasificado && (r.clasificado ?? "") !== filters.clasificado) return false;
       return true;
@@ -446,8 +446,7 @@ export default function BankStatementTable({
               {monedas.length > 1 && <th className="px-4 py-3 font-medium">Mon.</th>}
               {hasUsd && <th className="px-4 py-3 font-medium text-right">Imp. UYU</th>}
               <Th k="tipo" label="Tipo" />
-              <Th k="categoria_negocio" label="Cat. Negocio" />
-              <Th k="categoria_personal" label="Cat. Personal" />
+              <Th k="categoria_negocio" label="Categoría" />
             </tr>
             {/* Filter row */}
             <tr className="border-b bg-white text-xs">
@@ -478,25 +477,25 @@ export default function BankStatementTable({
               {hasUsd && <td className="px-3 py-1.5" />}
               <td className="px-3 py-1.5">
                 <select value={filters.tipo}
-                  onChange={(e) => setFilters((f) => ({ ...f, tipo: e.target.value }))}
+                  onChange={(e) => setFilters((f) => ({ ...f, tipo: e.target.value, categoria: "" }))}
                   className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand">
                   <option value="">Todos</option>
                   {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </td>
               <td className="px-3 py-1.5">
-                <input placeholder="Categoría…" value={filters.categoria}
-                  onChange={(e) => setFilters((f) => ({ ...f, categoria: e.target.value }))}
-                  className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand" />
-              </td>
-              <td className="px-3 py-1.5">
-                <select value={filters.clasificado}
-                  onChange={(e) => setFilters((f) => ({ ...f, clasificado: e.target.value }))}
-                  className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand">
-                  <option value="">Todos</option>
-                  <option value="Si">Clasificado</option>
-                  <option value="No">Sin clasificar</option>
-                </select>
+                {filters.tipo ? (
+                  <select value={filters.categoria}
+                    onChange={(e) => setFilters((f) => ({ ...f, categoria: e.target.value }))}
+                    className="w-full border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-brand">
+                    <option value="">Todas</option>
+                    {(filters.tipo === "negocio" ? catsNegocio : catsPersonal).map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-gray-300 text-xs px-2">← elegí tipo</span>
+                )}
               </td>
             </tr>
           </thead>
@@ -559,22 +558,17 @@ export default function BankStatementTable({
                     ) : null}
                   </td>
                   <td
-                    className="px-4 py-2 text-xs text-gray-500 max-w-[130px] truncate cursor-pointer hover:bg-gray-100 rounded"
-                    title={(row.categoria_negocio ?? "") + " — clic para editar"}
+                    className="px-4 py-2 text-xs max-w-[160px] truncate cursor-pointer hover:bg-gray-100 rounded"
+                    title={((row.tipo === "negocio" ? row.categoria_negocio : row.categoria_personal) ?? "") + " — clic para editar"}
                     onClick={(e) => !isSaldoAnterior && openEdit(row, e)}
                   >
-                    {row.categoria_negocio || ""}
-                  </td>
-                  <td
-                    className="px-4 py-2 text-xs max-w-[130px] truncate cursor-pointer hover:bg-gray-100 rounded"
-                    title={(row.categoria_personal ?? "") + " — clic para editar"}
-                    onClick={(e) => !isSaldoAnterior && openEdit(row, e)}
-                  >
-                    {row.categoria_personal
-                      ? <span className="text-gray-500">{row.categoria_personal}</span>
-                      : row.clasificado === "No" && !isSaldoAnterior
-                        ? <span className="text-orange-400">Sin clasificar</span>
-                        : null}
+                    {row.tipo === "negocio"
+                      ? <span className="text-gray-500">{row.categoria_negocio || ""}</span>
+                      : row.tipo === "personal"
+                        ? <span className="text-gray-500">{row.categoria_personal || ""}</span>
+                        : row.clasificado === "No" && !isSaldoAnterior
+                          ? <span className="text-orange-400">Sin clasificar</span>
+                          : null}
                   </td>
                 </tr>
               );
