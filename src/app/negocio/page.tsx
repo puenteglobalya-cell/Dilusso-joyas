@@ -102,7 +102,6 @@ export default async function NegocioPage({ searchParams }: Props) {
   const egresos = txs.filter(r => (r.debito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
   const resultado = ingresos - egresos;
   const margenNeto = pct(resultado, ingresos);
-  const margenEbitda = margenNeto;
 
   const byCategory = txs
     .filter(r => (r.debito ?? 0) > 0 && r.categoria_negocio)
@@ -182,14 +181,14 @@ export default async function NegocioPage({ searchParams }: Props) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Margen EBITDA</CardTitle>
-            <CardValue className={margenEbitda >= 0 ? "text-green-600" : "text-red-600"}>{margenEbitda.toFixed(1)}%</CardValue>
+            <CardTitle>Margen neto</CardTitle>
+            <CardValue className={margenNeto >= 0 ? "text-green-600" : "text-red-600"}>{margenNeto.toFixed(1)}%</CardValue>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Margen neto</CardTitle>
-            <CardValue className={margenNeto >= 0 ? "text-green-600" : "text-red-600"}>{margenNeto.toFixed(1)}%</CardValue>
+            <CardTitle>Top gasto</CardTitle>
+            <CardValue className="text-slate-800 text-base truncate">{categoryData[0]?.name ?? "—"}</CardValue>
           </CardHeader>
         </Card>
       </div>
