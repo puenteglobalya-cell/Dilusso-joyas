@@ -3,12 +3,13 @@ import { useState, useEffect, useMemo } from "react";
 import { formatUYU, formatDate } from "@/lib/utils";
 import { ArrowUp, ArrowDown, ArrowUpDown, CheckSquare, X, Save } from "lucide-react";
 import { ClassifyPopover } from "@/components/bank/ClassifyPopover";
+import { NoteCell } from "@/components/bank/NoteCell";
 
 interface BSRow {
   id: string; banco: string; fecha: string; descripcion: string | null;
   debito: number | null; credito: number | null; importe_uyu: number | null;
   moneda: string; tipo: string | null; categoria_negocio: string | null;
-  categoria_personal: string | null; clasificado: string | null;
+  categoria_personal: string | null; clasificado: string | null; nota: string | null;
 }
 
 function rowImporteUYU(r: BSRow): number {
@@ -319,6 +320,7 @@ export default function SinConciliarPage() {
                 </th>
                 <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium">Categoría</th>
+                <th className="px-4 py-3 font-medium">Nota</th>
               </tr>
               <tr className="border-b bg-white text-xs">
                 <td className="px-3 py-1.5" />
@@ -361,6 +363,7 @@ export default function SinConciliarPage() {
                     <span className="text-gray-300 text-xs px-2">— elegí tipo —</span>
                   )}
                 </td>
+                <td className="px-3 py-1.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -373,7 +376,7 @@ export default function SinConciliarPage() {
                 const isSelected = selected.has(r.id);
                 return (
                   <tr key={r.id}
-                    className={`cursor-pointer ${isSelected ? "bg-blue-50" : "hover:bg-blue-50"}`}
+                    className={`group cursor-pointer ${isSelected ? "bg-blue-50" : "hover:bg-blue-50"}`}
                     onClick={e => openEdit(r, e)}>
                     <td className="px-3 py-3" onClick={e => { e.stopPropagation(); toggleSelect(r.id); }}>
                       <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)}
@@ -397,12 +400,15 @@ export default function SinConciliarPage() {
                       ) : <span className="text-gray-300 text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{cat ?? "—"}</td>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <NoteCell id={r.id} nota={r.nota} />
+                    </td>
                   </tr>
                 );
               })}
               {!loading && sorted.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">
                     Sin resultados para los filtros aplicados
                   </td>
                 </tr>

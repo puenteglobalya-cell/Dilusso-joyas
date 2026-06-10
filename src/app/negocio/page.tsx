@@ -6,6 +6,7 @@ import { TransactionFilters } from "@/components/transactions/filters";
 import { NegocioChart } from "@/components/negocio/chart";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { NegocioHeatmap } from "@/components/negocio/heatmap";
+import { NoteCell } from "@/components/bank/NoteCell";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Negocio | Dilusso Joyas" };
@@ -27,6 +28,7 @@ interface BSRow {
   categoria_negocio: string | null;
   categoria_personal: string | null;
   clasificado: string | null;
+  nota: string | null;
 }
 
 function rowImporteUYU(r: BSRow): number {
@@ -65,7 +67,7 @@ export default async function NegocioPage({ searchParams }: Props) {
     while (true) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (sb.from("bank_statements") as any)
-        .select("id,banco,fecha,descripcion,debito,credito,importe_uyu,moneda,tipo,categoria_negocio,categoria_personal,clasificado")
+        .select("id,banco,fecha,descripcion,debito,credito,importe_uyu,moneda,tipo,categoria_negocio,categoria_personal,clasificado,nota")
         .eq("tipo", "negocio")
         .gte("fecha", desde)
         .lt("fecha", hasta)
@@ -262,13 +264,14 @@ export default async function NegocioPage({ searchParams }: Props) {
               <th className="text-left px-4 py-3 font-medium text-slate-500">Descripción</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Categoría</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Importe UYU</th>
+              <th className="px-4 py-3 font-medium text-slate-500">Nota</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {txs.map((r) => {
               const esIngreso = (r.credito ?? 0) > 0;
               return (
-                <tr key={r.id} className="hover:bg-slate-50">
+                <tr key={r.id} className="group hover:bg-slate-50">
                   <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(r.fecha)}</td>
                   <td className="px-4 py-3 font-medium">{r.banco}</td>
                   <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{r.descripcion ?? "—"}</td>
@@ -276,12 +279,15 @@ export default async function NegocioPage({ searchParams }: Props) {
                   <td className={`px-4 py-3 text-right font-medium ${esIngreso ? "text-green-600" : "text-red-600"}`}>
                     {esIngreso ? "+" : "-"}{formatUYU(rowImporteUYU(r))}
                   </td>
+                  <td className="px-4 py-3">
+                    <NoteCell id={r.id} nota={r.nota} />
+                  </td>
                 </tr>
               );
             })}
             {!txs.length && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
                   <p className="font-medium text-slate-500 mb-1">Sin movimientos clasificados como negocio para este período</p>
                   <Link href="/extractos" className="text-xs text-brand underline">Ir a extractos →</Link>
                 </td>
