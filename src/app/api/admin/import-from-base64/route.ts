@@ -162,12 +162,14 @@ export async function POST(req: NextRequest) {
   });
 
   let inserted = 0;
+  let insertError: string | null = null;
   const CHUNK = 500;
   for (let i = 0; i < enriched.length; i += CHUNK) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (sb.from("bank_statements") as any).insert(enriched.slice(i, i + CHUNK));
     if (!error) inserted += Math.min(CHUNK, enriched.length - i);
+    else insertError = error.message;
   }
 
-  return NextResponse.json({ ok: true, inserted, parsed: rows.length, skipped: rows.length - newRows.length, banco, filename: body.filename ?? "" });
+  return NextResponse.json({ ok: true, inserted, parsed: rows.length, skipped: rows.length - newRows.length, banco, filename: body.filename ?? "", ...(insertError ? { insertError } : {}) });
 }
