@@ -16,6 +16,10 @@ interface PeriodGap {
 
 function checkPeriodContinuity(rows: Row[], computed: (number | null)[]): PeriodGap[] {
   const gaps: PeriodGap[] = [];
+  // When the bank's declared saldo already includes same-date movements that
+  // sort after the SA row, the running total double-counts them until the
+  // next SA. `carry` tracks that overstatement so the next comparison is fair.
+  let carry = 0;
 
   for (let i = 1; i < rows.length; i++) {
     if (rows[i].descripcion !== "Saldo anterior") continue;
@@ -32,13 +36,29 @@ function checkPeriodContinuity(rows: Row[], computed: (number | null)[]): Period
     }
 
     const declared = rows[i].saldo;
-    if (prevComputed === null || declared === null) continue;
-    if (Math.abs(declared - prevComputed) > 1) {
+    if (prevComputed === null || declared === null) { carry = 0; continue; }
+
+    const adjusted = prevComputed - carry;
+    carry = 0;
+
+    if (Math.abs(declared - adjusted) > 1) {
+      // Boundary case: movements dated the same day as the SA sort after it,
+      // but the bank may have already included them in the declared saldo.
+      // If adding them closes the gap, it's not a real discontinuity.
+      let sumSameDate = 0;
+      for (let k = i + 1; k < rows.length && rows[k].fecha === rows[i].fecha; k++) {
+        if (rows[k].descripcion === "Saldo anterior") break;
+        sumSameDate += (rows[k].credito ?? 0) - (rows[k].debito ?? 0);
+      }
+      if (Math.abs(declared - (adjusted + sumSameDate)) <= 1) {
+        carry = sumSameDate;
+        continue;
+      }
       gaps.push({
         fecha: rows[i].fecha,
-        esperado: prevComputed,
+        esperado: adjusted,
         recibido: declared,
-        diff: declared - prevComputed,
+        diff: declared - adjusted,
       });
     }
   }

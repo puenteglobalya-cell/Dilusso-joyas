@@ -45,6 +45,9 @@ function computeGaps(rows: Row[]): GapInfo[] {
   });
 
   const gaps: GapInfo[] = [];
+  // carry: overstatement of the running total when the declared SA saldo
+  // already includes same-date movements that sort after the SA row.
+  let carry = 0;
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].descripcion !== "Saldo anterior") continue;
     let prevComputed: number | null = null;
@@ -52,9 +55,17 @@ function computeGaps(rows: Row[]): GapInfo[] {
       if (sorted[j].descripcion !== "Saldo anterior") { prevComputed = computed[j]; break; }
     }
     const declared = sorted[i].saldo;
-    if (prevComputed === null || declared === null) continue;
-    if (Math.abs(declared - prevComputed) > 1) {
-      gaps.push({ fecha: sorted[i].fecha, esperado: prevComputed, recibido: declared, diff: declared - prevComputed });
+    if (prevComputed === null || declared === null) { carry = 0; continue; }
+    const adjusted = prevComputed - carry;
+    carry = 0;
+    if (Math.abs(declared - adjusted) > 1) {
+      let sumSameDate = 0;
+      for (let k = i + 1; k < sorted.length && sorted[k].fecha === sorted[i].fecha; k++) {
+        if (sorted[k].descripcion === "Saldo anterior") break;
+        sumSameDate += (sorted[k].credito ?? 0) - (sorted[k].debito ?? 0);
+      }
+      if (Math.abs(declared - (adjusted + sumSameDate)) <= 1) { carry = sumSameDate; continue; }
+      gaps.push({ fecha: sorted[i].fecha, esperado: adjusted, recibido: declared, diff: declared - adjusted });
     }
   }
   return gaps;
