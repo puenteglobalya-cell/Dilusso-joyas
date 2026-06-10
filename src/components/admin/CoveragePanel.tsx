@@ -31,7 +31,7 @@ export function CoveragePanel() {
   const now = new Date();
   const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const missing = data.bancos
-    .map(b => ({ banco: b.label, meses: b.months.filter(({ ym, loaded }) => !loaded && ym <= currentYM).map(({ ym }) => fmtYM(ym)) }))
+    .map(b => ({ banco: b.label, meses: b.months.filter(({ ym, loaded }) => !loaded && ym < currentYM).map(({ ym }) => fmtYM(ym)) }))
     .filter(b => b.meses.length > 0);
 
   // Build lookup: bancoLabel -> set of YYYY-MM with gap
