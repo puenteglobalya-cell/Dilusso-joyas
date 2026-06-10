@@ -2,8 +2,8 @@ import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardValue } from "@/components/ui/card";
 import { TransactionFilters } from "@/components/transactions/filters";
+import { KpiCard } from "@/components/ui/KpiDrawer";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Consolidado | Dilusso Joyas" };
@@ -77,6 +77,13 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
 
   const totalSalidas = all.filter(r => (r.debito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
   const totalIngresos = all.filter(r => (r.credito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
+  const neto = totalIngresos - totalSalidas;
+
+  // per-banco breakdown
+  const byBancoIn = all.filter(r => (r.credito ?? 0) > 0).reduce<Record<string, number>>((a, r) => { a[r.banco] = (a[r.banco] ?? 0) + rowImporteUYU(r); return a; }, {});
+  const byBancoOut = all.filter(r => (r.debito ?? 0) > 0).reduce<Record<string, number>>((a, r) => { a[r.banco] = (a[r.banco] ?? 0) + rowImporteUYU(r); return a; }, {});
+  const ingresosDetail = Object.entries(byBancoIn).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  const egresosDetail = Object.entries(byBancoOut).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
 
   return (
     <div className="p-8">
@@ -90,9 +97,9 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
       <TransactionFilters />
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card><CardHeader><CardTitle>Ingresos</CardTitle><CardValue className="text-green-600">{formatUYU(totalIngresos)}</CardValue></CardHeader></Card>
-        <Card><CardHeader><CardTitle>Egresos</CardTitle><CardValue className="text-red-600">{formatUYU(totalSalidas)}</CardValue></CardHeader></Card>
-        <Card><CardHeader><CardTitle>Neto</CardTitle><CardValue className={totalIngresos - totalSalidas >= 0 ? "text-green-600" : "text-red-600"}>{formatUYU(totalIngresos - totalSalidas)}</CardValue></CardHeader></Card>
+        <KpiCard title="Ingresos" value={formatUYU(totalIngresos)} valueClass="text-green-600" detail={ingresosDetail} detailTitle="Ingresos por banco" />
+        <KpiCard title="Egresos" value={formatUYU(totalSalidas)} valueClass="text-red-600" detail={egresosDetail} detailTitle="Egresos por banco" />
+        <KpiCard title="Neto" value={formatUYU(neto)} valueClass={neto >= 0 ? "text-green-600" : "text-red-600"} />
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">

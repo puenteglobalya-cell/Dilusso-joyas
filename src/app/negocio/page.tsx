@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate, monthName } from "@/lib/utils";
-import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TransactionFilters } from "@/components/transactions/filters";
 import { NegocioChart } from "@/components/negocio/chart";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { NegocioHeatmap } from "@/components/negocio/heatmap";
 import { NoteCell } from "@/components/bank/NoteCell";
+import { KpiCard } from "@/components/ui/KpiDrawer";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Negocio | Dilusso Joyas" };
@@ -110,6 +111,15 @@ export default async function NegocioPage({ searchParams }: Props) {
       return acc;
     }, {});
   const categoryData = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
+  const allCatDetail = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+
+  const byCategoryIngresos = txs
+    .filter(r => (r.credito ?? 0) > 0 && r.categoria_negocio)
+    .reduce<Record<string, number>>((acc, r) => {
+      acc[r.categoria_negocio!] = (acc[r.categoria_negocio!] ?? 0) + rowImporteUYU(r);
+      return acc;
+    }, {});
+  const ingresosDetail = Object.entries(byCategoryIngresos).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
 
   // Heatmap: category × month (egresses only, negocio)
   const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
@@ -148,6 +158,7 @@ export default async function NegocioPage({ searchParams }: Props) {
     });
 
   const tableMonths = trend12.slice().reverse();
+  const trend12Detail = trend12.slice().reverse().map(m => ({ label: m.label, value: m.resultado }));
 
   return (
     <div className="p-8">
@@ -161,36 +172,41 @@ export default async function NegocioPage({ searchParams }: Props) {
       <TransactionFilters />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Ingresos</CardTitle>
-            <CardValue className="text-green-600">{formatUYU(ingresos)}</CardValue>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Egresos</CardTitle>
-            <CardValue className="text-red-600">{formatUYU(egresos)}</CardValue>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Resultado neto</CardTitle>
-            <CardValue className={resultado >= 0 ? "text-green-600" : "text-red-600"}>{formatUYU(resultado)}</CardValue>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Margen neto</CardTitle>
-            <CardValue className={margenNeto >= 0 ? "text-green-600" : "text-red-600"}>{margenNeto.toFixed(1)}%</CardValue>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Top gasto</CardTitle>
-            <CardValue className="text-slate-800 text-base truncate">{categoryData[0]?.name ?? "—"}</CardValue>
-          </CardHeader>
-        </Card>
+        <KpiCard
+          title="Ingresos"
+          value={formatUYU(ingresos)}
+          valueClass="text-green-600"
+          detail={ingresosDetail.length > 0 ? ingresosDetail : undefined}
+          detailTitle="Ingresos por categoría"
+        />
+        <KpiCard
+          title="Egresos"
+          value={formatUYU(egresos)}
+          valueClass="text-red-600"
+          detail={allCatDetail}
+          detailTitle="Gastos por categoría"
+        />
+        <KpiCard
+          title="Resultado neto"
+          value={formatUYU(resultado)}
+          valueClass={resultado >= 0 ? "text-green-600" : "text-red-600"}
+          detail={trend12Detail.length > 1 ? trend12Detail : undefined}
+          detailTitle="Resultado por mes"
+        />
+        <KpiCard
+          title="Margen neto"
+          value={`${margenNeto.toFixed(1)}%`}
+          valueClass={margenNeto >= 0 ? "text-green-600" : "text-red-600"}
+          detail={trend12.slice().reverse().map(m => ({ label: m.label, value: m.margenNeto, pct: Math.max(0, m.margenNeto) }))}
+          detailTitle="Margen neto por mes"
+        />
+        <KpiCard
+          title="Top gasto"
+          value={categoryData[0]?.name ?? "—"}
+          valueClass="text-slate-800 text-base truncate"
+          detail={allCatDetail}
+          detailTitle="Todos los gastos por categoría"
+        />
       </div>
 
       {trend12.length > 0 && (

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate, monthName } from "@/lib/utils";
-import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { KpiCard } from "@/components/ui/KpiDrawer";
 import { TransactionFilters } from "@/components/transactions/filters";
 import { NegocioChart } from "@/components/negocio/chart";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
@@ -102,6 +103,7 @@ export default async function PersonalPage({ searchParams }: Props) {
       return acc;
     }, {});
   const categoryData = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value }));
+  const allCatDetail = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
 
   const monthMap = new Map<string, { ingresos: number; egresos: number }>();
   for (const r of trendRows) {
@@ -126,6 +128,7 @@ export default async function PersonalPage({ searchParams }: Props) {
         margenNeto: pct(res, val.ingresos),
       };
     });
+  const trend12Detail = trend12.slice().reverse().map(m => ({ label: m.label, value: m.resultado }));
   const tableMonths = trend12.slice().reverse();
 
   return (
@@ -140,9 +143,9 @@ export default async function PersonalPage({ searchParams }: Props) {
       <TransactionFilters />
 
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <Card><CardHeader><CardTitle>Ingresos</CardTitle><CardValue className="text-green-600">{formatUYU(ingresos)}</CardValue></CardHeader></Card>
-        <Card><CardHeader><CardTitle>Gastos</CardTitle><CardValue className="text-red-600">{formatUYU(salidas)}</CardValue></CardHeader></Card>
-        <Card><CardHeader><CardTitle>Neto</CardTitle><CardValue className={resultado >= 0 ? "text-green-600" : "text-red-600"}>{formatUYU(resultado)}</CardValue></CardHeader></Card>
+        <KpiCard title="Ingresos" value={formatUYU(ingresos)} valueClass="text-green-600" />
+        <KpiCard title="Gastos" value={formatUYU(salidas)} valueClass="text-red-600" detail={allCatDetail} detailTitle="Gastos por categoría" />
+        <KpiCard title="Neto" value={formatUYU(resultado)} valueClass={resultado >= 0 ? "text-green-600" : "text-red-600"} detail={trend12Detail.length > 1 ? trend12Detail : undefined} detailTitle="Neto por mes" />
       </div>
 
       {trend12.length > 0 && (

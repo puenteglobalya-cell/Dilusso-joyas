@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
-import { Card, CardHeader, CardTitle, CardValue, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatUYU, monthName } from "@/lib/utils";
 import { DashboardChart } from "@/components/dashboard/chart";
+import { KpiCard } from "@/components/ui/KpiDrawer";
 import { AlertCircle, AlertTriangle, Upload } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +78,26 @@ async function getStats() {
   const trend = buildTrend(trendRows, 6);
   const resultado = negocioIngresos - negocioSalidas;
 
-  return { negocioSalidas, negocioIngresos, personalSalidas, resultado, facturado, unclassifiedCount, latestTC, mes, año, trend };
+  // Per-category detail for KpiCards
+  interface BSRowFull extends BSRow { categoria_negocio?: string | null; categoria_personal?: string | null }
+  const negocioGastosDetail = Object.entries(
+    (thisMonth as BSRowFull[]).filter(r => r.tipo === "negocio" && (r.debito ?? 0) > 0 && r.categoria_negocio)
+      .reduce<Record<string, number>>((a, r) => { a[r.categoria_negocio!] = (a[r.categoria_negocio!] ?? 0) + rowImporteUYU(r); return a; }, {})
+  ).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+
+  const personalGastosDetail = Object.entries(
+    (thisMonth as BSRowFull[]).filter(r => r.tipo === "personal" && (r.debito ?? 0) > 0 && r.categoria_personal)
+      .reduce<Record<string, number>>((a, r) => { a[r.categoria_personal!] = (a[r.categoria_personal!] ?? 0) + rowImporteUYU(r); return a; }, {})
+  ).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+
+  const negocioIngDetail = Object.entries(
+    (thisMonth as BSRowFull[]).filter(r => r.tipo === "negocio" && (r.credito ?? 0) > 0 && r.categoria_negocio)
+      .reduce<Record<string, number>>((a, r) => { a[r.categoria_negocio!] = (a[r.categoria_negocio!] ?? 0) + rowImporteUYU(r); return a; }, {})
+  ).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+
+  const trendResultado = trend.map(t => ({ label: t.label, value: t.ingresos - t.negocio - t.personal }));
+
+  return { negocioSalidas, negocioIngresos, personalSalidas, resultado, facturado, unclassifiedCount, latestTC, mes, año, trend, negocioGastosDetail, personalGastosDetail, negocioIngDetail, trendResultado };
 }
 
 function buildTrend(rows: BSRow[], months: number): TrendItem[] {
@@ -141,46 +161,39 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <Link href="/liquidaciones" className="block hover:scale-[1.02] transition-transform">
-          <Card>
-            <CardHeader>
-              <CardTitle>Facturado (mes)</CardTitle>
-              <CardValue>{formatUYU(stats.facturado)}</CardValue>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/negocio" className="block hover:scale-[1.02] transition-transform">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gastos negocio</CardTitle>
-              <CardValue className="text-red-600">{formatUYU(stats.negocioSalidas)}</CardValue>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/personal" className="block hover:scale-[1.02] transition-transform">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gastos personales</CardTitle>
-              <CardValue className="text-orange-600">{formatUYU(stats.personalSalidas)}</CardValue>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/negocio" className="block hover:scale-[1.02] transition-transform">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ingresos negocio</CardTitle>
-              <CardValue className="text-green-600">{formatUYU(stats.negocioIngresos)}</CardValue>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/negocio" className="block hover:scale-[1.02] transition-transform">
-          <Card>
-            <CardHeader>
-              <CardTitle>Resultado</CardTitle>
-              <CardValue className={stats.resultado >= 0 ? "text-green-600" : "text-red-600"}>{formatUYU(stats.resultado)}</CardValue>
-            </CardHeader>
-          </Card>
-        </Link>
+        <KpiCard
+          title="Facturado (mes)"
+          value={formatUYU(stats.facturado)}
+          href="/liquidaciones"
+        />
+        <KpiCard
+          title="Gastos negocio"
+          value={formatUYU(stats.negocioSalidas)}
+          valueClass="text-red-600"
+          detail={stats.negocioGastosDetail}
+          detailTitle="Gastos negocio por categoría"
+        />
+        <KpiCard
+          title="Gastos personales"
+          value={formatUYU(stats.personalSalidas)}
+          valueClass="text-orange-600"
+          detail={stats.personalGastosDetail}
+          detailTitle="Gastos personales por categoría"
+        />
+        <KpiCard
+          title="Ingresos negocio"
+          value={formatUYU(stats.negocioIngresos)}
+          valueClass="text-green-600"
+          detail={stats.negocioIngDetail}
+          detailTitle="Ingresos por categoría"
+        />
+        <KpiCard
+          title="Resultado"
+          value={formatUYU(stats.resultado)}
+          valueClass={stats.resultado >= 0 ? "text-green-600" : "text-red-600"}
+          detail={stats.trendResultado.length > 1 ? stats.trendResultado : undefined}
+          detailTitle="Resultado por mes"
+        />
       </div>
 
       <Card>
