@@ -417,8 +417,13 @@ export function parseBBVAPdf(text: string): BankRow[] {
   let cuenta = "";
   for (let i = 0; i < lines.length - 1; i++) {
     if (/^Cuenta\s*:?\s*$/.test(lines[i].trim())) {
-      const next = lines[i + 1].trim();
-      if (/^\d{6,12}$/.test(next)) { cuenta = next; break; }
+      // The value may appear several lines below the label (the PDF lays out
+      // all labels first, then all values in order).
+      for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
+        const cand = lines[j].trim();
+        if (/^\d{6,12}$/.test(cand)) { cuenta = cand; break; }
+      }
+      if (cuenta) break;
     }
     // Also try inline: "Cuenta : 15051382"
     const inlineM = lines[i].match(/Cuenta\s*:?\s*(\d{6,12})/);
@@ -465,7 +470,15 @@ export function parseBBVAPdf(text: string): BankRow[] {
     const firstNumIdx = combined.search(NUM_PAT);
     let concepto = combined.slice(0, firstNumIdx).trim();
     concepto = concepto.replace(/\s+\d{1,2}\/\d{2}\/\d{2,4}\s*$/, "").trim();
-    if (!concepto) { prevSaldoMap[tx.moneda] = saldo; continue; } // saldo anterior
+    if (!concepto) {
+      // Opening balance line ("30/04/25  114.453,58"): emit it as a
+      // "Saldo anterior" row so the running-saldo check has an anchor.
+      if (prevSaldoMap[tx.moneda] === null && saldo !== null) {
+        rows.push({ banco: "BBVA", cuenta, fecha: tx.date, descripcion: "Saldo anterior", numero: null, debito: null, credito: null, saldo, moneda: tx.moneda });
+      }
+      prevSaldoMap[tx.moneda] = saldo;
+      continue;
+    }
 
     const chequeMatch = concepto.match(/CLEARING\s+(\d{6,})/i) ?? concepto.match(/CHEQUE.*?(\d{6,})/i);
     const numero = chequeMatch ? chequeMatch[1] : null;
