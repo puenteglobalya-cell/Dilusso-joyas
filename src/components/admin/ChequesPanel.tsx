@@ -36,6 +36,18 @@ export function ChequesPanel() {
 
   useEffect(load, [load]);
 
+  const [aplicando, setAplicando] = useState(false);
+  const [aplicarResult, setAplicarResult] = useState<{ clasificados?: number } | null>(null);
+
+  async function aplicarClasificacion() {
+    setAplicando(true);
+    const res = await fetch("/api/admin/cheques-aplicar", { method: "POST" });
+    const d = await res.json();
+    setAplicarResult(d);
+    setAplicando(false);
+    if (d.ok) load();
+  }
+
   async function importar() {
     if (!paste.trim()) return;
     setImporting(true);
@@ -48,7 +60,14 @@ export function ChequesPanel() {
     const d = await res.json();
     setImportResult(d);
     setImporting(false);
-    if (d.ok) { setPaste(""); load(); }
+    if (d.ok) {
+      setPaste("");
+      load();
+      // auto-classify matched movements
+      const r2 = await fetch("/api/admin/cheques-aplicar", { method: "POST" });
+      const d2 = await r2.json();
+      if (d2.clasificados > 0) setAplicarResult(d2);
+    }
   }
 
   async function borrar(id: string) {
@@ -101,6 +120,7 @@ export function ChequesPanel() {
           {importResult?.ok && (
             <span className="text-sm text-green-600">
               ✓ {importResult.inserted} nuevos · {importResult.skipped} duplicados omitidos ({importResult.parsed} leídos)
+              {aplicarResult?.clasificados ? ` · ${aplicarResult.clasificados} movimientos clasificados` : ""}
             </span>
           )}
           {importResult?.error && <span className="text-sm text-red-600">{importResult.error}</span>}
@@ -115,7 +135,21 @@ export function ChequesPanel() {
       {/* Listado con matching */}
       <div className="bg-white rounded-xl border p-5">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-base font-semibold">Cheques registrados {cheques ? `(${cheques.length})` : ""}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-semibold">Cheques registrados {cheques ? `(${cheques.length})` : ""}</h2>
+            {counts.ok > 0 && (
+              <button
+                onClick={aplicarClasificacion}
+                disabled={aplicando}
+                className="h-8 px-3 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+              >
+                {aplicando ? "Clasificando…" : `Clasificar conciliados (${counts.ok})`}
+              </button>
+            )}
+            {aplicarResult?.clasificados != null && !aplicando && (
+              <span className="text-xs text-green-600">✓ {aplicarResult.clasificados} clasificados</span>
+            )}
+          </div>
           <div className="flex gap-1.5 text-xs">
             <button onClick={() => setFiltro("")} className={`px-2.5 py-1 rounded-full border ${filtro === "" ? "bg-gray-800 text-white border-gray-800" : "text-gray-500"}`}>Todos</button>
             <button onClick={() => setFiltro("ok")} className={`px-2.5 py-1 rounded-full border ${filtro === "ok" ? "bg-green-600 text-white border-green-600" : "text-green-700 border-green-300"}`}>✓ Conciliados {counts.ok}</button>
