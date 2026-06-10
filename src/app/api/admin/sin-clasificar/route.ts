@@ -11,7 +11,7 @@ export async function GET() {
   while (true) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (sb.from("bank_statements") as any)
-      .select("id,banco,fecha,descripcion,debito,credito,importe_uyu,moneda")
+      .select("id,banco,fecha,descripcion,debito,credito,importe_uyu,moneda,nota")
       .eq("clasificado", "No")
       .neq("descripcion", "Saldo anterior")
       .order("fecha", { ascending: false })
