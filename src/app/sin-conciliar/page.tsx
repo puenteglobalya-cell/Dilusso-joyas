@@ -9,7 +9,7 @@ interface BSRow {
   id: string; banco: string; fecha: string; descripcion: string | null;
   debito: number | null; credito: number | null; importe_uyu: number | null;
   moneda: string; tipo: string | null; categoria_negocio: string | null;
-  categoria_personal: string | null; clasificado: string | null; nota: string | null;
+  categoria_personal: string | null; clasificado: string | null; nota?: string | null;
 }
 
 function rowImporteUYU(r: BSRow): number {
@@ -401,7 +401,7 @@ export default function SinConciliarPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{cat ?? "—"}</td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      <NoteCell id={r.id} nota={r.nota} />
+                      <NoteCell id={r.id} nota={r.nota ?? null} />
                     </td>
                   </tr>
                 );

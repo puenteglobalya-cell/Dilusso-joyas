@@ -28,7 +28,6 @@ interface BSRow {
   categoria_negocio: string | null;
   categoria_personal: string | null;
   clasificado: string | null;
-  nota: string | null;
 }
 
 function rowImporteUYU(r: BSRow): number {
@@ -67,7 +66,7 @@ export default async function NegocioPage({ searchParams }: Props) {
     while (true) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (sb.from("bank_statements") as any)
-        .select("id,banco,fecha,descripcion,debito,credito,importe_uyu,moneda,tipo,categoria_negocio,categoria_personal,clasificado,nota")
+        .select("id,banco,fecha,descripcion,debito,credito,importe_uyu,moneda,tipo,categoria_negocio,categoria_personal,clasificado")
         .eq("tipo", "negocio")
         .gte("fecha", desde)
         .lt("fecha", hasta)
@@ -280,7 +279,7 @@ export default async function NegocioPage({ searchParams }: Props) {
                     {esIngreso ? "+" : "-"}{formatUYU(rowImporteUYU(r))}
                   </td>
                   <td className="px-4 py-3">
-                    <NoteCell id={r.id} nota={r.nota} />
+                    <NoteCell id={r.id} nota={null} />
                   </td>
                 </tr>
               );
