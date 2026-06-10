@@ -14,13 +14,21 @@ export async function POST(req: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
-  const { matches } = await req.json() as { matches: MatchToApply[] };
-  if (!Array.isArray(matches) || matches.length === 0) {
-    return NextResponse.json({ ok: true, clasificados: 0 });
+  let body: { matches?: MatchToApply[] };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "body inválido" }, { status: 400 });
+  }
+
+  const matches = body.matches ?? [];
+
+  if (matches.length === 0) {
+    return NextResponse.json({ ok: true, clasificados: 0, debug: "no matches received" });
   }
 
   const sb = createServerClient();
-  let clasificados = 0;
+  const resultados: { id: string; ok: boolean; error?: string }[] = [];
 
   for (const { movId, categoria, descripcion } of matches) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,8 +40,16 @@ export async function POST(req: Request) {
         descripcion,
       })
       .eq("id", movId);
-    if (!error) clasificados++;
+    resultados.push({ id: movId, ok: !error, error: error?.message });
   }
 
-  return NextResponse.json({ ok: true, clasificados });
+  const clasificados = resultados.filter(r => r.ok).length;
+  const errores = resultados.filter(r => !r.ok);
+
+  return NextResponse.json({
+    ok: true,
+    clasificados,
+    total: matches.length,
+    errores: errores.length > 0 ? errores : undefined,
+  });
 }
