@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardValue } from "@/components/ui/card";
 import { TransactionFilters } from "@/components/transactions/filters";
 
 export const dynamic = "force-dynamic";
@@ -88,15 +89,10 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
 
       <TransactionFilters />
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-lg border p-4">
-          <p className="text-xs text-slate-500">Total salidas</p>
-          <p className="text-xl font-bold text-red-600 mt-1">{formatUYU(totalSalidas)}</p>
-        </div>
-        <div className="bg-white rounded-lg border p-4">
-          <p className="text-xs text-slate-500">Total ingresos</p>
-          <p className="text-xl font-bold text-green-600 mt-1">{formatUYU(totalIngresos)}</p>
-        </div>
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card><CardHeader><CardTitle>Ingresos</CardTitle><CardValue className="text-green-600">{formatUYU(totalIngresos)}</CardValue></CardHeader></Card>
+        <Card><CardHeader><CardTitle>Egresos</CardTitle><CardValue className="text-red-600">{formatUYU(totalSalidas)}</CardValue></CardHeader></Card>
+        <Card><CardHeader><CardTitle>Neto</CardTitle><CardValue className={totalIngresos - totalSalidas >= 0 ? "text-green-600" : "text-red-600"}>{formatUYU(totalIngresos - totalSalidas)}</CardValue></CardHeader></Card>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">

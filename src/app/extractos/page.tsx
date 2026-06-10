@@ -53,8 +53,8 @@ export default async function ExtractosPage() {
           const movs = byKey[key];
           const total = movs.length;
           const fechas = movs.map((r) => r.fecha).sort();
-          const desde = fechas[fechas.length - 1];
-          const hasta = fechas[0];
+          const desde = fechas[0];
+          const hasta = fechas[fechas.length - 1];
 
           // Account numbers (distinct, non-null)
           const cuentas = [...new Set(movs.map((r) => r.cuenta).filter(Boolean))];

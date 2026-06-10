@@ -8,7 +8,7 @@ import { AlertCircle, AlertTriangle, Upload } from "lucide-react";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard | Dilusso Joyas" };
 
-interface TrendItem { label: string; negocio: number; personal: number }
+interface TrendItem { label: string; negocio: number; personal: number; ingresos: number }
 
 interface BSRow {
   tipo: string | null;
@@ -75,20 +75,24 @@ async function getStats() {
   const facturado = ((settlRes.data ?? []) as { facturado: number | null }[]).reduce((s, r) => s + (r.facturado ?? 0), 0);
 
   const trend = buildTrend(trendRows, 6);
+  const resultado = negocioIngresos - negocioSalidas;
 
-  return { negocioSalidas, negocioIngresos, personalSalidas, facturado, unclassifiedCount, latestTC, mes, año, trend };
+  return { negocioSalidas, negocioIngresos, personalSalidas, resultado, facturado, unclassifiedCount, latestTC, mes, año, trend };
 }
 
 function buildTrend(rows: BSRow[], months: number): TrendItem[] {
-  const map = new Map<string, { negocio: number; personal: number }>();
+  const map = new Map<string, { negocio: number; personal: number; ingresos: number }>();
   for (const r of rows) {
     const ym = r.fecha.slice(0, 7);
-    if (!map.has(ym)) map.set(ym, { negocio: 0, personal: 0 });
+    if (!map.has(ym)) map.set(ym, { negocio: 0, personal: 0, ingresos: 0 });
     const entry = map.get(ym)!;
     const amt = rowImporteUYU(r);
     if ((r.debito ?? 0) > 0) {
       if (r.tipo === "negocio") entry.negocio += amt;
       else if (r.tipo === "personal") entry.personal += amt;
+    }
+    if ((r.credito ?? 0) > 0) {
+      if (r.tipo === "negocio") entry.ingresos += amt;
     }
   }
   return Array.from(map.entries())
@@ -96,7 +100,7 @@ function buildTrend(rows: BSRow[], months: number): TrendItem[] {
     .slice(-months)
     .map(([key, val]) => {
       const [y, m] = key.split("-");
-      return { label: `${monthName(parseInt(m))} ${y}`, negocio: val.negocio, personal: val.personal };
+      return { label: `${monthName(parseInt(m))} ${y}`, negocio: val.negocio, personal: val.personal, ingresos: val.ingresos };
     });
 }
 
@@ -136,7 +140,7 @@ export default async function DashboardPage() {
         </Link>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Link href="/liquidaciones" className="block hover:scale-[1.02] transition-transform">
           <Card>
             <CardHeader>
@@ -166,6 +170,14 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Ingresos negocio</CardTitle>
               <CardValue className="text-green-600">{formatUYU(stats.negocioIngresos)}</CardValue>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/negocio" className="block hover:scale-[1.02] transition-transform">
+          <Card>
+            <CardHeader>
+              <CardTitle>Resultado</CardTitle>
+              <CardValue className={stats.resultado >= 0 ? "text-green-600" : "text-red-600"}>{formatUYU(stats.resultado)}</CardValue>
             </CardHeader>
           </Card>
         </Link>
