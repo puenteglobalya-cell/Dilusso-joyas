@@ -1,7 +1,8 @@
 import { createServerClient } from "@/lib/supabase";
-import { formatUYU, formatDate, monthName } from "@/lib/utils";
+import { formatUYU, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardValue } from "@/components/ui/card";
 import { CheckCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
 import type { Settlement } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,18 @@ interface BSIncome {
   categoria_negocio: string | null;
 }
 
+interface MonthDetail {
+  año: number;
+  mes: number;
+  facturado: number;
+  efectivo: number;
+  tarjeta: number;
+  fadaval: number;
+  gastos: number;
+  adelanto: number;
+  semanas: number;
+}
+
 export default async function LiquidacionesPage({ searchParams }: Props) {
   const sp = await searchParams;
   const sb = createServerClient();
@@ -37,6 +50,13 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
 
   const fechaDesde = `${añoFilter}-01-01`;
   const fechaHasta = `${añoFilter + 1}-01-01`;
+
+  // ── Años disponibles para el selector ─────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: yearsData } = await (sb.from("settlements") as any).select("año");
+  const añosDisponibles = [...new Set(((yearsData ?? []) as { año: number }[]).map(r => r.año).filter(Boolean))].sort((a, b) => b - a);
+  if (!añosDisponibles.includes(añoFilter)) añosDisponibles.push(añoFilter);
+  añosDisponibles.sort((a, b) => b - a);
 
   // ── Liquidaciones del período ─────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,8 +111,28 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     adelanto: items.reduce((s, r) => s + (r.adelanto_sueldos ?? 0), 0),
   };
 
+  // ── Detalle agrupado por mes (antes era por semana) ───────────────────────
+  const detailByMonth = new Map<string, MonthDetail>();
+  for (const s of items) {
+    if (!s.mes || !s.año) continue;
+    const k = `${s.año}-${String(s.mes).padStart(2, "0")}`;
+    if (!detailByMonth.has(k)) {
+      detailByMonth.set(k, { año: s.año, mes: s.mes, facturado: 0, efectivo: 0, tarjeta: 0, fadaval: 0, gastos: 0, adelanto: 0, semanas: 0 });
+    }
+    const e = detailByMonth.get(k)!;
+    e.facturado += s.facturado ?? 0;
+    e.efectivo += s.efectivo ?? 0;
+    e.tarjeta += s.tarjeta ?? 0;
+    e.fadaval += s.fadaval ?? 0;
+    e.gastos += s.gastos ?? 0;
+    e.adelanto += s.adelanto_sueldos ?? 0;
+    e.semanas += 1;
+  }
+  const monthDetails = Array.from(detailByMonth.values()).sort((a, b) =>
+    b.año !== a.año ? b.año - a.año : b.mes - a.mes
+  );
+
   // ── Reconciliación por mes ────────────────────────────────────────────────
-  // Acumular liquidaciones por mes (tarjeta + fadaval + efectivo + oca = facturado)
   const settlByMonth = new Map<string, { facturado: number }>();
   for (const s of settlements) {
     if (!s.mes || !s.año) continue;
@@ -102,10 +142,9 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     e.facturado += (s.tarjeta ?? 0) + (s.fadaval ?? 0) + (s.efectivo ?? 0);
   }
 
-  // Acumular cobros bancarios por mes desde bank_statements
   const cobByMonth = new Map<string, { tarjeta: number; fadaval: number; oca: number }>();
   for (const r of bsIncome) {
-    const ym = r.fecha.slice(0, 7); // "YYYY-MM"
+    const ym = r.fecha.slice(0, 7);
     if (!cobByMonth.has(ym)) cobByMonth.set(ym, { tarjeta: 0, fadaval: 0, oca: 0 });
     const e = cobByMonth.get(ym)!;
     const imp = r.moneda === "USD" ? Math.abs(r.importe_uyu ?? 0) : (r.credito ?? 0);
@@ -119,7 +158,6 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     }
   }
 
-  // Construir filas solo para meses con liquidación
   const allMonths = Array.from(settlByMonth.keys()).sort();
 
   const recon: MonthRecon[] = allMonths.map((k) => {
@@ -135,15 +173,32 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     };
   });
 
-  // Totales
   const totalCobrado = recon.reduce((s, r) => s + r.tarjetaCob + r.fadavalCob + r.ocaCob, 0);
   const totalLiquidado = recon.reduce((s, r) => s + r.facturadoLiq, 0);
   const totalPendiente = totalLiquidado - totalCobrado;
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-2">Liquidaciones</h1>
-      <p className="text-sm text-slate-500 mb-6">Caja diaria — efectivo, tarjeta y Fadaval</p>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold">Liquidaciones</h1>
+        {/* Year selector */}
+        <div className="flex gap-1">
+          {añosDisponibles.map(a => (
+            <Link
+              key={a}
+              href={`/liquidaciones?año=${a}`}
+              className={`px-3 h-8 flex items-center text-sm font-medium rounded-lg border transition-colors ${
+                a === añoFilter
+                  ? "bg-brand text-white border-brand"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {a}
+            </Link>
+          ))}
+        </div>
+      </div>
+      <p className="text-sm text-slate-500 mb-6">Caja diaria — efectivo, tarjeta y Fadaval · {añoFilter}</p>
 
       {/* KPIs */}
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
@@ -164,36 +219,52 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
         ))}
       </div>
 
-      {/* Tabla de liquidaciones */}
+      {/* Tabla de liquidaciones — agrupada por mes */}
       <div className="bg-white rounded-xl border overflow-x-auto mb-10">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Período</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Mes</th>
+              <th className="text-center px-4 py-3 font-medium text-slate-500">Liquidaciones</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Facturado</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Efectivo</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Tarjeta</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Fadaval</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Gastos</th>
+              <th className="text-right px-4 py-3 font-medium text-slate-500">Adelantos</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {items.map((s) => (
-              <tr key={s.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(s.desde)} – {formatDate(s.hasta)}</td>
-                <td className="px-4 py-3">{monthName(s.mes)} {s.año}</td>
-                <td className="px-4 py-3 text-right font-medium">{formatUYU(s.facturado)}</td>
-                <td className="px-4 py-3 text-right text-green-600">{formatUYU(s.efectivo)}</td>
-                <td className="px-4 py-3 text-right text-blue-600">{formatUYU(s.tarjeta)}</td>
-                <td className="px-4 py-3 text-right text-purple-600">{formatUYU(s.fadaval)}</td>
-                <td className="px-4 py-3 text-right text-red-600">{formatUYU(s.gastos)}</td>
+            {monthDetails.map((m) => (
+              <tr key={`${m.año}-${m.mes}`} className="hover:bg-slate-50">
+                <td className="px-4 py-3 font-medium">{monthName(m.mes)} {m.año}</td>
+                <td className="px-4 py-3 text-center text-slate-400 text-xs">{m.semanas}</td>
+                <td className="px-4 py-3 text-right font-medium">{formatUYU(m.facturado)}</td>
+                <td className="px-4 py-3 text-right text-green-600">{formatUYU(m.efectivo)}</td>
+                <td className="px-4 py-3 text-right text-blue-600">{formatUYU(m.tarjeta)}</td>
+                <td className="px-4 py-3 text-right text-purple-600">{formatUYU(m.fadaval)}</td>
+                <td className="px-4 py-3 text-right text-red-600">{formatUYU(m.gastos)}</td>
+                <td className="px-4 py-3 text-right text-orange-600">{m.adelanto > 0 ? formatUYU(m.adelanto) : "—"}</td>
               </tr>
             ))}
-            {!items.length && (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">Sin liquidaciones para este período</td></tr>
+            {!monthDetails.length && (
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">Sin liquidaciones para este período</td></tr>
             )}
           </tbody>
+          {monthDetails.length > 0 && (
+            <tfoot className="border-t-2 bg-slate-50">
+              <tr>
+                <td className="px-4 py-3 font-bold text-slate-700">Total {añoFilter}</td>
+                <td className="px-4 py-3 text-center text-slate-400 text-xs">{monthDetails.reduce((s, m) => s + m.semanas, 0)}</td>
+                <td className="px-4 py-3 text-right font-bold">{formatUYU(totals.facturado)}</td>
+                <td className="px-4 py-3 text-right font-bold text-green-600">{formatUYU(totals.efectivo)}</td>
+                <td className="px-4 py-3 text-right font-bold text-blue-600">{formatUYU(totals.tarjeta)}</td>
+                <td className="px-4 py-3 text-right font-bold text-purple-600">{formatUYU(totals.fadaval)}</td>
+                <td className="px-4 py-3 text-right font-bold text-red-600">{formatUYU(totals.gastos)}</td>
+                <td className="px-4 py-3 text-right font-bold text-orange-600">{formatUYU(totals.adelanto)}</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

@@ -1,18 +1,10 @@
 import { createServerClient } from "@/lib/supabase";
-import { Badge } from "@/components/ui/badge";
 import { AddDictionaryEntry } from "@/components/dictionary/add-entry";
+import { DictionaryTable, type Regla } from "@/components/dictionary/dictionary-table";
 import type { Category } from "@/lib/database.types";
-import { DeleteDictionaryEntry } from "@/components/dictionary/delete-entry";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Diccionario | Dilusso Joyas" };
-
-interface Regla {
-  keyword: string;
-  tipo: string;
-  cat_negocio: string;
-  cat_personal: string;
-}
 
 export default async function DiccionarioPage() {
   const sb = createServerClient();
@@ -38,44 +30,7 @@ export default async function DiccionarioPage() {
         <AddDictionaryEntry categories={categories} />
       </div>
 
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Keyword</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Tipo</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Categoría</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {entries.map((e) => (
-              <tr key={e.keyword} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-mono text-xs font-medium">{e.keyword}</td>
-                <td className="px-4 py-3">
-                  {e.tipo && (
-                    <Badge variant={e.tipo === "negocio" ? "default" : "outline"}>{e.tipo}</Badge>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-slate-600">
-                  {e.tipo === "negocio" ? e.cat_negocio : e.cat_personal || "—"}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <DeleteDictionaryEntry keyword={e.keyword} />
-                </td>
-              </tr>
-            ))}
-            {!entries.length && (
-              <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-slate-400">
-                  <p className="font-medium text-slate-500 mb-1">El diccionario está vacío</p>
-                  <p className="text-xs">Clasificá un movimiento y guardá la keyword para que aparezca aquí</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DictionaryTable entries={entries} />
     </div>
   );
 }
