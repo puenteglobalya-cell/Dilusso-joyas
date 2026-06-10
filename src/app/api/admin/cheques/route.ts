@@ -41,8 +41,9 @@ export async function GET() {
   }
 
   // Match by number suffix in either direction (the registry keeps the
-  // termination; the statement may store a longer or shorter reference)
-  // plus amount within $1 in the right currency.
+  // termination; the statement may store a longer or shorter reference),
+  // amount within $1 in the right currency, and movement date on/after
+  // the cheque's fecha de cobro (a diferido can't clear earlier).
   const results = (cheques as Cheque[]).map(ch => {
     const monto = ch.monto_uyu ?? ch.monto_usd;
     const monedaEsperada = ch.monto_usd != null && ch.monto_uyu == null ? "USD" : "UYU";
@@ -52,14 +53,22 @@ export async function GET() {
       if (!mn || !cn) return false;
       return mn === cn || mn.endsWith(cn) || cn.endsWith(mn);
     });
-    const match = candidates.find(m =>
-      monto != null && m.debito != null && Math.abs(m.debito - monto) < 1 && m.moneda === monedaEsperada
-    ) ?? null;
-    const matchNumOnly = !match && candidates.length > 0 ? candidates[0] : null;
+    const montoOk = (m: BSRow) =>
+      monto != null && m.debito != null && Math.abs(m.debito - monto) < 1 && m.moneda === monedaEsperada;
+    const fechaOk = (m: BSRow) => !ch.fecha_cobro || m.fecha >= ch.fecha_cobro;
+
+    const match = candidates.find(m => montoOk(m) && fechaOk(m)) ?? null;
+    let matchParcial: (BSRow & { motivo: string }) | null = null;
+    if (!match && candidates.length > 0) {
+      const conMonto = candidates.find(montoOk);
+      matchParcial = conMonto
+        ? { ...conMonto, motivo: `cobrado el ${conMonto.fecha} antes de la fecha de cobro ${ch.fecha_cobro}` }
+        : { ...candidates[0], motivo: "monto difiere" };
+    }
     return {
       ...ch,
       match: match ? { id: match.id, fecha: match.fecha, descripcion: match.descripcion, debito: match.debito, moneda: match.moneda } : null,
-      matchParcial: matchNumOnly ? { id: matchNumOnly.id, fecha: matchNumOnly.fecha, descripcion: matchNumOnly.descripcion, debito: matchNumOnly.debito, moneda: matchNumOnly.moneda } : null,
+      matchParcial: matchParcial ? { id: matchParcial.id, fecha: matchParcial.fecha, descripcion: matchParcial.descripcion, debito: matchParcial.debito, moneda: matchParcial.moneda, motivo: matchParcial.motivo } : null,
     };
   });
 

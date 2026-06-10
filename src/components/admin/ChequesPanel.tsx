@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Trash2 } from "lucide-react";
 
-interface MovMatch { id: string; fecha: string; descripcion: string | null; debito: number | null; moneda: string }
+interface MovMatch { id: string; fecha: string; descripcion: string | null; debito: number | null; moneda: string; motivo?: string }
 interface ChequeRow {
   id: string; numero: string; fecha_cobro: string | null; proveedor: string | null;
   tipo_mercaderia: string | null; monto_uyu: number | null; monto_usd: number | null;
@@ -119,7 +119,7 @@ export function ChequesPanel() {
           <div className="flex gap-1.5 text-xs">
             <button onClick={() => setFiltro("")} className={`px-2.5 py-1 rounded-full border ${filtro === "" ? "bg-gray-800 text-white border-gray-800" : "text-gray-500"}`}>Todos</button>
             <button onClick={() => setFiltro("ok")} className={`px-2.5 py-1 rounded-full border ${filtro === "ok" ? "bg-green-600 text-white border-green-600" : "text-green-700 border-green-300"}`}>✓ Conciliados {counts.ok}</button>
-            <button onClick={() => setFiltro("parcial")} className={`px-2.5 py-1 rounded-full border ${filtro === "parcial" ? "bg-orange-500 text-white border-orange-500" : "text-orange-700 border-orange-300"}`}>⚠ Nº ok, monto difiere {counts.parcial}</button>
+            <button onClick={() => setFiltro("parcial")} className={`px-2.5 py-1 rounded-full border ${filtro === "parcial" ? "bg-orange-500 text-white border-orange-500" : "text-orange-700 border-orange-300"}`}>⚠ Revisar {counts.parcial}</button>
             <button onClick={() => setFiltro("sin")} className={`px-2.5 py-1 rounded-full border ${filtro === "sin" ? "bg-red-600 text-white border-red-600" : "text-red-700 border-red-300"}`}>✗ Sin movimiento {counts.sin}</button>
           </div>
         </div>
@@ -161,7 +161,7 @@ export function ChequesPanel() {
                         </span>
                       ) : c.matchParcial ? (
                         <span className="text-orange-600" title={c.matchParcial.descripcion ?? ""}>
-                          ⚠ Nº en banco ({fmtFecha(c.matchParcial.fecha)} · {c.matchParcial.moneda} {fmtMonto(c.matchParcial.debito)}) pero monto difiere
+                          ⚠ Nº en banco ({fmtFecha(c.matchParcial.fecha)} · {c.matchParcial.moneda} {fmtMonto(c.matchParcial.debito)}) — {c.matchParcial.motivo ?? "monto difiere"}
                         </span>
                       ) : (
                         <span className="text-red-500">✗ Sin movimiento en banco</span>
