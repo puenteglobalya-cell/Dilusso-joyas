@@ -44,42 +44,73 @@ export async function GET() {
   // termination; the statement may store a longer or shorter reference),
   // amount within $1 in the right currency, and movement date on/after
   // the cheque's fecha de cobro (a diferido can't clear earlier).
-  const results = (cheques as Cheque[]).map(ch => {
+  // Build set of movIds already claimed by a full match (to avoid double-assigning)
+  // We do two passes: first pass finds all exact matches, second pass uses fallbacks
+  const claimedByNum = new Set<string>();
+
+  // Pass 1: collect all numero+monto+fecha matches
+  const pass1 = (cheques as Cheque[]).map(ch => {
     const monto = ch.monto_uyu ?? ch.monto_usd;
     const monedaEsperada = ch.monto_usd != null && ch.monto_uyu == null ? "USD" : "UYU";
+    const cn = ch.numero.replace(/^0+/, "");
 
-    const numMatch = (m: BSRow) => {
-      const mn = (m.numero ?? "").replace(/\D/g, "").replace(/^0+/, "");
-      const cn = ch.numero.replace(/^0+/, "");
-      if (!mn || !cn) return false;
-      // Prefer exact match over suffix match to avoid cross-matching same-proveedor cheques
-      return mn === cn || mn.endsWith(cn) || cn.endsWith(mn);
-    };
     const montoOk = (m: BSRow) =>
       monto != null && m.debito != null && Math.abs(m.debito - monto) < 1 && m.moneda === monedaEsperada;
     const fechaOk = (m: BSRow) => !ch.fecha_cobro || m.fecha >= ch.fecha_cobro;
 
-    // Prefer candidates with exact numero match first
-    const cn = ch.numero.replace(/^0+/, "");
     const candidates = movs
-      .filter(numMatch)
+      .filter(m => {
+        const mn = (m.numero ?? "").replace(/\D/g, "").replace(/^0+/, "");
+        return mn === cn || mn.endsWith(cn) || cn.endsWith(mn);
+      })
       .sort((a, b) => {
-        const aExact = (a.numero ?? "").replace(/\D/g, "").replace(/^0+/, "") === cn ? 0 : 1;
-        const bExact = (b.numero ?? "").replace(/\D/g, "").replace(/^0+/, "") === cn ? 0 : 1;
-        return aExact - bExact;
+        const aEx = (a.numero ?? "").replace(/\D/g, "").replace(/^0+/, "") === cn ? 0 : 1;
+        const bEx = (b.numero ?? "").replace(/\D/g, "").replace(/^0+/, "") === cn ? 0 : 1;
+        return aEx - bEx;
       });
 
     const match = candidates.find(m => montoOk(m) && fechaOk(m)) ?? null;
+    if (match) claimedByNum.add(match.id);
+    return { ch, match, candidates, montoOk, fechaOk, monedaEsperada, monto };
+  });
+
+  // Pass 2: for unmatched cheques, try fallback by monto+moneda within ±60 days
+  const results = pass1.map(({ ch, match, candidates, montoOk, fechaOk, monedaEsperada, monto }) => {
+    let finalMatch = match;
     let matchParcial: (BSRow & { motivo: string }) | null = null;
-    if (!match && candidates.length > 0) {
-      const conMonto = candidates.find(montoOk);
-      matchParcial = conMonto
-        ? { ...conMonto, motivo: `cobrado el ${conMonto.fecha} antes de la fecha de cobro ${ch.fecha_cobro}` }
-        : { ...candidates[0], motivo: "monto difiere" };
+
+    if (!finalMatch) {
+      // Fallback: monto+moneda match in a ±60 day window, not already claimed
+      if (monto != null && ch.fecha_cobro) {
+        const d0 = new Date(ch.fecha_cobro);
+        const dMin = new Date(d0); dMin.setDate(dMin.getDate() - 5);
+        const dMax = new Date(d0); dMax.setDate(dMax.getDate() + 60);
+        const dMinStr = dMin.toISOString().slice(0, 10);
+        const dMaxStr = dMax.toISOString().slice(0, 10);
+        const byAmount = movs.find(m =>
+          !claimedByNum.has(m.id) &&
+          m.debito != null && Math.abs(m.debito - monto) < 1 &&
+          m.moneda === monedaEsperada &&
+          m.fecha >= dMinStr && m.fecha <= dMaxStr
+        );
+        if (byAmount) {
+          finalMatch = byAmount;
+          claimedByNum.add(byAmount.id);
+        }
+      }
+
+      // If still no match, show best partial from numero candidates
+      if (!finalMatch && candidates.length > 0) {
+        const conMonto = candidates.find(montoOk);
+        matchParcial = conMonto
+          ? { ...conMonto, motivo: `cobrado el ${conMonto.fecha} antes de la fecha de cobro ${ch.fecha_cobro}` }
+          : { ...candidates[0], motivo: "monto difiere" };
+      }
     }
+
     return {
       ...ch,
-      match: match ? { id: match.id, fecha: match.fecha, descripcion: match.descripcion, debito: match.debito, moneda: match.moneda, clasificado: match.clasificado } : null,
+      match: finalMatch ? { id: finalMatch.id, fecha: finalMatch.fecha, descripcion: finalMatch.descripcion, debito: finalMatch.debito, moneda: finalMatch.moneda, clasificado: finalMatch.clasificado } : null,
       matchParcial: matchParcial ? { id: matchParcial.id, fecha: matchParcial.fecha, descripcion: matchParcial.descripcion, debito: matchParcial.debito, moneda: matchParcial.moneda, motivo: matchParcial.motivo } : null,
     };
   });
