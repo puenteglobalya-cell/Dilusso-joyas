@@ -47,15 +47,27 @@ export async function GET() {
   const results = (cheques as Cheque[]).map(ch => {
     const monto = ch.monto_uyu ?? ch.monto_usd;
     const monedaEsperada = ch.monto_usd != null && ch.monto_uyu == null ? "USD" : "UYU";
-    const candidates = movs.filter(m => {
+
+    const numMatch = (m: BSRow) => {
       const mn = (m.numero ?? "").replace(/\D/g, "").replace(/^0+/, "");
       const cn = ch.numero.replace(/^0+/, "");
       if (!mn || !cn) return false;
+      // Prefer exact match over suffix match to avoid cross-matching same-proveedor cheques
       return mn === cn || mn.endsWith(cn) || cn.endsWith(mn);
-    });
+    };
     const montoOk = (m: BSRow) =>
       monto != null && m.debito != null && Math.abs(m.debito - monto) < 1 && m.moneda === monedaEsperada;
     const fechaOk = (m: BSRow) => !ch.fecha_cobro || m.fecha >= ch.fecha_cobro;
+
+    // Prefer candidates with exact numero match first
+    const cn = ch.numero.replace(/^0+/, "");
+    const candidates = movs
+      .filter(numMatch)
+      .sort((a, b) => {
+        const aExact = (a.numero ?? "").replace(/\D/g, "").replace(/^0+/, "") === cn ? 0 : 1;
+        const bExact = (b.numero ?? "").replace(/\D/g, "").replace(/^0+/, "") === cn ? 0 : 1;
+        return aExact - bExact;
+      });
 
     const match = candidates.find(m => montoOk(m) && fechaOk(m)) ?? null;
     let matchParcial: (BSRow & { motivo: string }) | null = null;

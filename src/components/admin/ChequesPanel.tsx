@@ -53,6 +53,23 @@ export function ChequesPanel() {
       }));
   }
 
+  async function forzarClasificar(c: ChequeRow) {
+    const mov = c.matchParcial;
+    if (!mov) return;
+    const matches = [{
+      movId: mov.id,
+      categoria: (c.tipo_mercaderia ?? "Mercadería").trim(),
+      descripcion: c.proveedor?.trim() ? `${c.proveedor.trim()} - Cheque ${c.numero}` : `Cheque ${c.numero}`,
+    }];
+    await fetch("/api/admin/cheques-aplicar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matches }),
+    });
+    load();
+    router.refresh();
+  }
+
   async function aplicarClasificacion() {
     if (!cheques) return;
     setAplicando(true);
@@ -229,9 +246,17 @@ export function ChequesPanel() {
                           {c.match.clasificado === "Si" ? "✓ Clasificado" : "✓ Coincide"} · {fmtFecha(c.match.fecha)} · {c.match.moneda} {fmtMonto(c.match.debito)}
                         </span>
                       ) : c.matchParcial ? (
-                        <span className="text-orange-600" title={c.matchParcial.descripcion ?? ""}>
-                          ⚠ Nº en banco ({fmtFecha(c.matchParcial.fecha)} · {c.matchParcial.moneda} {fmtMonto(c.matchParcial.debito)}) — {c.matchParcial.motivo ?? "monto difiere"}
-                        </span>
+                        <div className="space-y-1">
+                          <span className="text-orange-600 block" title={c.matchParcial.descripcion ?? ""}>
+                            ⚠ {fmtFecha(c.matchParcial.fecha)} · {c.matchParcial.moneda} {fmtMonto(c.matchParcial.debito)} — {c.matchParcial.motivo ?? "monto difiere"}
+                          </span>
+                          <button
+                            onClick={() => forzarClasificar(c)}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded bg-orange-100 hover:bg-orange-200 text-orange-800"
+                          >
+                            Confirmar igual
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-red-500">✗ Sin movimiento en banco</span>
                       )}
