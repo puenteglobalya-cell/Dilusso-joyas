@@ -39,9 +39,27 @@ export function ChequesPanel() {
   const [aplicando, setAplicando] = useState(false);
   const [aplicarResult, setAplicarResult] = useState<{ clasificados?: number } | null>(null);
 
+  function buildMatches(rows: ChequeRow[]) {
+    return rows
+      .filter(c => c.match)
+      .map(c => ({
+        movId: c.match!.id,
+        categoria: (c.tipo_mercaderia ?? "Mercadería").trim(),
+        descripcion: c.proveedor?.trim()
+          ? `${c.proveedor.trim()} - Cheque ${c.numero}`
+          : `Cheque ${c.numero}`,
+      }));
+  }
+
   async function aplicarClasificacion() {
+    if (!cheques) return;
     setAplicando(true);
-    const res = await fetch("/api/admin/cheques-aplicar", { method: "POST" });
+    const matches = buildMatches(cheques);
+    const res = await fetch("/api/admin/cheques-aplicar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matches }),
+    });
     const d = await res.json();
     setAplicarResult(d);
     setAplicando(false);
@@ -62,11 +80,22 @@ export function ChequesPanel() {
     setImporting(false);
     if (d.ok) {
       setPaste("");
-      load();
-      // auto-classify matched movements
-      const r2 = await fetch("/api/admin/cheques-aplicar", { method: "POST" });
-      const d2 = await r2.json();
-      if (d2.clasificados > 0) setAplicarResult(d2);
+      // reload to get fresh matches, then auto-classify
+      const r2 = await fetch("/api/admin/cheques").then(r => r.json());
+      const freshCheques: ChequeRow[] = r2.cheques ?? [];
+      setCheques(freshCheques);
+      const matches = buildMatches(freshCheques);
+      if (matches.length > 0) {
+        const r3 = await fetch("/api/admin/cheques-aplicar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matches }),
+        });
+        const d3 = await r3.json();
+        if (d3.clasificados > 0) setAplicarResult(d3);
+        // reload to reflect new clasificado state
+        load();
+      }
     }
   }
 
