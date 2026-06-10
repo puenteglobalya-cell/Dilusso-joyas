@@ -19,16 +19,16 @@ export async function GET() {
   // Supabase PostgREST has a server-side max_rows limit (typically 1000).
   // Paginate to collect all rows regardless of that limit.
   const PAGE = 1000;
-  let rows: { banco: string; moneda: string; fecha: string }[] = [];
+  let rows: { banco: string; moneda: string; fecha: string; cuenta: string | null }[] = [];
   let from = 0;
   while (true) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (sb.from("bank_statements") as any)
-      .select("banco, moneda, fecha")
+      .select("banco, moneda, fecha, cuenta")
       .order("fecha", { ascending: true })
       .range(from, from + PAGE - 1);
     if (error || !data || data.length === 0) break;
-    rows = rows.concat(data as { banco: string; moneda: string; fecha: string }[]);
+    rows = rows.concat(data as { banco: string; moneda: string; fecha: string; cuenta: string | null }[]);
     if (data.length < PAGE) break;
     from += PAGE;
   }
@@ -57,7 +57,12 @@ export async function GET() {
       const keyAny = rows.some(r => r.banco === b.banco && (b.moneda ? r.moneda === b.moneda : true) && r.fecha.slice(0, 7) === ym);
       return { ym, loaded: b.moneda ? loaded.has(key) : keyAny };
     });
-    return { label: b.label, months };
+    const cuentas = [...new Set(
+      rows
+        .filter(r => r.banco === b.banco && (b.moneda ? r.moneda === b.moneda : true) && r.cuenta)
+        .map(r => r.cuenta as string)
+    )].sort();
+    return { label: b.label, months, cuentas };
   });
 
   return NextResponse.json({ months: allMonths, bancos: result });

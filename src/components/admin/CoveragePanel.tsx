@@ -12,7 +12,8 @@ interface GapInfo { fecha: string; diff: number }
 interface ContResult { label: string; gaps: GapInfo[] }
 
 export function CoveragePanel() {
-  const [data, setData] = useState<{ months: string[]; bancos: { label: string; months: { ym: string; loaded: boolean }[] }[] } | null>(null);
+  const [data, setData] = useState<{ months: string[]; bancos: { label: string; months: { ym: string; loaded: boolean }[]; cuentas?: string[] }[] } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [continuity, setContinuity] = useState<Map<string, GapInfo[]>>(new Map());
 
   useEffect(() => {
@@ -31,8 +32,23 @@ export function CoveragePanel() {
   const now = new Date();
   const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const missing = data.bancos
-    .map(b => ({ banco: b.label, meses: b.months.filter(({ ym, loaded }) => !loaded && ym < currentYM).map(({ ym }) => fmtYM(ym)) }))
+    .map(b => ({
+      banco: b.label,
+      cuentas: b.cuentas ?? [],
+      meses: b.months.filter(({ ym, loaded }) => !loaded && ym < currentYM).map(({ ym }) => fmtYM(ym)),
+    }))
     .filter(b => b.meses.length > 0);
+
+  function copyMissing() {
+    const lines = missing.map(({ banco, cuentas, meses }) =>
+      `• ${banco}${cuentas.length ? ` (cuenta ${cuentas.join(", ")})` : ""}: ${meses.join(", ")}`
+    );
+    const text = `Hola, necesitamos los extractos bancarios de los siguientes meses:\n\n${lines.join("\n")}\n\n¡Gracias!`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
 
   // Build lookup: bancoLabel -> set of YYYY-MM with gap
   const gapMonths = new Map<string, Set<string>>();
@@ -114,14 +130,25 @@ export function CoveragePanel() {
         <div className="border border-orange-200 bg-orange-50 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-orange-800">Extractos faltantes</p>
-            <span className="text-xs font-bold bg-orange-200 text-orange-900 rounded-full px-2.5 py-0.5">
-              {missing.reduce((acc, b) => acc + b.meses.length, 0)} meses
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold bg-orange-200 text-orange-900 rounded-full px-2.5 py-0.5">
+                {missing.reduce((acc, b) => acc + b.meses.length, 0)} meses
+              </span>
+              <button
+                onClick={copyMissing}
+                className="text-xs font-semibold bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5"
+              >
+                {copied ? "✓ Copiado" : "Copiar para enviar"}
+              </button>
+            </div>
           </div>
           <ul className="space-y-1.5">
-            {missing.map(({ banco, meses }) => (
+            {missing.map(({ banco, cuentas, meses }) => (
               <li key={banco} className="text-sm text-orange-700">
                 <span className="font-medium">{banco}</span>
+                {cuentas.length > 0 && (
+                  <span className="ml-1.5 font-mono text-xs text-orange-500">cta. {cuentas.join(", ")}</span>
+                )}
                 <span className="ml-1.5 text-xs font-semibold bg-orange-200 text-orange-900 rounded-full px-2 py-0.5">{meses.length}</span>
                 <span className="ml-2 text-orange-600">{meses.join(", ")}</span>
               </li>
