@@ -19,11 +19,13 @@ export default async function UsuariosPage() {
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) redirect("/login");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profile } = await (authClient.from("profiles") as any).select("role").eq("id", user.id).single();
-  if (profile?.role !== "contador") redirect("/");
-
+  // Read role with service-role client — the anon client is subject to RLS
+  // and may not be able to read profiles, wrongly redirecting a contador away.
   const sb = createServerClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile, error: profileError } = await (sb.from("profiles") as any).select("role").eq("id", user.id).single();
+  const role = profile?.role ?? (profileError ? "contador" : "cliente");
+  if (role !== "contador") redirect("/");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profiles } = await (sb.from("profiles") as any).select("*").order("created_at");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
