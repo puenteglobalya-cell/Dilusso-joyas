@@ -9,7 +9,7 @@ interface Cheque {
   tipo_mercaderia: string | null; monto_uyu: number | null; monto_usd: number | null;
   banco: string | null; nota: string | null;
 }
-interface BSRow { id: string; numero: string | null; fecha: string; descripcion: string | null; debito: number | null; moneda: string }
+interface BSRow { id: string; numero: string | null; fecha: string; descripcion: string | null; debito: number | null; moneda: string; clasificado: string | null }
 
 export async function GET() {
   const auth = await requireAdmin();
@@ -30,7 +30,7 @@ export async function GET() {
   while (true) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (sb.from("bank_statements") as any)
-      .select("id, numero, fecha, descripcion, debito, moneda")
+      .select("id, numero, fecha, descripcion, debito, moneda, clasificado")
       .not("numero", "is", null)
       .neq("numero", "")
       .range(from, from + PAGE - 1);
@@ -67,7 +67,7 @@ export async function GET() {
     }
     return {
       ...ch,
-      match: match ? { id: match.id, fecha: match.fecha, descripcion: match.descripcion, debito: match.debito, moneda: match.moneda } : null,
+      match: match ? { id: match.id, fecha: match.fecha, descripcion: match.descripcion, debito: match.debito, moneda: match.moneda, clasificado: match.clasificado } : null,
       matchParcial: matchParcial ? { id: matchParcial.id, fecha: matchParcial.fecha, descripcion: matchParcial.descripcion, debito: matchParcial.debito, moneda: matchParcial.moneda, motivo: matchParcial.motivo } : null,
     };
   });

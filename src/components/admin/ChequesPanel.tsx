@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 
-interface MovMatch { id: string; fecha: string; descripcion: string | null; debito: number | null; moneda: string; motivo?: string }
+interface MovMatch { id: string; fecha: string; descripcion: string | null; debito: number | null; moneda: string; clasificado?: string | null; motivo?: string }
 interface ChequeRow {
   id: string; numero: string; fecha_cobro: string | null; proveedor: string | null;
   tipo_mercaderia: string | null; monto_uyu: number | null; monto_usd: number | null;
@@ -20,6 +21,7 @@ function fmtFecha(f: string | null) {
 }
 
 export function ChequesPanel() {
+  const router = useRouter();
   const [cheques, setCheques] = useState<ChequeRow[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [paste, setPaste] = useState("");
@@ -41,7 +43,7 @@ export function ChequesPanel() {
 
   function buildMatches(rows: ChequeRow[]) {
     return rows
-      .filter(c => c.match)
+      .filter(c => c.match && c.match.clasificado !== "Si")
       .map(c => ({
         movId: c.match!.id,
         categoria: (c.tipo_mercaderia ?? "Mercadería").trim(),
@@ -63,7 +65,11 @@ export function ChequesPanel() {
     const d = await res.json();
     setAplicarResult(d);
     setAplicando(false);
-    if (d.ok) load();
+    if (d.ok) {
+      load();
+      // refresh sidebar badge (force full page revalidation)
+      router.refresh();
+    }
   }
 
   async function importar() {
@@ -219,8 +225,8 @@ export function ChequesPanel() {
                     <td className="px-3 py-2 text-right font-medium">{fmtMonto(c.monto_usd)}</td>
                     <td className="px-3 py-2">
                       {c.match ? (
-                        <span className="text-green-700" title={c.match.descripcion ?? ""}>
-                          ✓ {fmtFecha(c.match.fecha)} · {c.match.moneda} {fmtMonto(c.match.debito)}
+                        <span className={c.match.clasificado === "Si" ? "text-blue-600" : "text-green-700"} title={c.match.descripcion ?? ""}>
+                          {c.match.clasificado === "Si" ? "✓ Clasificado" : "✓ Coincide"} · {fmtFecha(c.match.fecha)} · {c.match.moneda} {fmtMonto(c.match.debito)}
                         </span>
                       ) : c.matchParcial ? (
                         <span className="text-orange-600" title={c.matchParcial.descripcion ?? ""}>
