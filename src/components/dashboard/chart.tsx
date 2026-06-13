@@ -28,9 +28,9 @@ export function DashboardChart({ data }: { data: DataPoint[] }) {
         <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" />
         <Tooltip formatter={(value) => fmt(Number(value))} />
         <Legend />
-        <Bar dataKey="ingresos" name="Ingresos negocio" fill="#22c55e" opacity={0.85} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="negocio" name="Gastos negocio" fill="#1e293b" opacity={0.85} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="personal" name="Gastos personales" fill="#94a3b8" opacity={0.85} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="ingresos" name="Ingresos negocio" fill="#0ea5e9" opacity={0.85} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="negocio" name="Gastos negocio" fill="#fb7185" opacity={0.85} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="personal" name="Gastos personales" fill="#c4b5a0" opacity={0.85} radius={[4, 4, 0, 0]} />
       </ComposedChart>
     </ResponsiveContainer>
   );
