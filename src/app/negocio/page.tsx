@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
-import { formatUYU, formatDate, monthName } from "@/lib/utils";
+import { formatUYU, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TransactionFilters } from "@/components/transactions/filters";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { DrillableHeatmap, DrillableChart } from "@/components/CategoryDrilldown";
 import { ExportButtons } from "@/components/ExportButtons";
-import { NoteCell } from "@/components/bank/NoteCell";
+import { TxTable } from "@/components/TxTable";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 
 export const dynamic = "force-dynamic";
@@ -160,158 +159,137 @@ export default async function NegocioPage({ searchParams }: Props) {
   const tableMonths = trend12.slice().reverse();
   const trend12Detail = trend12.slice().reverse().map(m => ({ label: m.label, value: m.resultado }));
 
+  const periodLabel = mesFilter
+    ? `${monthName(mesFilter)} ${añoFilter}`
+    : isCurrentYear ? "Últimos 12 meses" : String(añoFilter);
+
+  const txTableRows = txs.map(r => ({
+    id: r.id,
+    banco: r.banco,
+    fecha: r.fecha,
+    descripcion: r.descripcion,
+    debito: r.debito,
+    credito: r.credito,
+    importe_uyu: r.importe_uyu,
+    moneda: r.moneda,
+    categoria: r.categoria_negocio,
+    nota: r.nota,
+  }));
+
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6 max-w-7xl">
+
+      {/* Header */}
+      <div className="flex items-start justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-bold">Negocio</h1>
-          <p className="text-sm text-slate-500 mt-1">Basado en extractos bancarios clasificados como negocio</p>
+          <h1 className="text-2xl font-bold text-slate-900">Negocio</h1>
+          <p className="text-sm text-slate-400 mt-0.5">{periodLabel} · {txs.length} movimientos</p>
         </div>
         <ExportButtons params={{ tipo: "negocio", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
       </div>
 
-      <TransactionFilters />
+      <div className="mb-6">
+        <TransactionFilters />
+      </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <KpiCard
-          title="Ingresos"
-          value={formatUYU(ingresos)}
-          valueClass="text-green-600"
-          detail={ingresosDetail.length > 0 ? ingresosDetail : undefined}
-          detailTitle="Ingresos por categoría"
-        />
-        <KpiCard
-          title="Egresos"
-          value={formatUYU(egresos)}
-          valueClass="text-red-600"
-          detail={allCatDetail}
-          detailTitle="Gastos por categoría"
-        />
-        <KpiCard
-          title="Resultado neto"
-          value={formatUYU(resultado)}
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <KpiCard title="Ingresos" value={formatUYU(ingresos)} valueClass="text-green-600"
+          detail={ingresosDetail.length > 0 ? ingresosDetail : undefined} detailTitle="Ingresos por categoría" />
+        <KpiCard title="Egresos" value={formatUYU(egresos)} valueClass="text-red-600"
+          detail={allCatDetail} detailTitle="Gastos por categoría" />
+        <KpiCard title="Resultado" value={formatUYU(resultado)}
           valueClass={resultado >= 0 ? "text-green-600" : "text-red-600"}
-          detail={trend12Detail.length > 1 ? trend12Detail : undefined}
-          detailTitle="Resultado por mes"
-        />
-        <KpiCard
-          title="Margen neto"
-          value={`${margenNeto.toFixed(1)}%`}
+          detail={trend12Detail.length > 1 ? trend12Detail : undefined} detailTitle="Resultado por mes" />
+        <KpiCard title="Margen neto" value={`${margenNeto.toFixed(1)}%`}
           valueClass={margenNeto >= 0 ? "text-green-600" : "text-red-600"}
           detail={trend12.slice().reverse().map(m => ({ label: m.label, value: m.margenNeto, pct: Math.max(0, m.margenNeto) }))}
-          detailTitle="Margen neto por mes"
-        />
-        <KpiCard
-          title="Top gasto"
-          value={categoryData[0]?.name ?? "—"}
+          detailTitle="Margen neto por mes" />
+        <KpiCard title="Top gasto" value={categoryData[0]?.name ?? "—"}
           valueClass="text-slate-800 text-base truncate"
-          detail={allCatDetail}
-          detailTitle="Todos los gastos por categoría"
-        />
+          detail={allCatDetail} detailTitle="Todos los gastos" />
       </div>
 
+      {/* Trend chart + monthly table side by side */}
       {trend12.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>{isCurrentYear ? "Últimos 12 meses" : añoFilter} — Ingresos vs Egresos y Margen neto</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NegocioTrendChart data={trend12} />
-          </CardContent>
-        </Card>
-      )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-slate-600">{periodLabel} — Ingresos vs Egresos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NegocioTrendChart data={trend12} />
+            </CardContent>
+          </Card>
 
-      {tableMonths.length > 0 && (
-        <div className="bg-white rounded-xl border overflow-x-auto mb-6">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-500">Mes</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Ingresos</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Egresos</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Resultado</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Margen neto</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {tableMonths.map((m) => (
-                <tr key={m.label} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium">{m.label}</td>
-                  <td className="px-4 py-3 text-right text-green-600">{formatUYU(m.ingresos)}</td>
-                  <td className="px-4 py-3 text-right text-red-600">{formatUYU(m.egresos)}</td>
-                  <td className={`px-4 py-3 text-right font-medium ${m.resultado >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {formatUYU(m.resultado)}
-                  </td>
-                  <td className={`px-4 py-3 text-right font-medium ${m.margenNeto >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {m.margenNeto.toFixed(1)}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <div className="px-4 py-3 border-b bg-slate-50">
+              <p className="text-sm font-semibold text-slate-600">Por mes</p>
+            </div>
+            <div className="overflow-y-auto max-h-[300px]">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50 border-b sticky top-0">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium text-slate-400">Mes</th>
+                    <th className="text-right px-3 py-2 font-medium text-slate-400">Ingresos</th>
+                    <th className="text-right px-3 py-2 font-medium text-slate-400">Egresos</th>
+                    <th className="text-right px-3 py-2 font-medium text-slate-400">Margen</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {tableMonths.map((m) => (
+                    <tr key={m.label} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-medium text-slate-600 whitespace-nowrap">{m.label}</td>
+                      <td className="px-3 py-2 text-right text-green-600 tabular-nums">{formatUYU(m.ingresos)}</td>
+                      <td className="px-3 py-2 text-right text-red-500 tabular-nums">{formatUYU(m.egresos)}</td>
+                      <td className={`px-3 py-2 text-right font-semibold tabular-nums ${m.margenNeto >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {m.margenNeto.toFixed(0)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
-      {heatCats.length > 0 && heatMonths.length > 1 && (
-        <Card className="mb-6">
-          <CardHeader><CardTitle>Gastos por categoría × mes</CardTitle></CardHeader>
-          <CardContent>
-            <DrillableHeatmap cats={heatCats} months={heatMonths} data={heatMap} tipo="negocio" />
-          </CardContent>
-        </Card>
-      )}
-
-      {categoryData.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader><CardTitle>Gastos por categoría — período seleccionado</CardTitle></CardHeader>
-          <CardContent><DrillableChart data={categoryData} tipo="negocio" /></CardContent>
-        </Card>
-      )}
-
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-4 py-3 border-b bg-slate-50">
-          <p className="text-sm font-medium text-slate-700">Movimientos del período</p>
+      {/* Heatmap + category chart side by side */}
+      {(heatCats.length > 0 || categoryData.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {heatCats.length > 0 && heatMonths.length > 1 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría × mes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DrillableHeatmap cats={heatCats} months={heatMonths} data={heatMap} tipo="negocio" />
+              </CardContent>
+            </Card>
+          )}
+          {categoryData.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría — período</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DrillableChart data={categoryData} tipo="negocio" />
+              </CardContent>
+            </Card>
+          )}
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Fecha</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Banco</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Descripción</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Categoría</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Importe UYU</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Nota</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {txs.map((r) => {
-              const esIngreso = (r.credito ?? 0) > 0;
-              return (
-                <tr key={r.id} className="group hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(r.fecha)}</td>
-                  <td className="px-4 py-3 font-medium">{r.banco}</td>
-                  <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{r.descripcion ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-500">{r.categoria_negocio ?? "—"}</td>
-                  <td className={`px-4 py-3 text-right font-medium ${esIngreso ? "text-green-600" : "text-red-600"}`}>
-                    {esIngreso ? "+" : "-"}{formatUYU(rowImporteUYU(r))}
-                  </td>
-                  <td className="px-4 py-3">
-                    <NoteCell id={r.id} nota={r.nota} />
-                  </td>
-                </tr>
-              );
-            })}
-            {!txs.length && (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
-                  <p className="font-medium text-slate-500 mb-1">Sin movimientos clasificados como negocio para este período</p>
-                  <Link href="/extractos" className="text-xs text-brand underline">Ir a extractos →</Link>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      )}
+
+      {/* Transactions */}
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-semibold text-slate-700">Movimientos</p>
+        <span className="text-xs text-slate-400">{txs.length} registros</span>
       </div>
+      <TxTable
+        rows={txTableRows}
+        emptyMessage="Sin movimientos clasificados como negocio para este período"
+        emptyLink={{ href: "/extractos", label: "Ir a extractos →" }}
+      />
     </div>
   );
 }

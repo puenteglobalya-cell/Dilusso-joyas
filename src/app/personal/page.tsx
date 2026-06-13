@@ -1,13 +1,12 @@
-import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
-import { formatUYU, formatDate, monthName } from "@/lib/utils";
+import { formatUYU, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 import { TransactionFilters } from "@/components/transactions/filters";
 import { DrillableChart } from "@/components/CategoryDrilldown";
 import { ExportButtons } from "@/components/ExportButtons";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
-import { NoteCell } from "@/components/bank/NoteCell";
+import { TxTable } from "@/components/TxTable";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Movimientos de Cecilia | Dilusso Joyas" };
@@ -34,10 +33,6 @@ function rowImporteUYU(r: BSRow): number {
   return (r.debito ?? 0) + (r.credito ?? 0);
 }
 
-function pct(num: number, den: number): number {
-  return den === 0 ? 0 : Math.round((num / den) * 1000) / 10;
-}
-
 export default async function PersonalPage({ searchParams }: Props) {
   const sp = await searchParams;
   const sb = createServerClient();
@@ -62,9 +57,7 @@ export default async function PersonalPage({ searchParams }: Props) {
   const trendDesde = isCurrentYear
     ? `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
     : fechaDesde;
-  const trendHasta = isCurrentYear
-    ? `${now.getFullYear() + 1}-01-01`
-    : fechaHasta;
+  const trendHasta = isCurrentYear ? `${now.getFullYear() + 1}-01-01` : fechaHasta;
 
   const PAGE = 1000;
   async function fetchBS(desde: string, hasta: string): Promise<BSRow[]> {
@@ -126,116 +119,125 @@ export default async function PersonalPage({ searchParams }: Props) {
         ingresos: val.ingresos,
         egresos: val.egresos,
         resultado: res,
-        margenNeto: pct(res, val.ingresos),
+        margenNeto: 0,
       };
     });
   const trend12Detail = trend12.slice().reverse().map(m => ({ label: m.label, value: m.resultado }));
   const tableMonths = trend12.slice().reverse();
 
+  const periodLabel = mesFilter
+    ? `${monthName(mesFilter)} ${añoFilter}`
+    : isCurrentYear ? "Últimos 12 meses" : String(añoFilter);
+
+  const txTableRows = txs.map(r => ({
+    id: r.id,
+    banco: r.banco,
+    fecha: r.fecha,
+    descripcion: r.descripcion,
+    debito: r.debito,
+    credito: r.credito,
+    importe_uyu: r.importe_uyu,
+    moneda: r.moneda,
+    categoria: r.categoria_personal,
+    nota: r.nota,
+  }));
+
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6 max-w-7xl">
+
+      {/* Header */}
+      <div className="flex items-start justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-bold">Movimientos de Cecilia</h1>
-          <p className="text-sm text-slate-500 mt-1">Basado en extractos bancarios clasificados como personal</p>
+          <h1 className="text-2xl font-bold text-slate-900">Movimientos de Cecilia</h1>
+          <p className="text-sm text-slate-400 mt-0.5">{periodLabel} · {txs.length} movimientos</p>
         </div>
         <ExportButtons params={{ tipo: "personal", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
       </div>
 
-      <TransactionFilters />
-
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <KpiCard title="Ingresos" value={formatUYU(ingresos)} valueClass="text-green-600" />
-        <KpiCard title="Gastos" value={formatUYU(salidas)} valueClass="text-red-600" detail={allCatDetail} detailTitle="Gastos por categoría" />
-        <KpiCard title="Neto" value={formatUYU(resultado)} valueClass={resultado >= 0 ? "text-green-600" : "text-red-600"} detail={trend12Detail.length > 1 ? trend12Detail : undefined} detailTitle="Neto por mes" />
+      <div className="mb-6">
+        <TransactionFilters />
       </div>
 
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <KpiCard
+          title="Ingresos"
+          value={formatUYU(ingresos)}
+          valueClass="text-green-600"
+        />
+        <KpiCard
+          title="Gastos"
+          value={formatUYU(salidas)}
+          valueClass="text-red-600"
+          detail={allCatDetail}
+          detailTitle="Gastos por categoría"
+        />
+        <KpiCard
+          title="Neto"
+          value={formatUYU(resultado)}
+          valueClass={resultado >= 0 ? "text-green-600" : "text-red-600"}
+          detail={trend12Detail.length > 1 ? trend12Detail : undefined}
+          detailTitle="Neto por mes"
+        />
+      </div>
+
+      {/* Trend + Monthly table side by side */}
       {trend12.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-slate-600">{isCurrentYear ? "Últimos 12 meses" : añoFilter} — Ingresos vs Gastos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NegocioTrendChart data={trend12} />
+            </CardContent>
+          </Card>
+
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <div className="px-4 py-3 border-b bg-slate-50">
+              <p className="text-sm font-semibold text-slate-600">Por mes</p>
+            </div>
+            <div className="overflow-y-auto max-h-[300px]">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-slate-50">
+                  {tableMonths.map((m) => (
+                    <tr key={m.label} className="hover:bg-slate-50">
+                      <td className="px-4 py-2.5 text-xs font-medium text-slate-500 whitespace-nowrap">{m.label}</td>
+                      <td className="px-4 py-2.5 text-right text-xs text-red-500 tabular-nums">{formatUYU(m.egresos)}</td>
+                      <td className={`px-4 py-2.5 text-right text-xs font-semibold tabular-nums ${m.resultado >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {formatUYU(m.resultado)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category chart */}
+      {categoryData.length > 0 && (
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>{isCurrentYear ? "Últimos 12 meses" : añoFilter} — Ingresos vs Gastos</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría</CardTitle>
           </CardHeader>
           <CardContent>
-            <NegocioTrendChart data={trend12} />
+            <DrillableChart data={categoryData} tipo="personal" />
           </CardContent>
         </Card>
       )}
 
-      {tableMonths.length > 0 && (
-        <div className="bg-white rounded-xl border overflow-x-auto mb-6">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-500">Mes</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Ingresos</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Gastos</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Neto</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {tableMonths.map((m) => (
-                <tr key={m.label} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium">{m.label}</td>
-                  <td className="px-4 py-3 text-right text-green-600">{formatUYU(m.ingresos)}</td>
-                  <td className="px-4 py-3 text-right text-red-600">{formatUYU(m.egresos)}</td>
-                  <td className={`px-4 py-3 text-right font-medium ${m.resultado >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {formatUYU(m.resultado)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {categoryData.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader><CardTitle>Gastos por categoría</CardTitle></CardHeader>
-          <CardContent><DrillableChart data={categoryData} tipo="personal" /></CardContent>
-        </Card>
-      )}
-
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Fecha</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Banco</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Descripción</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Categoría</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Importe UYU</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Nota</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {txs.map((r) => {
-              const esIngreso = (r.credito ?? 0) > 0;
-              return (
-                <tr key={r.id} className="group hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(r.fecha)}</td>
-                  <td className="px-4 py-3 font-medium">{r.banco}</td>
-                  <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{r.descripcion ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-500">{r.categoria_personal ?? "—"}</td>
-                  <td className={`px-4 py-3 text-right font-medium ${esIngreso ? "text-green-600" : "text-red-600"}`}>
-                    {esIngreso ? "+" : "-"}{formatUYU(rowImporteUYU(r))}
-                  </td>
-                  <td className="px-4 py-3">
-                    <NoteCell id={r.id} nota={r.nota} />
-                  </td>
-                </tr>
-              );
-            })}
-            {!txs.length && (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
-                  <p className="font-medium text-slate-500 mb-1">Sin movimientos clasificados como personal para este período</p>
-                  <Link href="/extractos" className="text-xs text-brand underline">Ir a extractos →</Link>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Transactions */}
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-semibold text-slate-700">Movimientos</p>
+        <span className="text-xs text-slate-400">{txs.length} registros</span>
       </div>
+      <TxTable
+        rows={txTableRows}
+        emptyMessage="Sin movimientos clasificados como personal para este período"
+        emptyLink={{ href: "/extractos", label: "Ir a extractos →" }}
+      />
     </div>
   );
 }
