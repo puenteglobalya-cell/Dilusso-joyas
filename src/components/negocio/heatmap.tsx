@@ -5,6 +5,7 @@ interface Props {
   cats: string[];
   months: string[];
   data: Record<string, Record<string, number>>;
+  onCellClick?: (cat: string, mes: string) => void;
 }
 
 const MES: Record<string, string> = {
@@ -23,7 +24,7 @@ function heatColor(intensity: number): string {
   return "bg-red-500 text-white";
 }
 
-export function NegocioHeatmap({ cats, months, data }: Props) {
+export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
   // Per-category max for normalization
   const catMax: Record<string, number> = {};
   for (const cat of cats) {
@@ -47,14 +48,21 @@ export function NegocioHeatmap({ cats, months, data }: Props) {
             const rowTotal = months.reduce((s, m) => s + (data[cat]?.[m] ?? 0), 0);
             return (
               <tr key={cat} className="hover:bg-slate-50">
-                <td className="pr-3 py-1 text-slate-700 font-medium truncate max-w-[140px]" title={cat}>{cat}</td>
+                <td
+                  className={`pr-3 py-1 text-slate-700 font-medium truncate max-w-[140px] ${onCellClick ? "cursor-pointer hover:text-brand underline-offset-2 hover:underline" : ""}`}
+                  title={cat}
+                  onClick={() => onCellClick?.(cat, months[months.length - 1])}
+                >{cat}</td>
                 {months.map(m => {
                   const val = data[cat]?.[m] ?? 0;
                   const intensity = val / catMax[cat];
                   return (
                     <td key={m} className={`px-1 py-1 text-center rounded`}>
-                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${heatColor(intensity)}`}
-                        title={val > 0 ? formatUYU(val) : undefined}>
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${heatColor(intensity)} ${onCellClick && val > 0 ? "cursor-pointer hover:opacity-80" : ""}`}
+                        title={val > 0 ? formatUYU(val) : undefined}
+                        onClick={() => val > 0 && onCellClick?.(cat, m)}
+                      >
                         {val > 0 ? `$${(val / 1000).toFixed(0)}k` : "—"}
                       </span>
                     </td>

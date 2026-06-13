@@ -3,9 +3,8 @@ import { createServerClient } from "@/lib/supabase";
 import { formatUYU, formatDate, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TransactionFilters } from "@/components/transactions/filters";
-import { NegocioChart } from "@/components/negocio/chart";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
-import { NegocioHeatmap } from "@/components/negocio/heatmap";
+import { DrillableHeatmap, DrillableChart } from "@/components/CategoryDrilldown";
 import { NoteCell } from "@/components/bank/NoteCell";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 
@@ -255,7 +254,7 @@ export default async function NegocioPage({ searchParams }: Props) {
         <Card className="mb-6">
           <CardHeader><CardTitle>Gastos por categoría × mes</CardTitle></CardHeader>
           <CardContent>
-            <NegocioHeatmap cats={heatCats} months={heatMonths} data={heatMap} />
+            <DrillableHeatmap cats={heatCats} months={heatMonths} data={heatMap} tipo="negocio" />
           </CardContent>
         </Card>
       )}
@@ -263,7 +262,7 @@ export default async function NegocioPage({ searchParams }: Props) {
       {categoryData.length > 0 && (
         <Card className="mb-6">
           <CardHeader><CardTitle>Gastos por categoría — período seleccionado</CardTitle></CardHeader>
-          <CardContent><NegocioChart data={categoryData} /></CardContent>
+          <CardContent><DrillableChart data={categoryData} tipo="negocio" /></CardContent>
         </Card>
       )}
 

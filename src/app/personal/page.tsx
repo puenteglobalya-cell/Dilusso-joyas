@@ -4,7 +4,7 @@ import { formatUYU, formatDate, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 import { TransactionFilters } from "@/components/transactions/filters";
-import { NegocioChart } from "@/components/negocio/chart";
+import { DrillableChart } from "@/components/CategoryDrilldown";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { NoteCell } from "@/components/bank/NoteCell";
 
@@ -189,7 +189,7 @@ export default async function PersonalPage({ searchParams }: Props) {
       {categoryData.length > 0 && (
         <Card className="mb-6">
           <CardHeader><CardTitle>Gastos por categoría</CardTitle></CardHeader>
-          <CardContent><NegocioChart data={categoryData} /></CardContent>
+          <CardContent><DrillableChart data={categoryData} tipo="personal" /></CardContent>
         </Card>
       )}
 
