@@ -10,7 +10,7 @@ interface Result {
   matches: ReconcilRow[];
 }
 
-type SortCol = "fecha" | "banco" | "descripcion" | "debito" | "credito" | "tipo" | "categoria";
+type SortCol = "fecha" | "banco" | "descripcion" | "importe" | "tipo" | "categoria";
 type SortDir = "asc" | "desc";
 
 export default function ReconciliarPage() {
@@ -104,8 +104,7 @@ export default function ReconciliarPage() {
       if (sortCol === "fecha") { va = a.fecha; vb = b.fecha; }
       else if (sortCol === "banco") { va = a.banco; vb = b.banco; }
       else if (sortCol === "descripcion") { va = a.descripcion ?? ""; vb = b.descripcion ?? ""; }
-      else if (sortCol === "debito") { va = a.debito ?? 0; vb = b.debito ?? 0; }
-      else if (sortCol === "credito") { va = a.credito ?? 0; vb = b.credito ?? 0; }
+      else if (sortCol === "importe") { va = Math.abs(a.debito ?? a.credito ?? 0); vb = Math.abs(b.debito ?? b.credito ?? 0); }
       else if (sortCol === "tipo") { va = a.tipo_propuesto; vb = b.tipo_propuesto; }
       else if (sortCol === "categoria") { va = catOf(a); vb = catOf(b); }
       if (va < vb) return sortDir === "asc" ? -1 : 1;
@@ -259,11 +258,8 @@ export default function ReconciliarPage() {
                       <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none" onClick={() => toggleSort("descripcion")}>
                         Descripción <SortIcon col="descripcion" />
                       </th>
-                      <th className="text-right px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("debito")}>
-                        Débito <SortIcon col="debito" />
-                      </th>
-                      <th className="text-right px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("credito")}>
-                        Crédito <SortIcon col="credito" />
+                      <th className="text-right px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("importe")}>
+                        Importe <SortIcon col="importe" />
                       </th>
                       <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("tipo")}>
                         Tipo <SortIcon col="tipo" />
@@ -290,8 +286,9 @@ export default function ReconciliarPage() {
                         <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatDate(m.fecha)}</td>
                         <td className="px-3 py-2 font-medium">{m.banco}</td>
                         <td className="px-3 py-2 text-slate-600 max-w-xs truncate">{m.descripcion ?? "—"}</td>
-                        <td className="px-3 py-2 text-right text-red-600">{m.debito ? formatUYU(m.debito) : "—"}</td>
-                        <td className="px-3 py-2 text-right text-green-600">{m.credito ? formatUYU(m.credito) : "—"}</td>
+                        <td className={`px-3 py-2 text-right ${m.debito ? "text-red-600" : "text-green-600"}`}>
+                          {m.debito ? `-${formatUYU(m.debito)}` : m.credito ? `+${formatUYU(m.credito)}` : "—"}
+                        </td>
                         <td className="px-3 py-2">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${m.tipo_propuesto === "negocio" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
                             {m.tipo_propuesto}
@@ -301,7 +298,7 @@ export default function ReconciliarPage() {
                       </tr>
                     ))}
                     {visible.length === 0 && (
-                      <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400">Sin resultados para los filtros aplicados</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Sin resultados para los filtros aplicados</td></tr>
                     )}
                   </tbody>
                 </table>
