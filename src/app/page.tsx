@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatUYU, monthName } from "@/lib/utils";
-import { DashboardChart } from "@/components/dashboard/chart";
-import { KpiCard } from "@/components/ui/KpiDrawer";
 import { AlertCircle, AlertTriangle, Upload } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +15,14 @@ interface BSRow {
   importe_uyu: number | null;
   moneda: string;
   fecha: string;
+}
+
+interface SaldoRow {
+  banco: string;
+  moneda: string;
+  saldo: number;
+  fecha: string;
+  importe_uyu: number | null;
 }
 
 function rowImporteUYU(r: BSRow): number {
@@ -57,7 +62,7 @@ async function getStats() {
     return all;
   }
 
-  const [thisMonth, trendRows, unclRes, tcRes, settlRes] = await Promise.all([
+  const [thisMonth, trendRows, unclRes, tcRes, settlRes, saldosRes] = await Promise.all([
     fetchAll({ desde: fechaDesde, hasta: fechaHasta }),
     fetchAll({ desde: `${año - 1}-${mesStr}-01`, order: true }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +71,14 @@ async function getStats() {
     (sb.from("exchange_rates") as any).select("rate, date").order("date", { ascending: false }).limit(1).single(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (sb.from("settlements") as any).select("facturado").eq("año", año).eq("mes", mes),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (sb.from("bank_statements") as any)
+      .select("banco,moneda,saldo,fecha,importe_uyu")
+      .not("saldo", "is", null)
+      .neq("descripcion", "Saldo anterior")
+      .order("fecha", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(200),
   ]);
 
   const negocioSalidas = thisMonth.filter(r => r.tipo === "negocio" && (r.debito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
@@ -98,7 +111,19 @@ async function getStats() {
 
   const trendResultado = trend.map(t => ({ label: t.label, value: t.ingresos - t.negocio - t.personal }));
 
-  return { negocioSalidas, negocioIngresos, personalSalidas, personalIngresos, resultado, facturado, unclassifiedCount, latestTC, mes, año, trend, negocioGastosDetail, personalGastosDetail, negocioIngDetail, trendResultado };
+  // Latest saldo per banco+moneda
+  const saldoRows = (saldosRes.data ?? []) as SaldoRow[];
+  const seen = new Set<string>();
+  const saldos: { banco: string; moneda: string; saldo: number; fecha: string; saldoUYU: number }[] = [];
+  for (const r of saldoRows) {
+    const key = `${r.banco}|${r.moneda}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const saldoUYU = r.moneda === "USD" ? Math.abs(r.saldo) * (latestTC || 1) : r.saldo;
+    saldos.push({ banco: r.banco, moneda: r.moneda, saldo: r.saldo, fecha: r.fecha, saldoUYU });
+  }
+
+  return { negocioSalidas, negocioIngresos, personalSalidas, personalIngresos, resultado, facturado, unclassifiedCount, latestTC, mes, año, trend, negocioGastosDetail, personalGastosDetail, negocioIngDetail, trendResultado, saldos };
 }
 
 function buildTrend(rows: BSRow[], months: number): TrendItem[] {
@@ -258,16 +283,39 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Trend chart */}
-      {stats.trend.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold" style={{ color: "#7a6a60" }}>Evolución últimos 6 meses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DashboardChart data={stats.trend} />
-          </CardContent>
-        </Card>
+      {/* Bank balances */}
+      {stats.saldos.length > 0 && (
+        <div className="mb-2">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#b5a49a" }}>Saldos bancarios</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {stats.saldos.map(s => (
+              <div key={`${s.banco}|${s.moneda}`} className="bg-white rounded-xl p-4" style={{ border: "1px solid #ede9e4" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold" style={{ color: "#7a6a60" }}>{s.banco}</p>
+                  {s.moneda === "USD" && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#f0ece6", color: "#9c8a7e" }}>USD</span>
+                  )}
+                </div>
+                <p className="text-base font-bold tabular-nums" style={{ color: "#2a1f1a" }}>
+                  {s.moneda === "USD"
+                    ? `U$S ${s.saldo.toLocaleString("es-UY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                    : `$ ${s.saldo.toLocaleString("es-UY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                  }
+                </p>
+                {s.moneda === "USD" && stats.latestTC > 0 && (
+                  <p className="text-[10px] mt-0.5 tabular-nums" style={{ color: "#b5a49a" }}>
+                    ≈ $ {s.saldoUYU.toLocaleString("es-UY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </p>
+                )}
+                <p className="text-[10px] mt-1.5" style={{ color: "#c4b5a0" }}>{s.fecha}</p>
+              </div>
+            ))}
+            {/* Placeholder for manual assets */}
+            <Link href="/tc" className="bg-white rounded-xl p-4 flex flex-col justify-center items-center gap-1 opacity-50 hover:opacity-100 transition-opacity" style={{ border: "1px dashed #d6cfc8" }}>
+              <p className="text-xs text-center" style={{ color: "#9c8a7e" }}>+ Efectivo / otros activos</p>
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );
