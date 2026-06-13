@@ -1,13 +1,17 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { formatUYU, formatDate } from "@/lib/utils";
 import type { ReconcilRow } from "@/app/api/admin/reconciliar-excel/route";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 interface Result {
   total_excel: number;
   total_matches: number;
   matches: ReconcilRow[];
 }
+
+type SortCol = "fecha" | "banco" | "descripcion" | "debito" | "credito" | "tipo" | "categoria";
+type SortDir = "asc" | "desc";
 
 export default function ReconciliarPage() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -18,10 +22,20 @@ export default function ReconciliarPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // Filters
+  const [filterTipo, setFilterTipo] = useState<"" | "negocio" | "personal">("");
+  const [filterCat, setFilterCat] = useState("");
+  const [filterBanco, setFilterBanco] = useState("");
+
+  // Sort
+  const [sortCol, setSortCol] = useState<SortCol>("fecha");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
   async function handleUpload() {
     const file = fileRef.current?.files?.[0];
     if (!file) return;
     setLoading(true); setError(null); setResult(null); setApplied(null);
+    setFilterTipo(""); setFilterCat(""); setFilterBanco("");
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -56,11 +70,68 @@ export default function ReconciliarPage() {
     }
   }
 
+  function catOf(m: ReconcilRow) {
+    return (m.tipo_propuesto === "negocio" ? m.cat_negocio : m.cat_personal) ?? "";
+  }
+
+  // Derived option lists
+  const bancos = useMemo(() => {
+    if (!result) return [];
+    return [...new Set(result.matches.map(m => m.banco))].sort();
+  }, [result]);
+
+  const categorias = useMemo(() => {
+    if (!result) return [];
+    const filtered = filterTipo ? result.matches.filter(m => m.tipo_propuesto === filterTipo) : result.matches;
+    return [...new Set(filtered.map(catOf))].filter(Boolean).sort();
+  }, [result, filterTipo]);
+
+  function toggleSort(col: SortCol) {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  }
+
+  const visible = useMemo(() => {
+    if (!result) return [];
+    let rows = result.matches;
+    if (filterTipo) rows = rows.filter(m => m.tipo_propuesto === filterTipo);
+    if (filterBanco) rows = rows.filter(m => m.banco === filterBanco);
+    if (filterCat) rows = rows.filter(m => catOf(m) === filterCat);
+
+    return [...rows].sort((a, b) => {
+      let va: string | number = "";
+      let vb: string | number = "";
+      if (sortCol === "fecha") { va = a.fecha; vb = b.fecha; }
+      else if (sortCol === "banco") { va = a.banco; vb = b.banco; }
+      else if (sortCol === "descripcion") { va = a.descripcion ?? ""; vb = b.descripcion ?? ""; }
+      else if (sortCol === "debito") { va = a.debito ?? 0; vb = b.debito ?? 0; }
+      else if (sortCol === "credito") { va = a.credito ?? 0; vb = b.credito ?? 0; }
+      else if (sortCol === "tipo") { va = a.tipo_propuesto; vb = b.tipo_propuesto; }
+      else if (sortCol === "categoria") { va = catOf(a); vb = catOf(b); }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [result, filterTipo, filterBanco, filterCat, sortCol, sortDir]);
+
   function toggleAll() {
     if (!result) return;
-    if (selected.size === result.matches.length) setSelected(new Set());
-    else setSelected(new Set(result.matches.map(m => m.id)));
+    const visibleIds = new Set(visible.map(m => m.id));
+    const allVisibleSelected = visible.every(m => selected.has(m.id));
+    const s = new Set(selected);
+    if (allVisibleSelected) visibleIds.forEach(id => s.delete(id));
+    else visibleIds.forEach(id => s.add(id));
+    setSelected(s);
   }
+
+  function SortIcon({ col }: { col: SortCol }) {
+    if (sortCol !== col) return <ChevronsUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+    return sortDir === "asc"
+      ? <ChevronUp className="w-3 h-3 inline ml-1" />
+      : <ChevronDown className="w-3 h-3 inline ml-1" />;
+  }
+
+  const allVisibleSelected = visible.length > 0 && visible.every(m => selected.has(m.id));
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -112,11 +183,55 @@ export default function ReconciliarPage() {
 
           {result.matches.length > 0 ? (
             <>
+              {/* Filters */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <select
+                  value={filterTipo}
+                  onChange={e => { setFilterTipo(e.target.value as "" | "negocio" | "personal"); setFilterCat(""); }}
+                  className="border rounded-lg px-3 py-1.5 text-sm text-slate-700"
+                >
+                  <option value="">Todos los tipos</option>
+                  <option value="negocio">Negocio</option>
+                  <option value="personal">Personal</option>
+                </select>
+
+                <select
+                  value={filterBanco}
+                  onChange={e => setFilterBanco(e.target.value)}
+                  className="border rounded-lg px-3 py-1.5 text-sm text-slate-700"
+                >
+                  <option value="">Todos los bancos</option>
+                  {bancos.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+
+                <select
+                  value={filterCat}
+                  onChange={e => setFilterCat(e.target.value)}
+                  className="border rounded-lg px-3 py-1.5 text-sm text-slate-700 max-w-xs"
+                >
+                  <option value="">Todas las categorías</option>
+                  {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+
+                {(filterTipo || filterBanco || filterCat) && (
+                  <button
+                    onClick={() => { setFilterTipo(""); setFilterBanco(""); setFilterCat(""); }}
+                    className="text-xs text-slate-500 underline px-1"
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
+
+                <span className="ml-auto text-xs text-slate-400 self-center">
+                  {visible.length} de {result.matches.length} filas
+                </span>
+              </div>
+
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-medium text-slate-700">Vista previa de cambios</p>
                 <div className="flex gap-3">
                   <button onClick={toggleAll} className="text-xs text-brand underline">
-                    {selected.size === result.matches.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                    {allVisibleSelected ? "Deseleccionar visibles" : "Seleccionar visibles"}
                   </button>
                   <button
                     onClick={handleApply}
@@ -133,18 +248,33 @@ export default function ReconciliarPage() {
                   <thead className="bg-slate-50 border-b">
                     <tr>
                       <th className="px-3 py-3 w-8">
-                        <input type="checkbox" checked={selected.size === result.matches.length} onChange={toggleAll} />
+                        <input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} />
                       </th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500">Fecha</th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500">Banco</th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500">Descripción</th>
-                      <th className="text-right px-3 py-3 font-medium text-slate-500">Débito</th>
-                      <th className="text-right px-3 py-3 font-medium text-slate-500">Crédito</th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500">Tipo → Categoría</th>
+                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("fecha")}>
+                        Fecha <SortIcon col="fecha" />
+                      </th>
+                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("banco")}>
+                        Banco <SortIcon col="banco" />
+                      </th>
+                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none" onClick={() => toggleSort("descripcion")}>
+                        Descripción <SortIcon col="descripcion" />
+                      </th>
+                      <th className="text-right px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("debito")}>
+                        Débito <SortIcon col="debito" />
+                      </th>
+                      <th className="text-right px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("credito")}>
+                        Crédito <SortIcon col="credito" />
+                      </th>
+                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("tipo")}>
+                        Tipo <SortIcon col="tipo" />
+                      </th>
+                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("categoria")}>
+                        Categoría <SortIcon col="categoria" />
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {result.matches.map(m => (
+                    {visible.map(m => (
                       <tr key={m.id} className={`hover:bg-slate-50 ${selected.has(m.id) ? "" : "opacity-40"}`}>
                         <td className="px-3 py-2 text-center">
                           <input
@@ -163,15 +293,16 @@ export default function ReconciliarPage() {
                         <td className="px-3 py-2 text-right text-red-600">{m.debito ? formatUYU(m.debito) : "—"}</td>
                         <td className="px-3 py-2 text-right text-green-600">{m.credito ? formatUYU(m.credito) : "—"}</td>
                         <td className="px-3 py-2">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full mr-1 ${m.tipo_propuesto === "negocio" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${m.tipo_propuesto === "negocio" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
                             {m.tipo_propuesto}
                           </span>
-                          <span className="text-slate-600 text-xs">
-                            {m.tipo_propuesto === "negocio" ? m.cat_negocio : m.cat_personal}
-                          </span>
                         </td>
+                        <td className="px-3 py-2 text-slate-600 text-xs">{catOf(m) || "—"}</td>
                       </tr>
                     ))}
+                    {visible.length === 0 && (
+                      <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400">Sin resultados para los filtros aplicados</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
