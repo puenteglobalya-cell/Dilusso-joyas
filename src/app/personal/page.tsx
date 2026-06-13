@@ -3,7 +3,7 @@ import { formatUYU, monthName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 import { TransactionFilters } from "@/components/transactions/filters";
-import { DrillableChart } from "@/components/CategoryDrilldown";
+import { DrillableChart, DrillableHeatmap } from "@/components/CategoryDrilldown";
 import { ExportButtons } from "@/components/ExportButtons";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { TxTable } from "@/components/TxTable";
@@ -99,6 +99,18 @@ export default async function PersonalPage({ searchParams }: Props) {
   const categoryData = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value }));
   const allCatDetail = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
 
+  // Heatmap data (same as negocio)
+  const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
+  const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort().slice(-12);
+  const heatMap: Record<string, Record<string, number>> = {};
+  for (const r of trendRows) {
+    if ((r.debito ?? 0) <= 0 || !r.categoria_personal) continue;
+    const ym = r.fecha.slice(0, 7);
+    const cat = r.categoria_personal;
+    if (!heatMap[cat]) heatMap[cat] = {};
+    heatMap[cat][ym] = (heatMap[cat][ym] ?? 0) + rowImporteUYU(r);
+  }
+
   const monthMap = new Map<string, { ingresos: number; egresos: number }>();
   for (const r of trendRows) {
     const ym = r.fecha.slice(0, 7);
@@ -163,25 +175,25 @@ export default async function PersonalPage({ searchParams }: Props) {
         <KpiCard
           title="Ingresos"
           value={formatUYU(ingresos)}
-          valueClass="text-green-600"
+          valueClass="text-sky-700"
         />
         <KpiCard
           title="Gastos"
           value={formatUYU(salidas)}
-          valueClass="text-red-600"
+          valueClass="text-rose-600"
           detail={allCatDetail}
           detailTitle="Gastos por categoría"
         />
         <KpiCard
           title="Neto"
           value={formatUYU(resultado)}
-          valueClass={resultado >= 0 ? "text-green-600" : "text-red-600"}
+          valueClass={resultado >= 0 ? "text-sky-700" : "text-rose-600"}
           detail={trend12Detail.length > 1 ? trend12Detail : undefined}
           detailTitle="Neto por mes"
         />
       </div>
 
-      {/* Trend + Monthly table side by side */}
+      {/* Trend chart + monthly table side by side */}
       {trend12.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           <Card className="lg:col-span-2">
@@ -198,13 +210,13 @@ export default async function PersonalPage({ searchParams }: Props) {
               <p className="text-sm font-semibold text-slate-600">Por mes</p>
             </div>
             <div className="overflow-y-auto max-h-[300px]">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs">
                 <tbody className="divide-y divide-slate-50">
                   {tableMonths.map((m) => (
                     <tr key={m.label} className="hover:bg-slate-50">
-                      <td className="px-4 py-2.5 text-xs font-medium text-slate-500 whitespace-nowrap">{m.label}</td>
-                      <td className="px-4 py-2.5 text-right text-xs text-red-500 tabular-nums">{formatUYU(m.egresos)}</td>
-                      <td className={`px-4 py-2.5 text-right text-xs font-semibold tabular-nums ${m.resultado >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      <td className="px-4 py-2.5 font-medium text-slate-500 whitespace-nowrap">{m.label}</td>
+                      <td className="px-4 py-2.5 text-right text-rose-500 tabular-nums">{formatUYU(m.egresos)}</td>
+                      <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${m.resultado >= 0 ? "text-sky-700" : "text-rose-600"}`}>
                         {formatUYU(m.resultado)}
                       </td>
                     </tr>
@@ -216,16 +228,30 @@ export default async function PersonalPage({ searchParams }: Props) {
         </div>
       )}
 
-      {/* Category chart */}
-      {categoryData.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DrillableChart data={categoryData} tipo="personal" />
-          </CardContent>
-        </Card>
+      {/* Heatmap + category chart side by side */}
+      {(heatCats.length > 0 || categoryData.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {heatCats.length > 0 && heatMonths.length > 1 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría × mes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DrillableHeatmap cats={heatCats} months={heatMonths} data={heatMap} tipo="personal" />
+              </CardContent>
+            </Card>
+          )}
+          {categoryData.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría — período</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DrillableChart data={categoryData} tipo="personal" />
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Transactions */}

@@ -15,15 +15,15 @@ export interface TxRow {
 }
 
 const BANCO_COLORS: Record<string, string> = {
-  BBVA:       "bg-blue-100 text-blue-700",
-  "Itaú":     "bg-orange-100 text-orange-700",
-  Scotiabank: "bg-emerald-100 text-emerald-700",
-  OCA:        "bg-purple-100 text-purple-700",
-  "Itau-Card":"bg-amber-100 text-amber-700",
+  BBVA:        "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+  "Itaú":      "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  Scotiabank:  "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
+  OCA:         "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  "Itau-Card": "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
 };
 
 function bancoBadge(banco: string) {
-  const cls = BANCO_COLORS[banco] ?? "bg-slate-100 text-slate-600";
+  const cls = BANCO_COLORS[banco] ?? "bg-slate-100 text-slate-500 ring-1 ring-slate-200";
   return (
     <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${cls}`}>
       {banco}
@@ -63,8 +63,8 @@ export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
 
   return (
     <div className="bg-white rounded-xl border overflow-hidden">
-      {/* Sticky header */}
-      <div className="grid grid-cols-[1fr_3fr_1.5fr_auto] gap-0 bg-slate-50 border-b px-4 py-2.5 text-xs font-medium text-slate-400 uppercase tracking-wide sticky top-0">
+      {/* Column header */}
+      <div className="grid grid-cols-[1fr_3fr_1.5fr_auto] bg-slate-50 border-b px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider sticky top-0">
         <span>Banco</span>
         <span>Descripción</span>
         <span>Categoría</span>
@@ -78,11 +78,15 @@ export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
         return (
           <div key={fecha}>
             {/* Date separator */}
-            <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50/70 border-b border-t border-slate-100">
-              <span className="text-xs font-semibold text-slate-500">{formatDate(fecha)}</span>
-              <div className="flex gap-3 text-[11px]">
-                {dayIngresos > 0 && <span className="text-green-600 font-medium">+{formatUYU(dayIngresos)}</span>}
-                {dayEgresos > 0 && <span className="text-red-500 font-medium">-{formatUYU(dayEgresos)}</span>}
+            <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50/80 border-b border-t border-slate-100">
+              <span className="text-[11px] font-semibold text-slate-500 tracking-wide">{formatDate(fecha)}</span>
+              <div className="flex gap-4 text-[11px]">
+                {dayIngresos > 0 && (
+                  <span className="text-sky-600 font-medium">+{formatUYU(dayIngresos)}</span>
+                )}
+                {dayEgresos > 0 && (
+                  <span className="text-rose-500 font-medium">−{formatUYU(dayEgresos)}</span>
+                )}
               </div>
             </div>
 
@@ -90,30 +94,33 @@ export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
               const esIngreso = (r.credito ?? 0) > 0;
               const amt = importeUYU(r);
               return (
-                <div key={r.id}
-                  className={`grid grid-cols-[1fr_3fr_1.5fr_auto] gap-0 items-center px-4 py-2.5 border-b border-slate-50 hover:bg-slate-50 transition-colors group`}
-                  style={{ borderLeft: `3px solid ${esIngreso ? "#16a34a" : "#dc2626"}` }}
+                <div
+                  key={r.id}
+                  className="grid grid-cols-[1fr_3fr_1.5fr_auto] items-center px-4 py-2.5 border-b border-slate-50 hover:bg-slate-50/70 transition-colors"
+                  style={{ borderLeft: `3px solid ${esIngreso ? "#7dd3fc" : "#fda4af"}` }}
                 >
-                  <div className="pl-1">
+                  <div className="pl-1 flex items-center gap-1.5">
                     {bancoBadge(r.banco)}
                     {r.moneda === "USD" && (
-                      <span className="ml-1 text-[10px] text-slate-400">USD</span>
+                      <span className="text-[9px] font-bold text-slate-300 bg-slate-100 px-1 py-0.5 rounded">USD</span>
                     )}
                   </div>
                   <div className="pr-3 min-w-0">
-                    <p className="text-sm text-slate-700 truncate leading-tight">{r.descripcion ?? "—"}</p>
-                    {r.nota && <span className="text-[10px] text-amber-600 italic truncate">{r.nota}</span>}
+                    <p className="text-[13px] text-slate-700 truncate leading-snug">{r.descripcion ?? "—"}</p>
+                    {r.nota && (
+                      <p className="text-[11px] text-amber-600 italic truncate mt-0.5">{r.nota}</p>
+                    )}
                   </div>
                   <div>
                     {r.categoria ? (
-                      <span className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 truncate max-w-[160px]">
+                      <span className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium truncate max-w-[160px]">
                         {r.categoria}
                       </span>
                     ) : (
-                      <span className="text-[11px] text-slate-300 italic">sin categoría</span>
+                      <span className="text-[11px] text-slate-300">sin categoría</span>
                     )}
                   </div>
-                  <div className={`text-right text-sm font-semibold tabular-nums whitespace-nowrap ${esIngreso ? "text-green-600" : "text-red-600"}`}>
+                  <div className={`text-right text-[13px] font-semibold tabular-nums whitespace-nowrap ${esIngreso ? "text-sky-700" : "text-rose-600"}`}>
                     {esIngreso ? "+" : "−"}{formatUYU(amt)}
                   </div>
                 </div>
