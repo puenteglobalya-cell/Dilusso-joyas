@@ -32,7 +32,7 @@ export function NegocioChart({ data, onBarClick }: Props) {
           onMouseLeave={() => setHovered(null)}
         >
           {data.map(d => (
-            <Cell key={d.name} fill={hovered === d.name ? "#3b82f6" : "#1e293b"} />
+            <Cell key={d.name} fill={hovered === d.name ? "#0ea5e9" : "#334155"} />
           ))}
         </Bar>
       </BarChart>

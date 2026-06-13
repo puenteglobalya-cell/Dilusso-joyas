@@ -32,9 +32,9 @@ export function NegocioTrendChart({ data }: { data: MonthMetrics[] }) {
           }}
         />
         <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-        <Bar yAxisId="left" dataKey="ingresos" name="Ingresos" fill="#22c55e" opacity={0.85} radius={[3, 3, 0, 0]} />
-        <Bar yAxisId="left" dataKey="egresos" name="Egresos" fill="#ef4444" opacity={0.85} radius={[3, 3, 0, 0]} />
-        <Line yAxisId="right" type="monotone" dataKey="margenNeto" name="Margen neto" stroke="#C8102E" strokeWidth={2} dot={{ r: 3 }} />
+        <Bar yAxisId="left" dataKey="ingresos" name="Ingresos" fill="#0ea5e9" opacity={0.85} radius={[3, 3, 0, 0]} />
+        <Bar yAxisId="left" dataKey="egresos" name="Egresos" fill="#fb7185" opacity={0.85} radius={[3, 3, 0, 0]} />
+        <Line yAxisId="right" type="monotone" dataKey="margenNeto" name="Margen neto" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
       </ComposedChart>
     </ResponsiveContainer>
   );
