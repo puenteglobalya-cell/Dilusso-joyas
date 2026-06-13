@@ -103,7 +103,7 @@ export function Sidebar({ role, email, allowedSections, missingMonths, sinClasif
               onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#d4bfb6"; }}
               onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#9c8a7e"; }}
             >
-              <Icon className="w-4 h-4 shrink-0" style={active ? { color: "#C8102E" } : {}} />
+              <Icon className={cn("w-4 h-4 shrink-0", active ? "text-brand" : "")} />
               <span className="flex-1">{label}</span>
               {badgeCount > 0 && (
                 <span className="text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
