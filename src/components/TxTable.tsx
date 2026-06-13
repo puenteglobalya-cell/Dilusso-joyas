@@ -62,9 +62,9 @@ export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-xl border overflow-hidden">
+    <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #ede9e4" }}>
       {/* Column header */}
-      <div className="grid grid-cols-[1fr_3fr_1.5fr_auto] bg-slate-50 border-b px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider sticky top-0">
+      <div className="grid grid-cols-[1fr_3fr_1.5fr_auto] border-b px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider sticky top-0 bg-white" style={{ borderColor: "#ede9e4", color: "#b5a49a" }}>
         <span>Banco</span>
         <span>Descripción</span>
         <span>Categoría</span>
@@ -78,8 +78,8 @@ export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
         return (
           <div key={fecha}>
             {/* Date separator */}
-            <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50/80 border-b border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-500 tracking-wide">{formatDate(fecha)}</span>
+            <div className="flex items-center justify-between px-4 py-1.5 border-b border-t" style={{ background: "#faf8f5", borderColor: "#ede9e4" }}>
+              <span className="text-[11px] font-semibold tracking-wide" style={{ color: "#7a6a60" }}>{formatDate(fecha)}</span>
               <div className="flex gap-4 text-[11px]">
                 {dayIngresos > 0 && (
                   <span className="text-sky-600 font-medium">+{formatUYU(dayIngresos)}</span>
@@ -96,28 +96,30 @@ export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
               return (
                 <div
                   key={r.id}
-                  className="grid grid-cols-[1fr_3fr_1.5fr_auto] items-center px-4 py-2.5 border-b border-slate-50 hover:bg-slate-50/70 transition-colors"
-                  style={{ borderLeft: `3px solid ${esIngreso ? "#7dd3fc" : "#fda4af"}` }}
+                  className="grid grid-cols-[1fr_3fr_1.5fr_auto] items-center px-4 py-2.5 border-b transition-colors"
+                  style={{ borderColor: "#f5f0eb", borderLeft: `3px solid ${esIngreso ? "#7dd3fc" : "#fda4af"}` }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#faf8f5"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ""}
                 >
                   <div className="pl-1 flex items-center gap-1.5">
                     {bancoBadge(r.banco)}
                     {r.moneda === "USD" && (
-                      <span className="text-[9px] font-bold text-slate-300 bg-slate-100 px-1 py-0.5 rounded">USD</span>
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ color: "#b5a49a", background: "#f5f0eb" }}>USD</span>
                     )}
                   </div>
                   <div className="pr-3 min-w-0">
-                    <p className="text-[13px] text-slate-700 truncate leading-snug">{r.descripcion ?? "—"}</p>
+                    <p className="text-[13px] truncate leading-snug" style={{ color: "#2a1f1a" }}>{r.descripcion ?? "—"}</p>
                     {r.nota && (
-                      <p className="text-[11px] text-amber-600 italic truncate mt-0.5">{r.nota}</p>
+                      <p className="text-[11px] italic truncate mt-0.5" style={{ color: "#d97706" }}>{r.nota}</p>
                     )}
                   </div>
                   <div>
                     {r.categoria ? (
-                      <span className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium truncate max-w-[160px]">
+                      <span className="inline-block text-[11px] px-2 py-0.5 rounded-full font-medium truncate max-w-[160px]" style={{ background: "#f5f0eb", color: "#7a6a60" }}>
                         {r.categoria}
                       </span>
                     ) : (
-                      <span className="text-[11px] text-slate-300">sin categoría</span>
+                      <span className="text-[11px]" style={{ color: "#c4b5ad" }}>sin categoría</span>
                     )}
                   </div>
                   <div className={`text-right text-[13px] font-semibold tabular-nums whitespace-nowrap ${esIngreso ? "text-sky-700" : "text-rose-600"}`}>

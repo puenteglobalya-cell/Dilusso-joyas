@@ -3,7 +3,7 @@
 @theme {
   --color-brand: #C8102E;
   --color-brand-dark: #9B0B22;
-  --color-brand-light: #F9E0E4;
+  --color-brand-light: #fdf0f2;
   --font-family-sans: var(--font-inter), system-ui, sans-serif;
 }
 
@@ -12,8 +12,8 @@
     box-sizing: border-box;
   }
   body {
-    background-color: #f9fafb;
-    color: #111827;
+    background-color: #f7f5f2;
+    color: #1c1917;
     -webkit-font-smoothing: antialiased;
   }
 }

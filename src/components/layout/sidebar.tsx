@@ -63,25 +63,25 @@ export function Sidebar({ role, email, allowedSections, missingMonths, sinClasif
   }
 
   return (
-    <aside className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col shadow-sm">
+    <aside className="w-56 min-h-screen flex flex-col" style={{ background: "#2a1f1a" }}>
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-10 flex items-end justify-start shrink-0">
+      <div className="px-6 py-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-9 flex items-end justify-start shrink-0">
             <svg viewBox="0 0 48 56" fill="none" className="w-full h-full">
               <path d="M28 3 C25 3 22 5 20 8 L8 44 C7 47 9 50 12 50 L40 50 C43 50 45 48 45 45 C45 42 43 40 40 40 L18 40 L29 8 C30 5 28 3 28 3 Z" fill="#C8102E"/>
             </svg>
           </div>
           <div>
-            <p className="text-sm font-bold tracking-widest text-black uppercase leading-none">DILUSSO</p>
-            <p className="text-xs tracking-[0.3em] text-gray-500 leading-none mt-0.5">j o y a s</p>
+            <p className="text-sm font-bold tracking-widest uppercase leading-none" style={{ color: "#f5f0eb" }}>DILUSSO</p>
+            <p className="text-[10px] tracking-[0.3em] leading-none mt-1" style={{ color: "#9c8a7e" }}>j o y a s</p>
           </div>
         </div>
-        <p className="text-[10px] text-gray-400 mt-3 uppercase tracking-widest">Gestión Financiera</p>
+        <p className="text-[9px] uppercase tracking-widest mt-3" style={{ color: "#6b5a51" }}>Gestión Financiera</p>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3">
+      <nav className="flex-1 py-4 space-y-0.5">
         {nav.map(({ href, label, icon: Icon, badgeKey }: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; badgeKey?: string }) => {
           const active = pathname === href;
           const badgeCount = badgeKey ? (badges[badgeKey] ?? 0) : 0;
@@ -91,13 +91,19 @@ export function Sidebar({ role, email, allowedSections, missingMonths, sinClasif
               href={href}
               prefetch={false}
               className={cn(
-                "flex items-center gap-3 px-5 py-2.5 text-sm transition-colors mx-2 rounded-lg",
+                "flex items-center gap-3 px-4 py-2.5 text-sm transition-all mx-2 rounded-lg",
                 active
-                  ? "bg-brand-light text-brand font-semibold"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                  ? "font-semibold"
+                  : "hover:opacity-100"
               )}
+              style={active
+                ? { background: "rgba(200,16,46,0.18)", color: "#f4a0a8" }
+                : { color: "#9c8a7e" }
+              }
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#d4bfb6"; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#9c8a7e"; }}
             >
-              <Icon className={cn("w-4 h-4 shrink-0", active ? "text-brand" : "")} />
+              <Icon className="w-4 h-4 shrink-0" style={active ? { color: "#C8102E" } : {}} />
               <span className="flex-1">{label}</span>
               {badgeCount > 0 && (
                 <span className="text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
@@ -110,8 +116,8 @@ export function Sidebar({ role, email, allowedSections, missingMonths, sinClasif
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-gray-100 space-y-1.5">
-        {email && <p className="text-xs text-gray-400 truncate">{email}</p>}
+      <div className="px-5 py-4 space-y-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+        {email && <p className="text-xs truncate" style={{ color: "#6b5a51" }}>{email}</p>}
         <LogoutButton />
       </div>
     </aside>

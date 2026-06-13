@@ -34,13 +34,16 @@ export function KpiCard({ title, value, valueClass, detail, detailTitle, href, c
 
   const card = (
     <div
-      className={`bg-white rounded-xl border p-4 ${hasDetail ? "cursor-pointer hover:border-brand hover:shadow-sm transition-all" : ""} ${className}`}
+      className={`bg-white rounded-2xl p-4 transition-all ${hasDetail ? "cursor-pointer" : ""} ${className}`}
+      style={{ border: "1px solid #ede9e4", boxShadow: hasDetail ? undefined : "0 1px 3px 0 rgba(0,0,0,0.04)" }}
       onClick={hasDetail ? () => setOpen(true) : undefined}
       title={hasDetail ? `Ver detalle de ${title}` : undefined}
+      onMouseEnter={e => { if (hasDetail) (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px 0 rgba(0,0,0,0.08)"; }}
+      onMouseLeave={e => { if (hasDetail) (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 3px 0 rgba(0,0,0,0.04)"; }}
     >
-      <p className="text-xs text-gray-500 mb-1 font-medium">{title}</p>
+      <p className="text-xs font-medium mb-1" style={{ color: "#9c8a7e" }}>{title}</p>
       <p className={`text-lg font-bold ${valueClass ?? ""}`}>{value}</p>
-      {hasDetail && <p className="text-[10px] text-brand mt-1 opacity-70">Ver detalle →</p>}
+      {hasDetail && <p className="text-[10px] mt-1" style={{ color: "#C8102E", opacity: 0.7 }}>Ver detalle →</p>}
     </div>
   );
 

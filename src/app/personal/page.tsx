@@ -160,8 +160,8 @@ export default async function PersonalPage({ searchParams }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Movimientos de Cecilia</h1>
-          <p className="text-sm text-slate-400 mt-0.5">{periodLabel} · {txs.length} movimientos</p>
+          <h1 className="text-2xl font-bold" style={{ color: "#2a1f1a" }}>Movimientos de Cecilia</h1>
+          <p className="text-sm mt-0.5" style={{ color: "#b5a49a" }}>{periodLabel} · {txs.length} movimientos</p>
         </div>
         <ExportButtons params={{ tipo: "personal", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
       </div>
@@ -205,16 +205,16 @@ export default async function PersonalPage({ searchParams }: Props) {
             </CardContent>
           </Card>
 
-          <div className="bg-white rounded-xl border overflow-hidden">
-            <div className="px-4 py-3 border-b bg-slate-50">
-              <p className="text-sm font-semibold text-slate-600">Por mes</p>
+          <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #ede9e4" }}>
+            <div className="px-4 py-3 border-b" style={{ background: "#faf8f5", borderColor: "#ede9e4" }}>
+              <p className="text-sm font-semibold" style={{ color: "#7a6a60" }}>Por mes</p>
             </div>
             <div className="overflow-y-auto max-h-[300px]">
               <table className="w-full text-xs">
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {tableMonths.map((m) => (
-                    <tr key={m.label} className="hover:bg-slate-50">
-                      <td className="px-4 py-2.5 font-medium text-slate-500 whitespace-nowrap">{m.label}</td>
+                    <tr key={m.label} className="border-b" style={{ borderColor: "#f5f0eb" }}>
+                      <td className="px-4 py-2.5 font-medium whitespace-nowrap" style={{ color: "#5c4d45" }}>{m.label}</td>
                       <td className="px-4 py-2.5 text-right text-rose-500 tabular-nums">{formatUYU(m.egresos)}</td>
                       <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${m.resultado >= 0 ? "text-sky-700" : "text-rose-600"}`}>
                         {formatUYU(m.resultado)}
@@ -256,8 +256,8 @@ export default async function PersonalPage({ searchParams }: Props) {
 
       {/* Transactions */}
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-700">Movimientos</p>
-        <span className="text-xs text-slate-400">{txs.length} registros</span>
+        <p className="text-sm font-semibold" style={{ color: "#5c4d45" }}>Movimientos</p>
+        <span className="text-xs" style={{ color: "#b5a49a" }}>{txs.length} registros</span>
       </div>
       <TxTable
         rows={txTableRows}
