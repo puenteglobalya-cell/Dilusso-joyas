@@ -9,13 +9,14 @@ import { DuplicadosPanel } from "@/components/admin/DuplicadosPanel";
 import { ChequesPanel } from "@/components/admin/ChequesPanel";
 import { TcPanel, TransferPanel, AplicarReglasPanel, ExcelPanel } from "@/components/admin/HerramientasPanels";
 
-type TabId = "importar" | "cobertura" | "duplicados" | "cheques" | "herramientas";
+type TabId = "importar" | "cobertura" | "duplicados" | "cheques" | "herramientas" | "reconciliar";
 
 const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "importar",     label: "Importar",     icon: <FolderUp className="w-4 h-4" /> },
   { id: "cobertura",    label: "Cobertura",    icon: <Grid3x3 className="w-4 h-4" /> },
   { id: "duplicados",   label: "Duplicados",   icon: <Copy className="w-4 h-4" /> },
   { id: "cheques",      label: "Cheques",      icon: <FileCheck2 className="w-4 h-4" /> },
+  { id: "reconciliar",  label: "Reconciliar",  icon: <Wrench className="w-4 h-4" /> },
   { id: "herramientas", label: "Herramientas", icon: <Wrench className="w-4 h-4" /> },
 ];
 
@@ -56,6 +57,14 @@ export default function AdminPage() {
       {tab === "cobertura" && <CoveragePanel key={coverageKey} />}
       {tab === "duplicados" && <DuplicadosPanel />}
       {tab === "cheques" && <ChequesPanel />}
+      {tab === "reconciliar" && (
+        <div className="text-center py-8">
+          <p className="text-slate-600 mb-4">La herramienta de reconciliación está en su propia página.</p>
+          <a href="/admin/reconciliar" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90">
+            Ir a Reconciliar Excel →
+          </a>
+        </div>
+      )}
       {tab === "herramientas" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <TcPanel />
