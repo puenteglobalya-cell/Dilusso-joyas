@@ -41,7 +41,10 @@ export function ClassifyPopover({
   const [catPer, setCatPer] = useState(row.categoria_personal ?? "");
   const [keyword, setKeyword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
   const [askDict, setAskDict] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [keywordPreview, setKeywordPreview] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -76,6 +79,7 @@ export function ClassifyPopover({
 
   async function save(guardarEnDiccionario: boolean) {
     setSaving(true);
+    setSaveError(null);
     try {
       if (tipo === "negocio" && catNeg && !catsNegocio.includes(catNeg)) {
         await fetch("/api/admin/categorias", {
@@ -114,39 +118,48 @@ export function ClassifyPopover({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (res.ok) {
-        const data = await res.json();
-        const prevTipo = row.tipo;
-        const prevCatNeg = row.categoria_negocio;
-        const prevCatPer = row.categoria_personal;
+      const data = await res.json();
 
-        // Build undo function (only reverts this single row)
-        const undoFn = onUndo ? async () => {
-          await fetch("/api/admin/clasificar-row", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: row.id,
-              descripcion: row.descripcion ?? undefined,
-              clasificado: prevTipo ? "Si" : "No",
-              tipo: prevTipo ?? "",
-              categoria_negocio: prevCatNeg ?? "",
-              categoria_personal: prevCatPer ?? "",
-              usuario_email: userEmail,
-            }),
-          });
-          onUndo(row.id);
-          dismissToast();
-        } : undefined;
+      if (!res.ok) {
+        setSaveError(data.error ?? "Error al guardar. Intentá de nuevo.");
+        return;
+      }
 
-        let msg = "Clasificación guardada.";
-        if (data.actualizados > 0) msg += ` También se clasificaron ${data.actualizados} similares.`;
-        if (data.reglaError) msg += ` (error al guardar en diccionario)`;
+      const prevTipo = row.tipo;
+      const prevCatNeg = row.categoria_negocio;
+      const prevCatPer = row.categoria_personal;
 
-        onSaved({ tipo, categoria_negocio: catNeg, categoria_personal: catPer, clasificado: tipo ? "Si" : "No" });
+      // Build undo function (only reverts this single row)
+      const undoFn = onUndo ? async () => {
+        await fetch("/api/admin/clasificar-row", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: row.id,
+            descripcion: row.descripcion ?? undefined,
+            clasificado: prevTipo ? "Si" : "No",
+            tipo: prevTipo ?? "",
+            categoria_negocio: prevCatNeg ?? "",
+            categoria_personal: prevCatPer ?? "",
+            usuario_email: userEmail,
+          }),
+        });
+        onUndo(row.id);
+        dismissToast();
+      } : undefined;
+
+      let msg = "Clasificación guardada.";
+      if (data.actualizados > 0) msg += ` También se clasificaron ${data.actualizados} similares.`;
+      if (data.reglaError) msg += ` (error al guardar en diccionario)`;
+
+      onSaved({ tipo, categoria_negocio: catNeg, categoria_personal: catPer, clasificado: tipo ? "Si" : "No" });
+      setSaved(true);
+      setSavedMsg(msg);
+      // Close after a brief moment so the user sees confirmation
+      setTimeout(() => {
         onClose();
         showToast(msg, undoFn);
-      }
+      }, 1000);
     } finally {
       setSaving(false);
     }
@@ -186,7 +199,22 @@ export function ClassifyPopover({
 
         <p className="text-xs text-gray-500 truncate" title={row.descripcion ?? ""}>{row.descripcion}</p>
 
-        {!askDict ? (
+        {saved ? (
+          <div className="flex flex-col items-center justify-center py-6 gap-2 text-green-600">
+            <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <p className="text-sm font-semibold">Guardado</p>
+            <p className="text-xs text-slate-500 text-center">{savedMsg}</p>
+          </div>
+        ) : saveError ? (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+            {saveError}
+            <button className="ml-2 underline" onClick={() => setSaveError(null)}>Reintentar</button>
+          </div>
+        ) : null}
+
+        {!saved && !askDict && (
           <>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Tipo</label>
@@ -236,7 +264,8 @@ export function ClassifyPopover({
               <Save className="w-3 h-3 inline mr-1" />Guardar
             </button>
           </>
-        ) : (
+        )}
+        {!saved && askDict && (
           <div className="space-y-3">
             <p className="text-xs text-gray-700 font-medium">
               ¿Querés guardar una regla en el diccionario para clasificar automáticamente?
