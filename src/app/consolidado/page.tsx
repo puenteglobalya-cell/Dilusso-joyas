@@ -4,6 +4,7 @@ import { formatUYU, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { TransactionFilters } from "@/components/transactions/filters";
 import { KpiCard } from "@/components/ui/KpiDrawer";
+import { ExportButtons } from "@/components/ExportButtons";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Consolidado | Dilusso Joyas" };
@@ -92,6 +93,12 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold">Consolidado</h1>
           <p className="text-sm text-slate-500 mt-1">{all.length} movimientos</p>
         </div>
+        <ExportButtons params={{
+          año: String(añoFilter),
+          ...(mesFilter ? { mes: String(mesFilter) } : {}),
+          ...(tipoFilter ? { tipo: tipoFilter } : {}),
+          ...(bancoFilter ? { banco: bancoFilter } : {}),
+        }} />
       </div>
 
       <TransactionFilters />

@@ -17,3 +17,54 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+@media print {
+  /* Hide navigation, filters, action buttons */
+  nav, aside, header,
+  [data-print-hide],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 11px;
+  }
+
+  /* Reset main content padding for print */
+  main, [data-print-main] {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure tables don't clip */
+  table {
+    width: 100% !important;
+    font-size: 10px;
+  }
+
+  th, td {
+    padding: 4px 6px !important;
+  }
+
+  /* Don't break rows across pages */
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Force white backgrounds */
+  .bg-white, .bg-slate-50 {
+    background: white !important;
+  }
+
+  /* Show page URL as footer */
+  @page {
+    margin: 1.5cm;
+    @bottom-center {
+      content: "Dilusso Joyas — " counter(page) " / " counter(pages);
+      font-size: 9px;
+      color: #888;
+    }
+  }
+}

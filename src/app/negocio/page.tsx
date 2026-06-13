@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TransactionFilters } from "@/components/transactions/filters";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { DrillableHeatmap, DrillableChart } from "@/components/CategoryDrilldown";
+import { ExportButtons } from "@/components/ExportButtons";
 import { NoteCell } from "@/components/bank/NoteCell";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 
@@ -166,6 +167,7 @@ export default async function NegocioPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold">Negocio</h1>
           <p className="text-sm text-slate-500 mt-1">Basado en extractos bancarios clasificados como negocio</p>
         </div>
+        <ExportButtons params={{ tipo: "negocio", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
       </div>
 
       <TransactionFilters />

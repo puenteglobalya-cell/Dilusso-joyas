@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, Download, X, Save, BookMarked } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Download, FileSpreadsheet, Printer, X, Save, BookMarked } from "lucide-react";
 import { formatUYU } from "@/lib/utils";
 import { ClassifyPopover } from "@/components/bank/ClassifyPopover";
 
@@ -426,12 +426,27 @@ export default function BankStatementTable({
             {filters.clasificado === "No" ? "✗ Sin clasificar" : "Ver sin clasificar"}
           </button>
         </div>
-        <button
-          onClick={downloadCSV}
-          className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <Download className="w-4 h-4" /> Exportar CSV
-        </button>
+        <div className="flex gap-2 print:hidden">
+          <button
+            onClick={downloadCSV}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Download className="w-4 h-4" /> CSV
+          </button>
+          <a
+            href={`/api/export/xlsx?banco=${encodeURIComponent(rows[0]?.banco ?? "")}`}
+            download
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-green-600" /> Excel
+          </a>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Printer className="w-4 h-4" /> PDF
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border overflow-x-auto">

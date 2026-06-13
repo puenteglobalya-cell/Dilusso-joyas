@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 import { TransactionFilters } from "@/components/transactions/filters";
 import { DrillableChart } from "@/components/CategoryDrilldown";
+import { ExportButtons } from "@/components/ExportButtons";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { NoteCell } from "@/components/bank/NoteCell";
 
@@ -138,6 +139,7 @@ export default async function PersonalPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold">Movimientos de Cecilia</h1>
           <p className="text-sm text-slate-500 mt-1">Basado en extractos bancarios clasificados como personal</p>
         </div>
+        <ExportButtons params={{ tipo: "personal", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
       </div>
 
       <TransactionFilters />
