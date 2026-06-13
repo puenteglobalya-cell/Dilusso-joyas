@@ -166,9 +166,22 @@ export async function POST(req: NextRequest) {
   const CHUNK = 500;
   for (let i = 0; i < enriched.length; i += CHUNK) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (sb.from("bank_statements") as any).insert(enriched.slice(i, i + CHUNK));
-    if (!error) inserted += Math.min(CHUNK, enriched.length - i);
-    else insertError = error.message;
+    const { error } = await (sb.from("bank_statements") as any)
+      .insert(enriched.slice(i, i + CHUNK))
+      .select("id");
+    if (!error) {
+      inserted += Math.min(CHUNK, enriched.length - i);
+    } else if (error.code === "23505") {
+      // Unique constraint violation: insert row-by-row, skipping dups
+      for (const row of enriched.slice(i, i + CHUNK)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: e2 } = await (sb.from("bank_statements") as any).insert(row).select("id");
+        if (!e2) inserted++;
+        else if (e2.code !== "23505") insertError = e2.message;
+      }
+    } else {
+      insertError = error.message;
+    }
   }
 
   return NextResponse.json({ ok: true, inserted, parsed: rows.length, skipped: rows.length - newRows.length, banco, filename: body.filename ?? "", ...(insertError ? { insertError } : {}) });
