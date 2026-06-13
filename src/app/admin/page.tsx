@@ -1,6 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
-import { FolderUp, Grid3x3, Copy, Wrench, FileCheck2 } from "lucide-react";
+import { FolderUp, Grid3x3, Copy, Wrench, FileCheck2, Tag } from "lucide-react";
 
 import { BulkUploadCard } from "@/components/admin/BulkUploadCard";
 import { SingleUploadCard } from "@/components/admin/SingleUploadCard";
@@ -8,8 +8,9 @@ import { CoveragePanel } from "@/components/admin/CoveragePanel";
 import { DuplicadosPanel } from "@/components/admin/DuplicadosPanel";
 import { ChequesPanel } from "@/components/admin/ChequesPanel";
 import { TcPanel, TransferPanel, AplicarReglasPanel, ExcelPanel } from "@/components/admin/HerramientasPanels";
+import { CategoriasPanel } from "@/components/admin/CategoriasPanel";
 
-type TabId = "importar" | "cobertura" | "duplicados" | "cheques" | "herramientas" | "reconciliar";
+type TabId = "importar" | "cobertura" | "duplicados" | "cheques" | "herramientas" | "reconciliar" | "categorias";
 
 const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "importar",     label: "Importar",     icon: <FolderUp className="w-4 h-4" /> },
@@ -18,6 +19,7 @@ const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "cheques",      label: "Cheques",      icon: <FileCheck2 className="w-4 h-4" /> },
   { id: "reconciliar",  label: "Reconciliar",  icon: <Wrench className="w-4 h-4" /> },
   { id: "herramientas", label: "Herramientas", icon: <Wrench className="w-4 h-4" /> },
+  { id: "categorias",   label: "Categorías",   icon: <Tag className="w-4 h-4" /> },
 ];
 
 export default function AdminPage() {
@@ -65,6 +67,7 @@ export default function AdminPage() {
           </a>
         </div>
       )}
+      {tab === "categorias" && <CategoriasPanel />}
       {tab === "herramientas" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <TcPanel />
