@@ -21,25 +21,40 @@ export async function GET() {
     results.push({ step: "Seed categories table", ok: false, detail: String(e) });
   }
 
-  // 2. Normalize bank_statements.categoria_personal
+  // 2. Check current state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: currentCats } = await (sb.from("bank_statements") as any)
+    .select("categoria_personal")
+    .eq("tipo", "personal")
+    .not("categoria_personal", "is", null);
+
+  const counts: Record<string, number> = {};
+  for (const r of (currentCats ?? [])) {
+    counts[r.categoria_personal] = (counts[r.categoria_personal] ?? 0) + 1;
+  }
+
+  // 3. Normalize bank_statements.categoria_personal
   const updateResults: string[] = [];
   for (const [oldName, newName] of Object.entries(CATEGORIA_NORMALIZAR)) {
+    if (!counts[oldName]) continue; // skip if no rows with this name
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (sb.from("bank_statements") as any)
+      const { error } = await (sb.from("bank_statements") as any)
         .update({ categoria_personal: newName })
-        .eq("categoria_personal", oldName)
-        .select("id");
+        .eq("categoria_personal", oldName);
       if (error) {
         updateResults.push(`ERROR ${oldName}: ${error.message}`);
-      } else if (data && data.length > 0) {
-        updateResults.push(`${oldName} → ${newName}: ${data.length} filas`);
+      } else {
+        updateResults.push(`${oldName} → ${newName}: ${counts[oldName]} filas`);
       }
     } catch (e) {
       updateResults.push(`EXCEPCION ${oldName}: ${String(e)}`);
     }
   }
-  results.push({ step: "Normalizar banco_statements", ok: true, detail: updateResults.length > 0 ? updateResults.join(" | ") : "Sin cambios" });
+
+  const estadoActual = Object.entries(counts).map(([cat, n]) => `${cat}: ${n}`).join(", ");
+  results.push({ step: "Estado actual categorías", ok: true, detail: estadoActual });
+  results.push({ step: "Normalizar banco_statements", ok: true, detail: updateResults.length > 0 ? updateResults.join(" | ") : "Sin cambios (ya normalizado)" });
 
   return NextResponse.json({ ok: true, results });
 }
