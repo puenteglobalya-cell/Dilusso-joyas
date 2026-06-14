@@ -17,13 +17,13 @@ const MES: Record<string, string> = {
 function fmtYM(ym: string) { return `${MES[ym.slice(5)] ?? ym.slice(5)}-${ym.slice(2,4)}`; }
 
 function heatColor(intensity: number): { bg: string; text: string } {
-  if (intensity <= 0)   return { bg: "#f5f0eb", text: "#c4b5a0" };
-  if (intensity < 0.15) return { bg: "#fef9ec", text: "#92400e" };
-  if (intensity < 0.30) return { bg: "#fef3c7", text: "#78350f" };
-  if (intensity < 0.50) return { bg: "#fde68a", text: "#451a03" };
-  if (intensity < 0.70) return { bg: "#fbbf24", text: "#1c0a00" };
-  if (intensity < 0.85) return { bg: "#f59e0b", text: "#fff" };
-  return { bg: "#d97706", text: "#fff" };
+  if (intensity <= 0)   return { bg: "#F5F0E8", text: "#C4B5A0" };
+  if (intensity < 0.15) return { bg: "#FDF6E8", text: "#8C7A5A" };
+  if (intensity < 0.30) return { bg: "#F5E8C8", text: "#7A6040" };
+  if (intensity < 0.50) return { bg: "#E8D4A0", text: "#5A4020" };
+  if (intensity < 0.70) return { bg: "#C5A059", text: "#fff" };
+  if (intensity < 0.85) return { bg: "#A3907A", text: "#fff" };
+  return { bg: "#2E2B2A", text: "#C5A059" };
 }
 
 export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
@@ -47,13 +47,13 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
       <table className="text-xs w-full">
         <thead>
           <tr>
-            <th className="text-left pr-3 pb-2 font-medium whitespace-nowrap min-w-[140px]" style={{ color: "#9c8a7e" }}>Categoría</th>
+            <th className="text-left pr-3 pb-2 font-medium whitespace-nowrap min-w-[140px]" style={{ color: "#8C857B" }}>Categoría</th>
             {months.map(m => (
-              <th key={m} className="px-1 pb-2 font-normal whitespace-nowrap text-center" style={{ color: "#c4b5a0" }}>{fmtYM(m)}</th>
+              <th key={m} className="px-1 pb-2 font-normal whitespace-nowrap text-center" style={{ color: "#A3907A" }}>{fmtYM(m)}</th>
             ))}
             <th
               className="px-2 pb-2 font-medium text-right whitespace-nowrap cursor-pointer select-none"
-              style={{ color: "#7a6a60" }}
+              style={{ color: "#2E2B2A" }}
               onClick={() => setSortByTotal(s => !s)}
               title="Ordenar por total"
             >
@@ -63,10 +63,10 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
         </thead>
         <tbody>
           {sorted.map(({ cat, total }, idx) => (
-            <tr key={cat} style={{ borderTop: idx > 0 ? "1px solid #f5f0eb" : undefined }}>
+            <tr key={cat} style={{ borderTop: idx > 0 ? "1px solid #E6E1DA" : undefined }}>
               <td
                 className={`pr-3 py-1.5 font-medium truncate max-w-[140px] ${onCellClick ? "cursor-pointer hover:underline underline-offset-2" : ""}`}
-                style={{ color: "#5c4d45" }}
+                style={{ color: "#2E2B2A" }}
                 title={cat}
                 onClick={() => onCellClick?.(cat, months[months.length - 1])}
               >{cat.replace(/^\d+\.\s*/, "")}</td>
@@ -88,7 +88,7 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
               })}
               <td
                 className={`px-2 py-1.5 text-right font-semibold whitespace-nowrap ${onCellClick ? "cursor-pointer hover:underline underline-offset-2" : ""}`}
-                style={{ color: "#d97706" }}
+                style={{ color: "#C5A059" }}
                 onClick={() => onCellClick?.(cat)}
               >
                 {formatUYU(total)}

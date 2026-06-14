@@ -10,18 +10,18 @@ interface Props {
   mesLabel: string;
 }
 
-function PctBar({ pct, meta, color = "#d97706" }: { pct: number; meta?: number; color?: string }) {
+function PctBar({ pct, meta, color = "#C5A059" }: { pct: number; meta?: number; color?: string }) {
   const over = meta !== undefined && pct > meta;
   return (
     <div className="flex items-center gap-2 mt-1">
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#f0ece6" }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#fb7185" : color }} />
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#F5F0E8" }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#946E61" : color }} />
       </div>
-      <span className="text-[11px] tabular-nums w-10 text-right font-medium" style={{ color: over ? "#fb7185" : "#7a6a60" }}>
+      <span className="text-[11px] tabular-nums w-10 text-right font-medium" style={{ color: over ? "#946E61" : "#8C857B" }}>
         {pct.toFixed(1)}%
       </span>
       {meta !== undefined && (
-        <span className="text-[10px]" style={{ color: "#c4b5a0" }}>/ {meta}%</span>
+        <span className="text-[10px]" style={{ color: "#A3907A" }}>/ {meta}%</span>
       )}
     </div>
   );
@@ -51,47 +51,47 @@ export function MetricasCecilia({ ingresos, gastosPorGrupo, ingresosPorGrupo, me
   ].filter(g => g.valor > 0);
 
   return (
-    <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #ede9e4" }}>
+    <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E6E1DA", borderLeft: "4px solid #C5A059" }}>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#b5a49a" }}>Análisis</p>
-          <p className="text-xs mt-0.5" style={{ color: "#c4b5a0" }}>{mesLabel}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#8C857B" }}>Análisis · Cecilia</p>
+          <p className="text-xs mt-0.5" style={{ color: "#A3907A" }}>{mesLabel}</p>
         </div>
       </div>
 
       {/* Retention KPI */}
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="rounded-xl p-3 col-span-1" style={{ background: retencion >= 0 ? "#f0f9ff" : "#fff1f2" }}>
-          <p className="text-[10px] font-medium mb-1" style={{ color: "#b5a49a" }}>¿Cuánto retiene?</p>
-          <p className={`text-xl font-bold ${retencion >= 0 ? "text-sky-700" : "text-rose-600"}`}>{retencion.toFixed(1)}%</p>
-          <p className="text-[10px] mt-0.5" style={{ color: "#c4b5a0" }}>debe incrementarse</p>
+        <div className="rounded-xl p-3 col-span-1" style={{ background: retencion >= 20 ? "#EEF3EB" : "#F5EAE7" }}>
+          <p className="text-[10px] font-medium mb-1" style={{ color: "#8C857B" }}>¿Cuánto retiene?</p>
+          <p className="text-xl font-bold" style={{ color: retencion >= 20 ? "#586E50" : "#946E61" }}>{retencion.toFixed(1)}%</p>
+          <p className="text-[10px] mt-0.5" style={{ color: "#A3907A" }}>del ingreso total</p>
         </div>
-        <div className="rounded-xl p-3" style={{ background: "#faf8f5" }}>
-          <p className="text-[10px] font-medium mb-1" style={{ color: "#b5a49a" }}>Ingreso total</p>
-          <p className="text-sm font-bold" style={{ color: "#2a1f1a" }}>{formatUYU(ingresoTotal)}</p>
+        <div className="rounded-xl p-3" style={{ background: "#F5F0E8" }}>
+          <p className="text-[10px] font-medium mb-1" style={{ color: "#8C857B" }}>Lo que entró</p>
+          <p className="text-sm font-bold" style={{ color: "#586E50" }}>{formatUYU(ingresoTotal)}</p>
         </div>
-        <div className="rounded-xl p-3" style={{ background: "#faf8f5" }}>
-          <p className="text-[10px] font-medium mb-1" style={{ color: "#b5a49a" }}>Neto</p>
-          <p className={`text-sm font-bold ${neto >= 0 ? "text-sky-700" : "text-rose-600"}`}>{formatUYU(neto)}</p>
+        <div className="rounded-xl p-3" style={{ background: "#F5F0E8" }}>
+          <p className="text-[10px] font-medium mb-1" style={{ color: "#8C857B" }}>Te quedó</p>
+          <p className="text-sm font-bold" style={{ color: neto >= 0 ? "#586E50" : "#946E61" }}>{formatUYU(neto)}</p>
         </div>
       </div>
 
       {/* Ingreso pasivo */}
       {(ingresosPorGrupo["B. INGRESO PASIVO"] ?? 0) > 0 && (
-        <div className="rounded-xl px-3 py-2.5 mb-4 flex items-center justify-between" style={{ background: "#faf8f5", border: "1px solid #ede9e4" }}>
-          <p className="text-xs" style={{ color: "#7a6a60" }}>Ingreso pasivo</p>
-          <p className="text-sm font-semibold text-sky-700">{formatUYU(ingresosPorGrupo["B. INGRESO PASIVO"])}</p>
+        <div className="rounded-xl px-3 py-2.5 mb-4 flex items-center justify-between" style={{ background: "#EEF3EB", border: "1px solid #D0DBC8" }}>
+          <p className="text-xs" style={{ color: "#586E50" }}>Ingreso pasivo</p>
+          <p className="text-sm font-semibold" style={{ color: "#586E50" }}>{formatUYU(ingresosPorGrupo["B. INGRESO PASIVO"])}</p>
         </div>
       )}
 
       {/* Groups breakdown */}
-      <p className="text-[10px] uppercase tracking-wider mb-3" style={{ color: "#c4b5a0" }}>Gastos por grupo</p>
+      <p className="text-[10px] uppercase tracking-wider mb-3" style={{ color: "#A3907A" }}>Gastos por grupo</p>
       <div className="space-y-3">
         {grupos.map(g => (
           <div key={g.label}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium" style={{ color: "#5c4d45" }}>{g.label}</span>
-              <span className="text-xs tabular-nums text-rose-600 font-medium">{formatUYU(g.valor)}</span>
+              <span className="text-xs font-medium" style={{ color: "#2E2B2A" }}>{g.label}</span>
+              <span className="text-xs tabular-nums font-medium" style={{ color: "#946E61" }}>{formatUYU(g.valor)}</span>
             </div>
             <PctBar pct={g.pct} meta={g.meta} />
           </div>

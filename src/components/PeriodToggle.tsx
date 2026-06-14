@@ -26,7 +26,7 @@ export function PeriodToggle() {
   ];
 
   return (
-    <div className="inline-flex rounded-xl overflow-hidden" style={{ border: "1px solid #ede9e4", background: "#faf8f5" }}>
+    <div className="inline-flex rounded-xl overflow-hidden" style={{ border: "1px solid #E6E1DA", background: "#FCFBFA" }}>
       {options.map(opt => {
         const active = current === opt.value;
         return (
@@ -35,8 +35,8 @@ export function PeriodToggle() {
             onClick={() => select(opt.value)}
             className="px-3 py-1.5 text-xs font-medium transition-colors"
             style={{
-              background: active ? "#d97706" : "transparent",
-              color: active ? "#fff" : "#7a6a60",
+              background: active ? "#C5A059" : "transparent",
+              color: active ? "#fff" : "#8C857B",
               cursor: "pointer",
             }}
           >

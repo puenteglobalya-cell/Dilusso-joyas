@@ -63,21 +63,21 @@ export function Sidebar({ role, email, allowedSections, missingMonths, sinClasif
   }
 
   return (
-    <aside className="w-56 min-h-screen flex flex-col" style={{ background: "#2a1f1a" }}>
+    <aside className="w-56 min-h-screen flex flex-col" style={{ background: "#1C1A19" }}>
       {/* Logo */}
-      <div className="px-6 py-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div className="px-6 py-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-9 flex items-end justify-start shrink-0">
             <svg viewBox="0 0 48 56" fill="none" className="w-full h-full">
-              <path d="M28 3 C25 3 22 5 20 8 L8 44 C7 47 9 50 12 50 L40 50 C43 50 45 48 45 45 C45 42 43 40 40 40 L18 40 L29 8 C30 5 28 3 28 3 Z" fill="#C8102E"/>
+              <path d="M28 3 C25 3 22 5 20 8 L8 44 C7 47 9 50 12 50 L40 50 C43 50 45 48 45 45 C45 42 43 40 40 40 L18 40 L29 8 C30 5 28 3 28 3 Z" fill="#C5A059"/>
             </svg>
           </div>
           <div>
-            <p className="text-sm font-bold tracking-widest uppercase leading-none" style={{ color: "#f5f0eb" }}>DILUSSO</p>
-            <p className="text-[10px] tracking-[0.3em] leading-none mt-1" style={{ color: "#9c8a7e" }}>j o y a s</p>
+            <p className="text-sm font-bold tracking-widest uppercase leading-none" style={{ color: "#F5F0E8" }}>DI LUSSO</p>
+            <p className="text-[10px] tracking-[0.3em] leading-none mt-1" style={{ color: "#8C857B" }}>j o y a s</p>
           </div>
         </div>
-        <p className="text-[9px] uppercase tracking-widest mt-3" style={{ color: "#6b5a51" }}>Gestión Financiera</p>
+        <p className="text-[9px] uppercase tracking-widest mt-3" style={{ color: "#5A5350" }}>Gestión Financiera</p>
       </div>
 
       {/* Nav */}
@@ -90,23 +90,18 @@ export function Sidebar({ role, email, allowedSections, missingMonths, sinClasif
               key={href}
               href={href}
               prefetch={false}
-              className={cn(
-                "flex items-center gap-3 px-4 py-2.5 text-sm transition-all mx-2 rounded-lg",
-                active
-                  ? "font-semibold"
-                  : "hover:opacity-100"
-              )}
+              className={cn("flex items-center gap-3 py-2.5 text-sm transition-all mx-2 rounded-lg", active ? "font-semibold" : "")}
               style={active
-                ? { background: "rgba(200,16,46,0.18)", color: "#f4a0a8" }
-                : { color: "#9c8a7e" }
+                ? { background: "rgba(197,160,89,0.12)", color: "#C5A059", borderLeft: "3px solid #C5A059", paddingLeft: "13px" }
+                : { color: "#8C857B", paddingLeft: "16px" }
               }
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#d4bfb6"; }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#9c8a7e"; }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#C5A059"; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#8C857B"; }}
             >
-              <Icon className={cn("w-4 h-4 shrink-0", active ? "text-brand" : "")} />
+              <Icon className="w-4 h-4 shrink-0" />
               <span className="flex-1">{label}</span>
               {badgeCount > 0 && (
-                <span className="text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+                <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none mr-2" style={{ background: "#946E61", color: "#fff" }}>
                   {badgeCount > 99 ? "99+" : badgeCount}
                 </span>
               )}
@@ -116,8 +111,8 @@ export function Sidebar({ role, email, allowedSections, missingMonths, sinClasif
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-4 space-y-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        {email && <p className="text-xs truncate" style={{ color: "#6b5a51" }}>{email}</p>}
+      <div className="px-5 py-4 space-y-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        {email && <p className="text-xs truncate" style={{ color: "#5A5350" }}>{email}</p>}
         <LogoutButton />
       </div>
     </aside>

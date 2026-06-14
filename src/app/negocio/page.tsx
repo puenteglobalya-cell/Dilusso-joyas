@@ -205,19 +205,19 @@ export default async function NegocioPage({ searchParams }: Props) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-        <KpiCard title="Ingresos" value={formatUYU(ingresos)} valueClass="text-sky-700"
+        <KpiCard title="Lo que entró" value={formatUYU(ingresos)} valueColor="#586E50"
           detail={ingresosDetail.length > 0 ? ingresosDetail : undefined} detailTitle="Ingresos por categoría" />
-        <KpiCard title="Egresos" value={formatUYU(egresos)} valueClass="text-amber-700"
+        <KpiCard title="Lo que se gastó" value={formatUYU(egresos)} valueColor="#946E61"
           detail={allCatDetail} detailTitle="Gastos por categoría" />
-        <KpiCard title="Resultado" value={formatUYU(resultado)}
-          valueClass={resultado >= 0 ? "text-sky-700" : "text-rose-600"}
+        <KpiCard title="Te quedó" value={formatUYU(resultado)}
+          valueColor={resultado >= 0 ? "#586E50" : "#946E61"}
           detail={trend12Detail.length > 1 ? trend12Detail : undefined} detailTitle="Resultado por mes" />
         <KpiCard title="Margen neto" value={`${margenNeto.toFixed(1)}%`}
-          valueClass={margenNeto >= 0 ? "text-sky-700" : "text-rose-600"}
+          valueColor={margenNeto >= 0 ? "#586E50" : "#946E61"}
           detail={trend12.slice().reverse().map(m => ({ label: m.label, value: m.margenNeto, pct: Math.max(0, m.margenNeto) }))}
           detailTitle="Margen neto por mes" />
         <KpiCard title="Top gasto" value={categoryData[0]?.name ?? "—"}
-          valueClass="text-slate-800 text-base truncate"
+          valueColor="#2E2B2A"
           detail={allCatDetail} detailTitle="Todos los gastos" />
       </div>
 
@@ -249,11 +249,11 @@ export default async function NegocioPage({ searchParams }: Props) {
                 </thead>
                 <tbody>
                   {tableMonths.map((m) => (
-                    <tr key={m.label} className="border-b" style={{ borderColor: "#f5f0eb" }}>
-                      <td className="px-3 py-2 font-medium whitespace-nowrap" style={{ color: "#5c4d45" }}>{m.label}</td>
-                      <td className="px-3 py-2 text-right text-sky-700 tabular-nums">{formatUYU(m.ingresos)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums" style={{ color: "#d97706" }}>{formatUYU(m.egresos)}</td>
-                      <td className={`px-3 py-2 text-right font-semibold tabular-nums ${m.margenNeto >= 0 ? "text-sky-700" : "text-rose-600"}`}>
+                    <tr key={m.label} className="border-b" style={{ borderColor: "#E6E1DA" }}>
+                      <td className="px-3 py-2 font-medium whitespace-nowrap" style={{ color: "#2E2B2A" }}>{m.label}</td>
+                      <td className="px-3 py-2 text-right tabular-nums" style={{ color: "#586E50" }}>{formatUYU(m.ingresos)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums" style={{ color: "#946E61" }}>{formatUYU(m.egresos)}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums" style={{ color: m.margenNeto >= 0 ? "#586E50" : "#946E61" }}>
                         {m.margenNeto.toFixed(0)}%
                       </td>
                     </tr>

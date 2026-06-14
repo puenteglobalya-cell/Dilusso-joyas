@@ -187,54 +187,76 @@ export default async function DashboardPage() {
       {/* Alert */}
       {stats.unclassifiedCount > 0 && (
         <Link href="/sin-conciliar" className="mb-5 rounded-xl px-4 py-3 flex items-center gap-3 transition-colors block" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
-          <AlertCircle className="w-4 h-4 shrink-0" style={{ color: "#d97706" }} />
-          <span className="text-sm font-medium" style={{ color: "#92400e" }}>{stats.unclassifiedCount} movimientos sin clasificar</span>
-          <span className="text-sm underline ml-auto" style={{ color: "#d97706" }}>Revisar ahora →</span>
+          <AlertCircle className="w-4 h-4 shrink-0" style={{ color: "#946E61" }} />
+          <span className="text-sm font-medium" style={{ color: "#2E2B2A" }}>{stats.unclassifiedCount} movimientos sin clasificar</span>
+          <span className="text-sm underline ml-auto" style={{ color: "#946E61" }}>Revisar ahora →</span>
         </Link>
       )}
+
+      {/* Coverage index (Kiyosaki-style) */}
+      {stats.negocioIngresos > 0 && stats.personalSalidas > 0 && (() => {
+        const cobertura = Math.round((stats.negocioIngresos / stats.personalSalidas) * 100);
+        const ok = cobertura >= 100;
+        return (
+          <div className="mb-5 rounded-2xl p-4" style={{ background: ok ? "#EEF3EB" : "#F5EAE7", border: `1px solid ${ok ? "#D0DBC8" : "#E0C5BE"}` }}>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: ok ? "#586E50" : "#946E61" }}>Tu Nivel de Cobertura</p>
+                <p className="text-sm mt-0.5" style={{ color: "#2E2B2A" }}>
+                  Este mes Di Lusso cubrió el <strong>{cobertura}%</strong> de tus gastos personales
+                </p>
+              </div>
+              <p className="text-3xl font-bold tabular-nums" style={{ color: ok ? "#586E50" : "#946E61" }}>{cobertura}%</p>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: ok ? "#D0DBC8" : "#E0C5BE" }}>
+              <div className="h-full rounded-full" style={{ width: `${Math.min(cobertura, 100)}%`, background: ok ? "#586E50" : "#946E61" }} />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Two-column: Negocio | Personal */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
 
         {/* NEGOCIO */}
-        <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #ede9e4" }}>
+        <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E6E1DA", borderLeft: "4px solid #C5A059" }}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#b5a49a" }}>Negocio</p>
-              <p className="text-xs mt-0.5" style={{ color: "#c4b5a0" }}>{monthName(stats.mes)} {stats.año}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#8C857B" }}>Di Lusso · Negocio</p>
+              <p className="text-xs mt-0.5" style={{ color: "#A3907A" }}>{monthName(stats.mes)} {stats.año}</p>
             </div>
-            <Link href="/negocio" className="text-xs px-2.5 py-1 rounded-lg transition-colors" style={{ color: "#7a6a60", background: "#f5f0eb" }}>
+            <Link href="/negocio" className="text-xs px-2.5 py-1 rounded-lg" style={{ color: "#C5A059", background: "#F5F0E8" }}>
               Ver todo →
             </Link>
           </div>
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="rounded-xl p-3" style={{ background: "#f0f9ff" }}>
-              <p className="text-[10px] font-medium mb-1" style={{ color: "#7db9d4" }}>Ingresos</p>
-              <p className="text-base font-bold text-sky-700">{formatUYU(stats.negocioIngresos)}</p>
+            <div className="rounded-xl p-3" style={{ background: "#EEF3EB" }}>
+              <p className="text-[10px] font-medium mb-1" style={{ color: "#586E50" }}>Lo que entró</p>
+              <p className="text-base font-bold" style={{ color: "#586E50" }}>{formatUYU(stats.negocioIngresos)}</p>
             </div>
-            <div className="rounded-xl p-3" style={{ background: "#fff1f2" }}>
-              <p className="text-[10px] font-medium mb-1" style={{ color: "#d4909a" }}>Egresos</p>
-              <p className="text-base font-bold text-rose-600">{formatUYU(stats.negocioSalidas)}</p>
+            <div className="rounded-xl p-3" style={{ background: "#F5EAE7" }}>
+              <p className="text-[10px] font-medium mb-1" style={{ color: "#946E61" }}>Lo que se gastó</p>
+              <p className="text-base font-bold" style={{ color: "#946E61" }}>{formatUYU(stats.negocioSalidas)}</p>
             </div>
-            <div className="rounded-xl p-3" style={{ background: negocioResultado >= 0 ? "#f0f9ff" : "#fff1f2" }}>
-              <p className="text-[10px] font-medium mb-1" style={{ color: "#b5a49a" }}>Resultado</p>
-              <p className={`text-base font-bold ${negocioResultado >= 0 ? "text-sky-700" : "text-rose-600"}`}>{formatUYU(negocioResultado)}</p>
+            <div className="rounded-xl p-3" style={{ background: negocioResultado >= 0 ? "#EEF3EB" : "#F5EAE7" }}>
+              <p className="text-[10px] font-medium mb-1" style={{ color: "#8C857B" }}>Te quedó</p>
+              <p className="text-base font-bold" style={{ color: negocioResultado >= 0 ? "#586E50" : "#946E61" }}>{formatUYU(negocioResultado)}</p>
             </div>
           </div>
           {stats.facturado > 0 && (
-            <div className="rounded-xl px-3 py-2 flex items-center justify-between" style={{ background: "#faf8f5", border: "1px solid #ede9e4" }}>
-              <p className="text-xs" style={{ color: "#9c8a7e" }}>Facturado</p>
-              <Link href="/liquidaciones" className="text-sm font-semibold" style={{ color: "#5c4d45" }}>{formatUYU(stats.facturado)}</Link>
+            <div className="rounded-xl px-3 py-2 flex items-center justify-between" style={{ background: "#F5F0E8", border: "1px solid #E6E1DA" }}>
+              <p className="text-xs" style={{ color: "#8C857B" }}>Facturado</p>
+              <Link href="/liquidaciones" className="text-sm font-semibold" style={{ color: "#C5A059" }}>{formatUYU(stats.facturado)}</Link>
             </div>
           )}
           {stats.negocioGastosDetail.length > 0 && (
             <div className="mt-3">
-              <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "#c4b5a0" }}>Top gastos</p>
+              <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "#A3907A" }}>Top gastos</p>
               <div className="space-y-1.5">
                 {stats.negocioGastosDetail.slice(0, 4).map(d => (
                   <div key={d.label} className="flex items-center justify-between">
-                    <span className="text-xs truncate pr-2" style={{ color: "#5c4d45" }}>{d.label}</span>
-                    <span className="text-xs font-medium tabular-nums text-rose-600">{formatUYU(d.value)}</span>
+                    <span className="text-xs truncate pr-2" style={{ color: "#2E2B2A" }}>{d.label}</span>
+                    <span className="text-xs font-medium tabular-nums" style={{ color: "#946E61" }}>{formatUYU(d.value)}</span>
                   </div>
                 ))}
               </div>
@@ -243,45 +265,45 @@ export default async function DashboardPage() {
         </div>
 
         {/* PERSONAL */}
-        <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #ede9e4" }}>
+        <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E6E1DA", borderLeft: "4px solid #A3907A" }}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#b5a49a" }}>Cecilia</p>
-              <p className="text-xs mt-0.5" style={{ color: "#c4b5a0" }}>{monthName(stats.mes)} {stats.año}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#8C857B" }}>Cecilia · Personal</p>
+              <p className="text-xs mt-0.5" style={{ color: "#A3907A" }}>{monthName(stats.mes)} {stats.año}</p>
             </div>
-            <Link href="/personal" className="text-xs px-2.5 py-1 rounded-lg transition-colors" style={{ color: "#7a6a60", background: "#f5f0eb" }}>
+            <Link href="/personal" className="text-xs px-2.5 py-1 rounded-lg" style={{ color: "#C5A059", background: "#F5F0E8" }}>
               Ver todo →
             </Link>
           </div>
           {stats.personalSalidas === 0 && stats.personalIngresos === 0 ? (
-            <div className="rounded-xl px-4 py-6 text-center" style={{ background: "#faf8f5", border: "1px solid #ede9e4" }}>
-              <p className="text-sm" style={{ color: "#b5a49a" }}>Sin extracto cargado para este mes</p>
-              <Link href="/admin" className="text-xs mt-1 inline-block" style={{ color: "#C8102E" }}>Importar →</Link>
+            <div className="rounded-xl px-4 py-6 text-center" style={{ background: "#FCFBFA", border: "1px solid #E6E1DA" }}>
+              <p className="text-sm" style={{ color: "#8C857B" }}>Sin extracto cargado para este mes</p>
+              <Link href="/admin" className="text-xs mt-1 inline-block font-medium" style={{ color: "#C5A059" }}>Importar →</Link>
             </div>
           ) : (
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="rounded-xl p-3" style={{ background: "#f0f9ff" }}>
-              <p className="text-[10px] font-medium mb-1" style={{ color: "#7db9d4" }}>Ingresos</p>
-              <p className="text-base font-bold text-sky-700">{formatUYU(stats.personalIngresos)}</p>
+            <div className="rounded-xl p-3" style={{ background: "#EEF3EB" }}>
+              <p className="text-[10px] font-medium mb-1" style={{ color: "#586E50" }}>Lo que entró</p>
+              <p className="text-base font-bold" style={{ color: "#586E50" }}>{formatUYU(stats.personalIngresos)}</p>
             </div>
-            <div className="rounded-xl p-3" style={{ background: "#fff1f2" }}>
-              <p className="text-[10px] font-medium mb-1" style={{ color: "#d4909a" }}>Gastos</p>
-              <p className="text-base font-bold text-rose-600">{formatUYU(stats.personalSalidas)}</p>
+            <div className="rounded-xl p-3" style={{ background: "#F5EAE7" }}>
+              <p className="text-[10px] font-medium mb-1" style={{ color: "#946E61" }}>Lo que se gastó</p>
+              <p className="text-base font-bold" style={{ color: "#946E61" }}>{formatUYU(stats.personalSalidas)}</p>
             </div>
-            <div className="rounded-xl p-3" style={{ background: personalResultado >= 0 ? "#f0f9ff" : "#fff1f2" }}>
-              <p className="text-[10px] font-medium mb-1" style={{ color: "#b5a49a" }}>Neto</p>
-              <p className={`text-base font-bold ${personalResultado >= 0 ? "text-sky-700" : "text-rose-600"}`}>{formatUYU(personalResultado)}</p>
+            <div className="rounded-xl p-3" style={{ background: personalResultado >= 0 ? "#EEF3EB" : "#F5EAE7" }}>
+              <p className="text-[10px] font-medium mb-1" style={{ color: "#8C857B" }}>Neto</p>
+              <p className="text-base font-bold" style={{ color: personalResultado >= 0 ? "#586E50" : "#946E61" }}>{formatUYU(personalResultado)}</p>
             </div>
           </div>
           )}
           {stats.personalGastosDetail.length > 0 && stats.personalSalidas > 0 && (
             <div className="mt-3">
-              <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "#c4b5a0" }}>Top gastos</p>
+              <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "#A3907A" }}>Top gastos</p>
               <div className="space-y-1.5">
                 {stats.personalGastosDetail.slice(0, 4).map(d => (
                   <div key={d.label} className="flex items-center justify-between">
-                    <span className="text-xs truncate pr-2" style={{ color: "#5c4d45" }}>{d.label}</span>
-                    <span className="text-xs font-medium tabular-nums text-rose-600">{formatUYU(d.value)}</span>
+                    <span className="text-xs truncate pr-2" style={{ color: "#2E2B2A" }}>{d.label}</span>
+                    <span className="text-xs font-medium tabular-nums" style={{ color: "#946E61" }}>{formatUYU(d.value)}</span>
                   </div>
                 ))}
               </div>
@@ -293,35 +315,34 @@ export default async function DashboardPage() {
       {/* Bank balances */}
       {stats.saldos.length > 0 && (
         <div className="mb-2">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#b5a49a" }}>Saldos bancarios</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#8C857B" }}>Saldos bancarios</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {stats.saldos.map(s => (
-              <div key={`${s.banco}|${s.moneda}`} className="bg-white rounded-xl p-4" style={{ border: "1px solid #ede9e4" }}>
+              <div key={`${s.banco}|${s.moneda}`} className="bg-white rounded-xl p-4" style={{ border: "1px solid #E6E1DA", borderLeft: "3px solid #C5A059" }}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold" style={{ color: "#7a6a60" }}>{s.banco}</p>
+                  <p className="text-xs font-semibold" style={{ color: "#2E2B2A" }}>{s.banco}</p>
                   {s.moneda === "USD" && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#f0ece6", color: "#9c8a7e" }}>USD</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#F5F0E8", color: "#A3907A" }}>USD</span>
                   )}
                 </div>
-                <p className="text-base font-bold tabular-nums" style={{ color: "#2a1f1a" }}>
+                <p className="text-base font-bold tabular-nums" style={{ color: "#2E2B2A" }}>
                   {s.moneda === "USD"
                     ? `U$S ${s.saldo.toLocaleString("es-UY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                     : `$ ${s.saldo.toLocaleString("es-UY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                   }
                 </p>
                 {s.moneda === "USD" && stats.latestTC > 0 && (
-                  <p className="text-[10px] mt-0.5 tabular-nums" style={{ color: "#b5a49a" }}>
+                  <p className="text-[10px] mt-0.5 tabular-nums" style={{ color: "#8C857B" }}>
                     ≈ $ {s.saldoUYU.toLocaleString("es-UY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </p>
                 )}
-                <p className="text-[10px] mt-1.5" style={{ color: "#c4b5a0" }}>
+                <p className="text-[10px] mt-1.5" style={{ color: "#A3907A" }}>
                   {monthName(parseInt(s.fecha.slice(5, 7)))} {s.fecha.slice(0, 4)}
                 </p>
               </div>
             ))}
-            {/* Placeholder for manual assets */}
-            <Link href="/tc" className="bg-white rounded-xl p-4 flex flex-col justify-center items-center gap-1 opacity-50 hover:opacity-100 transition-opacity" style={{ border: "1px dashed #d6cfc8" }}>
-              <p className="text-xs text-center" style={{ color: "#9c8a7e" }}>+ Efectivo / otros activos</p>
+            <Link href="/asientos" className="bg-white rounded-xl p-4 flex flex-col justify-center items-center gap-1 hover:border-[#C5A059] transition-colors" style={{ border: "1px dashed #E6E1DA" }}>
+              <p className="text-xs text-center" style={{ color: "#A3907A" }}>+ Efectivo / otros activos</p>
             </Link>
           </div>
         </div>
