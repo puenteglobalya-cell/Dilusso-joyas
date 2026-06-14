@@ -7,6 +7,7 @@ import { DrillableHeatmap, DrillableChart } from "@/components/CategoryDrilldown
 import { ExportButtons } from "@/components/ExportButtons";
 import { TxTable } from "@/components/TxTable";
 import { KpiCard } from "@/components/ui/KpiDrawer";
+import { PeriodToggle } from "@/components/PeriodToggle";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Negocio | Dilusso Joyas" };
@@ -40,24 +41,42 @@ function pct(num: number, den: number): number {
   return den === 0 ? 0 : Math.round((num / den) * 1000) / 10;
 }
 
+// Today: 2026-06-14
+const TODAY = "2026-06-14";
+const TODAY_DATE = new Date(TODAY);
+
 export default async function NegocioPage({ searchParams }: Props) {
   const sp = await searchParams;
   const sb = createServerClient();
   const mesFilter = sp.mes ? parseInt(sp.mes) : null;
-  const añoFilter = sp.año ? parseInt(sp.año) : new Date().getFullYear();
+  const añoFilter = sp.año ? parseInt(sp.año) : TODAY_DATE.getFullYear();
+  const periodo = sp.periodo ?? "12m";
 
-  // Build date range for period filter
+  // Build date range based on periodo toggle or explicit mes/año filters
   let fechaDesde: string;
   let fechaHasta: string;
+  let periodLabel: string;
+
   if (mesFilter) {
     const m = String(mesFilter).padStart(2, "0");
     fechaDesde = `${añoFilter}-${m}-01`;
     const nextM = mesFilter === 12 ? 1 : mesFilter + 1;
     const nextY = mesFilter === 12 ? añoFilter + 1 : añoFilter;
     fechaHasta = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
+    periodLabel = `${monthName(mesFilter)} ${añoFilter}`;
+  } else if (periodo === "año") {
+    fechaDesde = `${TODAY_DATE.getFullYear()}-01-01`;
+    fechaHasta = `${TODAY_DATE.getFullYear() + 1}-01-01`;
+    periodLabel = `Año ${TODAY_DATE.getFullYear()}`;
   } else {
-    fechaDesde = `${añoFilter}-01-01`;
-    fechaHasta = `${añoFilter + 1}-01-01`;
+    // Default: last 12 months
+    const y = TODAY_DATE.getFullYear();
+    const m = TODAY_DATE.getMonth() + 1;
+    const fromY = m === 12 ? y : y - 1;
+    const fromM = m === 12 ? 12 : m;
+    fechaDesde = `${fromY}-${String(fromM).padStart(2, "0")}-01`;
+    fechaHasta = `${y + 1}-01-01`;
+    periodLabel = "Últimos 12 meses";
   }
 
   const PAGE = 1000;
@@ -82,20 +101,9 @@ export default async function NegocioPage({ searchParams }: Props) {
     return all;
   }
 
-  // Trend: if filtering by year (with or without month), use the filtered range;
-  // otherwise (current year, no explicit año param) show last 12 months from today
-  const now = new Date();
-  const isCurrentYear = añoFilter === now.getFullYear() && !sp.año;
-  const trendDesde = isCurrentYear
-    ? `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
-    : fechaDesde;
-  const trendHasta = isCurrentYear
-    ? `${now.getFullYear() + 1}-01-01`
-    : fechaHasta;
-
   const [txs, trendRows] = await Promise.all([
     fetchBS(fechaDesde, fechaHasta),
-    fetchBS(trendDesde, trendHasta),
+    fetchBS(fechaDesde, fechaHasta),
   ]);
 
   const ingresos = txs.filter(r => (r.credito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
@@ -103,8 +111,11 @@ export default async function NegocioPage({ searchParams }: Props) {
   const resultado = ingresos - egresos;
   const margenNeto = pct(resultado, ingresos);
 
+  // Filter out TRASPASO from category charts
+  const IGNORAR_CATS = new Set(["Traspaso", "traspaso", "TRASPASO"]);
+
   const byCategory = txs
-    .filter(r => (r.debito ?? 0) > 0 && r.categoria_negocio)
+    .filter(r => (r.debito ?? 0) > 0 && r.categoria_negocio && !IGNORAR_CATS.has(r.categoria_negocio))
     .reduce<Record<string, number>>((acc, r) => {
       acc[r.categoria_negocio!] = (acc[r.categoria_negocio!] ?? 0) + rowImporteUYU(r);
       return acc;
@@ -121,12 +132,12 @@ export default async function NegocioPage({ searchParams }: Props) {
   const ingresosDetail = Object.entries(byCategoryIngresos).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
 
   // Heatmap: category × month (egresses only, negocio) — exclude traspasos
-  const IGNORAR_HEATMAP_NEG = new Set(["Traspaso", "traspaso"]);
-  const heatCats = Object.keys(byCategory).filter(c => !IGNORAR_HEATMAP_NEG.has(c)).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
+  const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
   const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort().slice(-12);
   const heatMap: Record<string, Record<string, number>> = {};
   for (const r of trendRows) {
     if ((r.debito ?? 0) <= 0 || !r.categoria_negocio) continue;
+    if (IGNORAR_CATS.has(r.categoria_negocio)) continue;
     const ym = r.fecha.slice(0, 7);
     const cat = r.categoria_negocio;
     if (!heatMap[cat]) heatMap[cat] = {};
@@ -160,10 +171,6 @@ export default async function NegocioPage({ searchParams }: Props) {
   const tableMonths = trend12.slice().reverse();
   const trend12Detail = trend12.slice().reverse().map(m => ({ label: m.label, value: m.resultado }));
 
-  const periodLabel = mesFilter
-    ? `${monthName(mesFilter)} ${añoFilter}`
-    : isCurrentYear ? "Últimos 12 meses" : String(añoFilter);
-
   const txTableRows = txs.map(r => ({
     id: r.id,
     banco: r.banco,
@@ -178,26 +185,29 @@ export default async function NegocioPage({ searchParams }: Props) {
   }));
 
   return (
-    <div className="p-6 max-w-7xl">
+    <div className="p-8 max-w-7xl">
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "#2a1f1a" }}>Negocio</h1>
           <p className="text-sm mt-0.5" style={{ color: "#b5a49a" }}>{periodLabel} · {txs.length} movimientos</p>
         </div>
-        <ExportButtons params={{ tipo: "negocio", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
+        <div className="flex items-center gap-3">
+          <PeriodToggle />
+          <ExportButtons params={{ tipo: "negocio", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
+        </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-8">
         <TransactionFilters />
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
         <KpiCard title="Ingresos" value={formatUYU(ingresos)} valueClass="text-sky-700"
           detail={ingresosDetail.length > 0 ? ingresosDetail : undefined} detailTitle="Ingresos por categoría" />
-        <KpiCard title="Egresos" value={formatUYU(egresos)} valueClass="text-rose-600"
+        <KpiCard title="Egresos" value={formatUYU(egresos)} valueClass="text-amber-700"
           detail={allCatDetail} detailTitle="Gastos por categoría" />
         <KpiCard title="Resultado" value={formatUYU(resultado)}
           valueClass={resultado >= 0 ? "text-sky-700" : "text-rose-600"}
@@ -213,7 +223,7 @@ export default async function NegocioPage({ searchParams }: Props) {
 
       {/* Trend chart + monthly table side by side */}
       {trend12.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card className="lg:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold text-slate-600">{periodLabel} — Ingresos vs Egresos</CardTitle>
@@ -242,7 +252,7 @@ export default async function NegocioPage({ searchParams }: Props) {
                     <tr key={m.label} className="border-b" style={{ borderColor: "#f5f0eb" }}>
                       <td className="px-3 py-2 font-medium whitespace-nowrap" style={{ color: "#5c4d45" }}>{m.label}</td>
                       <td className="px-3 py-2 text-right text-sky-700 tabular-nums">{formatUYU(m.ingresos)}</td>
-                      <td className="px-3 py-2 text-right text-rose-500 tabular-nums">{formatUYU(m.egresos)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums" style={{ color: "#d97706" }}>{formatUYU(m.egresos)}</td>
                       <td className={`px-3 py-2 text-right font-semibold tabular-nums ${m.margenNeto >= 0 ? "text-sky-700" : "text-rose-600"}`}>
                         {m.margenNeto.toFixed(0)}%
                       </td>
@@ -257,7 +267,7 @@ export default async function NegocioPage({ searchParams }: Props) {
 
       {/* Heatmap + category chart side by side */}
       {(heatCats.length > 0 || categoryData.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {heatCats.length > 0 && heatMonths.length > 1 && (
             <Card>
               <CardHeader className="pb-2">
@@ -282,7 +292,7 @@ export default async function NegocioPage({ searchParams }: Props) {
       )}
 
       {/* Transactions */}
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-semibold" style={{ color: "#5c4d45" }}>Movimientos</p>
         <span className="text-xs" style={{ color: "#b5a49a" }}>{txs.length} registros</span>
       </div>

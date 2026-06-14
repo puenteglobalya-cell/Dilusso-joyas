@@ -10,7 +10,7 @@ interface Props {
   mesLabel: string;
 }
 
-function PctBar({ pct, meta, color = "#C8102E" }: { pct: number; meta?: number; color?: string }) {
+function PctBar({ pct, meta, color = "#d97706" }: { pct: number; meta?: number; color?: string }) {
   const over = meta !== undefined && pct > meta;
   return (
     <div className="flex items-center gap-2 mt-1">
