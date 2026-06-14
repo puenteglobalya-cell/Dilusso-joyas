@@ -12,7 +12,6 @@ const navContador = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin", label: "Importar", icon: Upload, badgeKey: "missingMonths" },
   { href: "/buscar", label: "Buscar", icon: Search },
-  { href: "/consolidado", label: "Consolidado", icon: Table2 },
   { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle, badgeKey: "sinClasificar" },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
   { href: "/extractos", label: "Extractos bancarios", icon: Building2 },

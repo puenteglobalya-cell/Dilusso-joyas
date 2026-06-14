@@ -253,6 +253,12 @@ export default async function DashboardPage() {
               Ver todo →
             </Link>
           </div>
+          {stats.personalSalidas === 0 && stats.personalIngresos === 0 ? (
+            <div className="rounded-xl px-4 py-6 text-center" style={{ background: "#faf8f5", border: "1px solid #ede9e4" }}>
+              <p className="text-sm" style={{ color: "#b5a49a" }}>Sin extracto cargado para este mes</p>
+              <Link href="/admin" className="text-xs mt-1 inline-block" style={{ color: "#C8102E" }}>Importar →</Link>
+            </div>
+          ) : (
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="rounded-xl p-3" style={{ background: "#f0f9ff" }}>
               <p className="text-[10px] font-medium mb-1" style={{ color: "#7db9d4" }}>Ingresos</p>
@@ -267,7 +273,8 @@ export default async function DashboardPage() {
               <p className={`text-base font-bold ${personalResultado >= 0 ? "text-sky-700" : "text-rose-600"}`}>{formatUYU(personalResultado)}</p>
             </div>
           </div>
-          {stats.personalGastosDetail.length > 0 && (
+          )}
+          {stats.personalGastosDetail.length > 0 && stats.personalSalidas > 0 && (
             <div className="mt-3">
               <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "#c4b5a0" }}>Top gastos</p>
               <div className="space-y-1.5">
@@ -307,7 +314,9 @@ export default async function DashboardPage() {
                     ≈ $ {s.saldoUYU.toLocaleString("es-UY", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </p>
                 )}
-                <p className="text-[10px] mt-1.5" style={{ color: "#c4b5a0" }}>{s.fecha}</p>
+                <p className="text-[10px] mt-1.5" style={{ color: "#c4b5a0" }}>
+                  {monthName(parseInt(s.fecha.slice(5, 7)))} {s.fecha.slice(0, 4)}
+                </p>
               </div>
             ))}
             {/* Placeholder for manual assets */}
