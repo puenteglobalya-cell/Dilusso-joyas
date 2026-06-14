@@ -39,6 +39,7 @@ export function MetricasCecilia({ ingresos, gastosPorGrupo, ingresosPorGrupo, me
     { label: "Alimentos", valor: gastosPorGrupo["ALIMENTOS"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["ALIMENTOS"] ?? 0) / ingresoTotal) * 100 : 0 },
     { label: "Transporte", valor: gastosPorGrupo["TRANSPORTE"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["TRANSPORTE"] ?? 0) / ingresoTotal) * 100 : 0 },
     { label: "Entretenimiento", valor: gastosPorGrupo["ENTRETENIMIENTO"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["ENTRETENIMIENTO"] ?? 0) / ingresoTotal) * 100 : 0 },
+    { label: "Vacaciones", valor: gastosPorGrupo["VACACIONES"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["VACACIONES"] ?? 0) / ingresoTotal) * 100 : 0 },
     { label: "Salud", valor: gastosPorGrupo["SALUD"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["SALUD"] ?? 0) / ingresoTotal) * 100 : 0 },
     { label: "Ropa", valor: gastosPorGrupo["ROPA"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["ROPA"] ?? 0) / ingresoTotal) * 100 : 0 },
     { label: "Cuidado personal", valor: gastosPorGrupo["CUIDADO PERSONAL"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["CUIDADO PERSONAL"] ?? 0) / ingresoTotal) * 100 : 0 },
