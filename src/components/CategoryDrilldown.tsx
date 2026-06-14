@@ -18,7 +18,7 @@ interface ChartProps {
 
 export function DrillableHeatmap({ cats, months, data, tipo }: HeatmapProps) {
   const [target, setTarget] = useState<DrilldownTarget | null>(null);
-  const open = useCallback((cat: string, mes: string) => setTarget({ tipo, categoria: cat, mes }), [tipo]);
+  const open = useCallback((cat: string, mes?: string) => setTarget({ tipo, categoria: cat, mes }), [tipo]);
   const close = useCallback(() => setTarget(null), []);
   return (
     <>
