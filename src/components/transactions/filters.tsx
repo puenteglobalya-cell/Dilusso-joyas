@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { MESES, BANCOS } from "@/lib/utils";
 
-export function TransactionFilters() {
+export function TransactionFilters({ hideTipo }: { hideTipo?: boolean } = {}) {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -39,15 +39,17 @@ export function TransactionFilters() {
         ))}
       </select>
 
-      <select
-        value={sp.get("tipo") ?? ""}
-        onChange={(e) => update("tipo", e.target.value)}
-        className="text-sm border rounded-md px-3 py-1.5 bg-white"
-      >
-        <option value="">Negocio + Personal</option>
-        <option value="negocio">Negocio</option>
-        <option value="personal">Personal</option>
-      </select>
+      {!hideTipo && (
+        <select
+          value={sp.get("tipo") ?? ""}
+          onChange={(e) => update("tipo", e.target.value)}
+          className="text-sm border rounded-md px-3 py-1.5 bg-white"
+        >
+          <option value="">Negocio + Personal</option>
+          <option value="negocio">Negocio</option>
+          <option value="personal">Personal</option>
+        </select>
+      )}
 
       <select
         value={sp.get("banco") ?? ""}

@@ -209,7 +209,7 @@ export default async function PersonalPage({ searchParams }: Props) {
       </div>
 
       <div className="mb-8">
-        <TransactionFilters />
+        <TransactionFilters hideTipo />
       </div>
 
       {/* KPIs */}
