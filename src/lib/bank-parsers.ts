@@ -561,7 +561,7 @@ export function parseScotiabankPdf(text: string): BankRow[] {
 
     // Pre-process: strip cuota notation (e.g. "06/10", "C04/10") that may be glued
     // to the amount ("06/103.999,00" must not be read as 103999)
-    const restClean = rest.replace(/\bC?\d{1,2}\/\d{1,2}/g, " ");
+    const restClean = rest.replace(/C?\d{1,2}\/\d{1,2}/g, " ");
 
     // Find the last number in the rest and how much whitespace precedes it
     const numPattern = /(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})/g;
@@ -675,7 +675,7 @@ export function parseItauCardPdf(text: string): BankRow[] {
     if (/^\d{4}\s/.test(detail)) detail = detail.slice(5);
     // Pre-process: strip cuota notation (e.g. "06/10", "C04/10") that may be glued
     // to the amount, causing "06/103.999,00" to be read as 103999 instead of 3999
-    const detailClean = detail.replace(/\bC?\d{1,2}\/\d{1,2}/g, " ");
+    const detailClean = detail.replace(/C?\d{1,2}\/\d{1,2}/g, " ");
 
     // Match UY numbers: optional minus, digits (with optional dot-thousands), comma+2decimals
     // \d[\d.]* allows 4+ digit numbers without thousands separator (e.g. 1267,00)
