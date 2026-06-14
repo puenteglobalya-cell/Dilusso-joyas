@@ -673,18 +673,20 @@ export function parseItauCardPdf(text: string): BankRow[] {
     // Strip leading card number like "9008 "
     let detail = rest;
     if (/^\d{4}\s/.test(detail)) detail = detail.slice(5);
-    // detail still has original spacing for whitespace-column detection
+    // Pre-process: strip cuota notation (e.g. "06/10", "C04/10") that may be glued
+    // to the amount, causing "06/103.999,00" to be read as 103999 instead of 3999
+    const detailClean = detail.replace(/\bC?\d{1,2}\/\d{1,2}/g, " ");
 
     // Match UY numbers: optional minus, digits (with optional dot-thousands), comma+2decimals
     // \d[\d.]* allows 4+ digit numbers without thousands separator (e.g. 1267,00)
     const numPat = /(-?\d[\d.]*,\d{2})/g;
-    const allMatches = [...detail.matchAll(numPat)];
+    const allMatches = [...detailClean.matchAll(numPat)];
     if (allMatches.length === 0) continue;
 
-    // Build concept: everything before the first number, strip cuota notation X/ Y or X/Y
-    const firstMatch = allMatches[0];
-    let concepto = detail.slice(0, firstMatch.index!).trim();
-    concepto = concepto.replace(/\s+C?\d+\/\s*\d+\s*$/, "").replace(/\s{2,}/g, " ").trim();
+    // Build concept: everything before the first number in the ORIGINAL detail, strip cuota notation
+    const firstMatchIdx = allMatches[0].index!;
+    let concepto = detail.slice(0, firstMatchIdx).trim();
+    concepto = concepto.replace(/\s*C?\d{1,2}\/\d{1,2}\s*$/, "").replace(/\s{2,}/g, " ").trim();
     if (!concepto || concepto.length < 2) continue;
 
     // Determine currency and amount using whitespace-position rules on last two numbers
@@ -700,7 +702,7 @@ export function parseItauCardPdf(text: string): BankRow[] {
       // Count whitespace before last number to detect USD-only single entry
       let wsBeforeLast = 0;
       for (let i = lastMatch.index! - 1; i >= 0; i--) {
-        if (detail[i] === " " || detail[i] === "\t") wsBeforeLast++;
+        if (detailClean[i] === " " || detailClean[i] === "\t") wsBeforeLast++;
         else break;
       }
 
