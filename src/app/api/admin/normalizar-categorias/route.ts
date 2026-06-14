@@ -5,7 +5,7 @@ import { CATEGORIAS_PERSONAL, CATEGORIA_NORMALIZAR } from "@/lib/categorias-pers
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function POST() {
+export async function GET() {
   const sb = createServerClient();
   const results: { step: string; ok: boolean; detail?: string }[] = [];
 
