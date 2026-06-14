@@ -119,12 +119,14 @@ export default async function PersonalPage({ searchParams }: Props) {
     }
   }
 
-  // Heatmap data (same as negocio)
-  const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
+  // Heatmap data (same as negocio) — exclude TRASPASO
+  const IGNORAR_HEATMAP = new Set(["10. TRASPASO", "Transferencia entre cuenta"]);
+  const heatCats = Object.keys(byCategory).filter(c => !IGNORAR_HEATMAP.has(c)).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
   const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort().slice(-12);
   const heatMap: Record<string, Record<string, number>> = {};
   for (const r of trendRows) {
     if ((r.debito ?? 0) <= 0 || !r.categoria_personal) continue;
+    if (IGNORAR_HEATMAP.has(r.categoria_personal)) continue;
     const ym = r.fecha.slice(0, 7);
     const cat = r.categoria_personal;
     if (!heatMap[cat]) heatMap[cat] = {};

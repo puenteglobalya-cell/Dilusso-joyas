@@ -120,8 +120,9 @@ export default async function NegocioPage({ searchParams }: Props) {
     }, {});
   const ingresosDetail = Object.entries(byCategoryIngresos).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
 
-  // Heatmap: category × month (egresses only, negocio)
-  const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
+  // Heatmap: category × month (egresses only, negocio) — exclude traspasos
+  const IGNORAR_HEATMAP_NEG = new Set(["Traspaso", "traspaso"]);
+  const heatCats = Object.keys(byCategory).filter(c => !IGNORAR_HEATMAP_NEG.has(c)).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
   const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort().slice(-12);
   const heatMap: Record<string, Record<string, number>> = {};
   for (const r of trendRows) {

@@ -559,9 +559,13 @@ export function parseScotiabankPdf(text: string): BankRow[] {
     const lineOffset = line.indexOf(trimmed);
     const rest = line.slice(lineOffset + dateMatch[0].length);
 
+    // Pre-process: strip cuota notation (e.g. "06/10", "C04/10") that may be glued
+    // to the amount ("06/103.999,00" must not be read as 103999)
+    const restClean = rest.replace(/\bC?\d{1,2}\/\d{1,2}/g, " ");
+
     // Find the last number in the rest and how much whitespace precedes it
     const numPattern = /(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})/g;
-    const allMatches = [...rest.matchAll(numPattern)];
+    const allMatches = [...restClean.matchAll(numPattern)];
     if (allMatches.length === 0) continue;
 
     const lastMatch = allMatches[allMatches.length - 1];
@@ -570,7 +574,7 @@ export function parseScotiabankPdf(text: string): BankRow[] {
     // Count whitespace chars immediately before this number
     let wsCount = 0;
     for (let i = lastMatchIdx - 1; i >= 0; i--) {
-      if (rest[i] === " " || rest[i] === "\t") wsCount++;
+      if (restClean[i] === " " || restClean[i] === "\t") wsCount++;
       else break;
     }
 
@@ -581,9 +585,11 @@ export function parseScotiabankPdf(text: string): BankRow[] {
     const amount = parseUY(rawAmount);
     if (amount === null) continue;
 
-    // Description: everything before the last number, clean cuota notation (06/06, C04/10, 07/10)
-    let concepto = rest.slice(0, lastMatchIdx).trim();
-    concepto = concepto.replace(/\s*C?\d{1,2}\/\d{1,2}\s*$/, "").trim();
+    // Description: use original rest (not stripped), remove cuota notation and trailing spaces
+    let concepto = rest.slice(0, rest.indexOf(rawAmount, lastMatchIdx - 5 >= 0 ? lastMatchIdx - 5 : 0)).trim();
+    // Fallback if indexOf didn't find it: use restClean position
+    if (!concepto) concepto = rest.slice(0, lastMatchIdx).trim();
+    concepto = concepto.replace(/\s*C?\d{1,2}\/\d{1,2}\s*$/, "").replace(/\s+/g, " ").trim();
     if (!concepto || concepto.length < 2) continue;
 
     // Payments ("PAGO") are credits; negative sign also indicates payment
