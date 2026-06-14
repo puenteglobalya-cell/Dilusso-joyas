@@ -162,13 +162,13 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#2a1f1a" }}>{monthName(stats.mes)} {stats.año}</h1>
-          <p className="text-sm mt-0.5" style={{ color: "#b5a49a" }}>Resumen del mes</p>
+          <h1 className="text-2xl font-bold" style={{ color: "#2E2B2A" }}>{monthName(stats.mes)} {stats.año}</h1>
+          <p className="text-sm mt-0.5" style={{ color: "#8C857B" }}>Resumen del mes</p>
         </div>
         <div className="flex items-center gap-3">
           {stats.latestTC > 0 && (
-            <Link href="/tc" className="text-xs px-3 py-1.5 rounded-lg transition-colors" style={{ background: "#f0ece6", color: "#7a6a60" }}>
-              USD/UYU <span className="font-semibold" style={{ color: "#2a1f1a" }}>{stats.latestTC.toFixed(2)}</span>
+            <Link href="/tc" className="text-xs px-3 py-1.5 rounded-lg transition-colors" style={{ background: "#F5F0E8", color: "#8C857B" }}>
+              USD/UYU <span className="font-semibold" style={{ color: "#2E2B2A" }}>{stats.latestTC.toFixed(2)}</span>
             </Link>
           )}
           {stats.latestTC === 0 && (
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
               Configurar TC
             </Link>
           )}
-          <Link href="/admin" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors" style={{ background: "#2a1f1a", color: "#f5f0eb" }}>
+          <Link href="/admin" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors" style={{ background: "#1C1A19", color: "#C5A059" }}>
             <Upload className="w-3.5 h-3.5" />
             Importar
           </Link>

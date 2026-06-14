@@ -199,8 +199,8 @@ export default async function PersonalPage({ searchParams }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#2a1f1a" }}>Movimientos de Cecilia</h1>
-          <p className="text-sm mt-0.5" style={{ color: "#b5a49a" }}>{periodLabel} · {txs.length} movimientos</p>
+          <h1 className="text-2xl font-bold" style={{ color: "#2E2B2A" }}>Movimientos de Cecilia</h1>
+          <p className="text-sm mt-0.5" style={{ color: "#8C857B" }}>{periodLabel} · {txs.length} movimientos</p>
         </div>
         <div className="flex items-center gap-3">
           <PeriodToggle />
@@ -252,16 +252,16 @@ export default async function PersonalPage({ searchParams }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card className="lg:col-span-2">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-slate-600">{periodLabel} — Ingresos vs Gastos</CardTitle>
+              <CardTitle className="text-sm font-semibold" style={{ color: "#8C857B" }}>{periodLabel} — Ingresos vs Gastos</CardTitle>
             </CardHeader>
             <CardContent>
               <NegocioTrendChart data={trend12} />
             </CardContent>
           </Card>
 
-          <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #ede9e4" }}>
-            <div className="px-4 py-3 border-b" style={{ background: "#faf8f5", borderColor: "#ede9e4" }}>
-              <p className="text-sm font-semibold" style={{ color: "#7a6a60" }}>Por mes</p>
+          <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #E6E1DA" }}>
+            <div className="px-4 py-3 border-b" style={{ background: "#FCFBFA", borderColor: "#E6E1DA" }}>
+              <p className="text-sm font-semibold" style={{ color: "#8C857B" }}>Por mes</p>
             </div>
             <div className="overflow-y-auto max-h-[300px]">
               <table className="w-full text-xs">
@@ -288,7 +288,7 @@ export default async function PersonalPage({ searchParams }: Props) {
           {heatCats.length > 0 && heatMonths.length > 1 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría × mes</CardTitle>
+                <CardTitle className="text-sm font-semibold text-sm font-semibold" style={{ color: "#8C857B" }}>Gastos por categoría × mes</CardTitle>
               </CardHeader>
               <CardContent>
                 <DrillableHeatmap cats={heatCats} months={heatMonths} data={heatMap} tipo="personal" />
@@ -298,7 +298,7 @@ export default async function PersonalPage({ searchParams }: Props) {
           {categoryData.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-slate-600">Gastos por categoría — período</CardTitle>
+                <CardTitle className="text-sm font-semibold text-sm font-semibold" style={{ color: "#8C857B" }}>Gastos por categoría — período</CardTitle>
               </CardHeader>
               <CardContent>
                 <DrillableChart data={categoryData} tipo="personal" />
@@ -310,8 +310,8 @@ export default async function PersonalPage({ searchParams }: Props) {
 
       {/* Transactions */}
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-semibold" style={{ color: "#5c4d45" }}>Movimientos</p>
-        <span className="text-xs" style={{ color: "#b5a49a" }}>{txs.length} registros</span>
+        <p className="text-sm font-semibold" style={{ color: "#2E2B2A" }}>Movimientos</p>
+        <span className="text-xs" style={{ color: "#8C857B" }}>{txs.length} registros</span>
       </div>
       <TxTable
         rows={txTableRows}

@@ -14,18 +14,22 @@ export interface TxRow {
   nota: string | null;
 }
 
-const BANCO_COLORS: Record<string, string> = {
-  BBVA:        "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-  "Itaú":      "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  Scotiabank:  "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
-  OCA:         "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
-  "Itau-Card": "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
+// Warm desaturated bank badges (no pure blue/red)
+const BANCO_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  BBVA:        { bg: "#EEF1F8", color: "#4A5A8A", border: "#C5CCE0" },
+  "Itaú":      { bg: "#F5F0E8", color: "#7A5A20", border: "#D4B87A" },
+  Scotiabank:  { bg: "#EBF2EE", color: "#3A6A50", border: "#A8C8B0" },
+  OCA:         { bg: "#F0EBF5", color: "#5A3A7A", border: "#C0A8D8" },
+  "Itau-Card": { bg: "#F5EDE8", color: "#7A4A30", border: "#D4A888" },
 };
 
 function bancoBadge(banco: string) {
-  const cls = BANCO_COLORS[banco] ?? "bg-slate-100 text-slate-500 ring-1 ring-slate-200";
+  const s = BANCO_STYLES[banco] ?? { bg: "#F5F0E8", color: "#8C857B", border: "#E6E1DA" };
   return (
-    <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${cls}`}>
+    <span
+      className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap"
+      style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
+    >
       {banco}
     </span>
   );
@@ -45,10 +49,10 @@ interface Props {
 export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
   if (!rows.length) {
     return (
-      <div className="bg-white rounded-xl border p-12 text-center">
-        <p className="text-slate-400 text-sm mb-2">{emptyMessage ?? "Sin movimientos para este período"}</p>
+      <div className="bg-white rounded-xl p-12 text-center" style={{ border: "1px solid #E6E1DA" }}>
+        <p className="text-sm mb-2" style={{ color: "#8C857B" }}>{emptyMessage ?? "Sin movimientos para este período"}</p>
         {emptyLink && (
-          <a href={emptyLink.href} className="text-xs text-brand underline">{emptyLink.label}</a>
+          <a href={emptyLink.href} className="text-xs underline" style={{ color: "#C5A059" }}>{emptyLink.label}</a>
         )}
       </div>
     );
@@ -62,67 +66,88 @@ export function TxTable({ rows, emptyMessage, emptyLink }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #ede9e4" }}>
+    <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #E6E1DA" }}>
       {/* Column header */}
-      <div className="grid grid-cols-[1fr_3fr_1.5fr_auto] border-b px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider sticky top-0 bg-white" style={{ borderColor: "#ede9e4", color: "#b5a49a" }}>
+      <div
+        className="grid grid-cols-[1fr_3fr_1.5fr_auto] border-b px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider sticky top-0 bg-white"
+        style={{ borderColor: "#E6E1DA", color: "#8C857B" }}
+      >
         <span>Banco</span>
         <span>Descripción</span>
         <span>Categoría</span>
         <span className="text-right pr-1">Importe</span>
       </div>
 
-      {Array.from(groups.entries()).map(([fecha, dayRows]) => {
-        const dayEgresos = dayRows.filter(r => (r.debito ?? 0) > 0).reduce((s, r) => s + importeUYU(r), 0);
+      {Array.from(groups.entries()).map(([fecha, dayRows], groupIdx) => {
+        const dayEgresos  = dayRows.filter(r => (r.debito  ?? 0) > 0).reduce((s, r) => s + importeUYU(r), 0);
         const dayIngresos = dayRows.filter(r => (r.credito ?? 0) > 0).reduce((s, r) => s + importeUYU(r), 0);
 
         return (
           <div key={fecha}>
             {/* Date separator */}
-            <div className="flex items-center justify-between px-4 py-1.5 border-b border-t" style={{ background: "#faf8f5", borderColor: "#ede9e4" }}>
-              <span className="text-[11px] font-semibold tracking-wide" style={{ color: "#7a6a60" }}>{formatDate(fecha)}</span>
+            <div
+              className="flex items-center justify-between px-4 py-1.5 border-b"
+              style={{
+                background: groupIdx % 2 === 0 ? "#FCFBFA" : "#F8F5F0",
+                borderTop: "1px solid #E6E1DA",
+                borderBottom: "1px solid #E6E1DA",
+              }}
+            >
+              <span className="text-[11px] font-semibold tracking-wide" style={{ color: "#2E2B2A" }}>{formatDate(fecha)}</span>
               <div className="flex gap-4 text-[11px]">
                 {dayIngresos > 0 && (
-                  <span className="text-sky-600 font-medium">+{formatUYU(dayIngresos)}</span>
+                  <span className="font-medium" style={{ color: "#586E50" }}>+{formatUYU(dayIngresos)}</span>
                 )}
                 {dayEgresos > 0 && (
-                  <span className="text-rose-500 font-medium">−{formatUYU(dayEgresos)}</span>
+                  <span className="font-medium" style={{ color: "#946E61" }}>−{formatUYU(dayEgresos)}</span>
                 )}
               </div>
             </div>
 
-            {dayRows.map(r => {
+            {dayRows.map((r, rowIdx) => {
               const esIngreso = (r.credito ?? 0) > 0;
               const amt = importeUYU(r);
+              const zebraBase = rowIdx % 2 === 0 ? "#fff" : "#FCFBFA";
               return (
                 <div
                   key={r.id}
                   className="grid grid-cols-[1fr_3fr_1.5fr_auto] items-center px-4 py-2.5 border-b transition-colors"
-                  style={{ borderColor: "#f5f0eb", borderLeft: `3px solid ${esIngreso ? "#7dd3fc" : "#fda4af"}` }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#faf8f5"}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ""}
+                  style={{
+                    background: zebraBase,
+                    borderColor: "#E6E1DA",
+                    borderLeft: `3px solid ${esIngreso ? "#586E50" : "#946E61"}`,
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#F5F0E8"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = zebraBase}
                 >
                   <div className="pl-1 flex items-center gap-1.5">
                     {bancoBadge(r.banco)}
                     {r.moneda === "USD" && (
-                      <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ color: "#b5a49a", background: "#f5f0eb" }}>USD</span>
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ color: "#A3907A", background: "#F5F0E8" }}>USD</span>
                     )}
                   </div>
                   <div className="pr-3 min-w-0">
-                    <p className="text-[13px] truncate leading-snug" style={{ color: "#2a1f1a" }}>{r.descripcion ?? "—"}</p>
+                    <p className="text-[13px] truncate leading-snug" style={{ color: "#2E2B2A" }}>{r.descripcion ?? "—"}</p>
                     {r.nota && (
-                      <p className="text-[11px] italic truncate mt-0.5" style={{ color: "#d97706" }}>{r.nota}</p>
+                      <p className="text-[11px] italic truncate mt-0.5" style={{ color: "#C5A059" }}>{r.nota}</p>
                     )}
                   </div>
                   <div>
                     {r.categoria ? (
-                      <span className="inline-block text-[11px] px-2 py-0.5 rounded-full font-medium truncate max-w-[160px]" style={{ background: "#f5f0eb", color: "#7a6a60" }}>
+                      <span
+                        className="inline-block text-[11px] px-2 py-0.5 rounded-full font-medium truncate max-w-[160px]"
+                        style={{ background: "#F5F0E8", color: "#8C857B" }}
+                      >
                         {r.categoria}
                       </span>
                     ) : (
-                      <span className="text-[11px]" style={{ color: "#c4b5ad" }}>sin categoría</span>
+                      <span className="text-[11px]" style={{ color: "#A3907A" }}>sin categoría</span>
                     )}
                   </div>
-                  <div className={`text-right text-[13px] font-semibold tabular-nums whitespace-nowrap ${esIngreso ? "text-sky-700" : "text-rose-600"}`}>
+                  <div
+                    className="text-right text-[13px] font-semibold tabular-nums whitespace-nowrap"
+                    style={{ color: esIngreso ? "#586E50" : "#946E61" }}
+                  >
                     {esIngreso ? "+" : "−"}{formatUYU(amt)}
                   </div>
                 </div>

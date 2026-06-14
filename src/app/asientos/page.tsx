@@ -152,14 +152,14 @@ export default function AsientosPage() {
   return (
     <div className="p-8 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "#2a1f1a" }}>Asientos Manuales</h1>
-        <p className="text-sm mt-0.5" style={{ color: "#b5a49a" }}>
+        <h1 className="text-2xl font-bold" style={{ color: "#2E2B2A" }}>Asientos Manuales</h1>
+        <p className="text-sm mt-0.5" style={{ color: "#8C857B" }}>
           Registros manuales con control de balanceo · Debe = Haber
         </p>
       </div>
 
       {/* Form */}
-      <div className="rounded-2xl bg-white p-6 mb-6" style={{ border: "1px solid #ede9e4" }}>
+      <div className="rounded-2xl bg-white p-6 mb-6" style={{ border: "1px solid #E6E1DA" }}>
         <div className="grid grid-cols-2 gap-4 mb-5">
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: "#9c8a7e" }}>Fecha</label>
@@ -168,7 +168,7 @@ export default function AsientosPage() {
               value={fecha}
               onChange={e => setFecha(e.target.value)}
               className="w-full rounded-lg px-3 py-2 text-sm"
-              style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }}
+              style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }}
             />
           </div>
           <div>
@@ -179,7 +179,7 @@ export default function AsientosPage() {
               onChange={e => setDescripcion(e.target.value)}
               placeholder="Ej: Pago efectivo mercado, traspaso bolsillo..."
               className="w-full rounded-lg px-3 py-2 text-sm"
-              style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }}
+              style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }}
             />
           </div>
         </div>
@@ -200,24 +200,24 @@ export default function AsientosPage() {
           {lineas.map((l, i) => (
             <div key={i} className="grid gap-1.5 mb-2 items-center" style={{ gridTemplateColumns: "1fr 100px 120px 120px 90px 90px 70px 32px" }}>
               <select value={l.cuenta} onChange={e => setLinea(i, { cuenta: e.target.value })}
-                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }}>
+                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }}>
                 <option value="">— cuenta —</option>
                 {CUENTAS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <select value={l.tipo} onChange={e => setLinea(i, { tipo: e.target.value as Linea["tipo"] })}
-                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }}>
+                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }}>
                 <option value="personal">Personal</option>
                 <option value="negocio">Negocio</option>
                 <option value="ambos">Ambos</option>
               </select>
               <select value={l.categoria_negocio} onChange={e => setLinea(i, { categoria_negocio: e.target.value })}
-                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }}
+                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }}
                 disabled={l.tipo === "personal"}>
                 <option value="">—</option>
                 {CATS_NEGOCIO.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <select value={l.categoria_personal} onChange={e => setLinea(i, { categoria_personal: e.target.value })}
-                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }}
+                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }}
                 disabled={l.tipo === "negocio"}>
                 <option value="">—</option>
                 {CATEGORIAS_PERSONAL.map(c => <option key={c} value={c}>{c.replace(/^\d+\.\s*/, "")}</option>)}
@@ -225,13 +225,13 @@ export default function AsientosPage() {
               <input type="number" min="0" step="0.01" value={l.debe} onChange={e => setLinea(i, { debe: e.target.value })}
                 placeholder="0"
                 className="rounded px-2 py-1.5 text-xs text-right tabular-nums"
-                style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }} />
+                style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }} />
               <input type="number" min="0" step="0.01" value={l.haber} onChange={e => setLinea(i, { haber: e.target.value })}
                 placeholder="0"
                 className="rounded px-2 py-1.5 text-xs text-right tabular-nums"
-                style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }} />
+                style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }} />
               <select value={l.moneda} onChange={e => setLinea(i, { moneda: e.target.value as "UYU" | "USD" })}
-                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #ede9e4", color: "#2a1f1a" }}>
+                className="rounded px-2 py-1.5 text-xs" style={{ border: "1px solid #E6E1DA", color: "#2E2B2A" }}>
                 <option value="UYU">UYU</option>
                 <option value="USD">USD</option>
               </select>
@@ -255,11 +255,11 @@ export default function AsientosPage() {
           <div className="flex gap-8 text-sm tabular-nums">
             <div>
               <span style={{ color: "#9c8a7e" }}>Total Debe: </span>
-              <span className="font-semibold" style={{ color: "#2a1f1a" }}>{formatUYU(totalDebe)}</span>
+              <span className="font-semibold" style={{ color: "#2E2B2A" }}>{formatUYU(totalDebe)}</span>
             </div>
             <div>
               <span style={{ color: "#9c8a7e" }}>Total Haber: </span>
-              <span className="font-semibold" style={{ color: "#2a1f1a" }}>{formatUYU(totalHaber)}</span>
+              <span className="font-semibold" style={{ color: "#2E2B2A" }}>{formatUYU(totalHaber)}</span>
             </div>
             {totalDebe > 0 && (
               <div className="flex items-center gap-1.5">
@@ -291,9 +291,9 @@ export default function AsientosPage() {
       </div>
 
       {/* Historial */}
-      <div className="rounded-2xl bg-white p-6" style={{ border: "1px solid #ede9e4" }}>
+      <div className="rounded-2xl bg-white p-6" style={{ border: "1px solid #E6E1DA" }}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold" style={{ color: "#5c4d45" }}>Historial de asientos</h2>
+          <h2 className="text-sm font-semibold" style={{ color: "#2E2B2A" }}>Historial de asientos</h2>
           <button onClick={loadHistorial} disabled={loadingHist}
             className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-50"
             style={{ color: "#d97706", border: "1px solid #f59e0b" }}>
@@ -302,7 +302,7 @@ export default function AsientosPage() {
         </div>
 
         {showHist && historial.length === 0 && (
-          <p className="text-sm text-center py-6" style={{ color: "#b5a49a" }}>No hay asientos registrados</p>
+          <p className="text-sm text-center py-6" style={{ color: "#8C857B" }}>No hay asientos registrados</p>
         )}
 
         {historial.map(a => {
@@ -315,8 +315,8 @@ export default function AsientosPage() {
                 onClick={() => setExpandedId(expanded ? null : a.id)}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-medium tabular-nums" style={{ color: "#b5a49a" }}>{a.fecha}</span>
-                  <span className="text-sm font-medium" style={{ color: "#2a1f1a" }}>{a.descripcion}</span>
+                  <span className="text-xs font-medium tabular-nums" style={{ color: "#8C857B" }}>{a.fecha}</span>
+                  <span className="text-sm font-medium" style={{ color: "#2E2B2A" }}>{a.descripcion}</span>
                   <span className="text-xs" style={{ color: "#9c8a7e" }}>{a.lineas.length} líneas</span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -325,7 +325,7 @@ export default function AsientosPage() {
                     className="p-1 rounded hover:bg-red-50" title="Eliminar asiento">
                     <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                   </button>
-                  {expanded ? <ChevronUp className="w-4 h-4 text-amber-500" /> : <ChevronDown className="w-4 h-4" style={{ color: "#b5a49a" }} />}
+                  {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "#C5A059" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "#8C857B" }} />}
                 </div>
               </div>
 
@@ -345,26 +345,26 @@ export default function AsientosPage() {
                     <tbody>
                       {a.lineas.map(l => (
                         <tr key={l.id} style={{ borderTop: "1px solid #f5f0eb" }}>
-                          <td className="py-1.5 pr-2 font-medium" style={{ color: "#5c4d45" }}>{l.cuenta}</td>
-                          <td className="py-1.5 pr-2" style={{ color: "#7a6a60" }}>{l.tipo}</td>
-                          <td className="py-1.5 pr-2" style={{ color: "#7a6a60" }}>
+                          <td className="py-1.5 pr-2 font-medium" style={{ color: "#2E2B2A" }}>{l.cuenta}</td>
+                          <td className="py-1.5 pr-2" style={{ color: "#8C857B" }}>{l.tipo}</td>
+                          <td className="py-1.5 pr-2" style={{ color: "#8C857B" }}>
                             {l.categoria_negocio || l.categoria_personal || "—"}
                           </td>
-                          <td className="py-1.5 text-right tabular-nums font-medium" style={{ color: l.debe > 0 ? "#2a1f1a" : "#d1c8c2" }}>
+                          <td className="py-1.5 text-right tabular-nums font-medium" style={{ color: l.debe > 0 ? "#2E2B2A" : "#C4B5A0" }}>
                             {l.debe > 0 ? formatUYU(l.debe) : "—"}
                           </td>
-                          <td className="py-1.5 text-right tabular-nums font-medium" style={{ color: l.haber > 0 ? "#2a1f1a" : "#d1c8c2" }}>
+                          <td className="py-1.5 text-right tabular-nums font-medium" style={{ color: l.haber > 0 ? "#2E2B2A" : "#C4B5A0" }}>
                             {l.haber > 0 ? formatUYU(l.haber) : "—"}
                           </td>
                           <td className="py-1.5 pl-2" style={{ color: "#9c8a7e" }}>{l.moneda}</td>
                         </tr>
                       ))}
-                      <tr style={{ borderTop: "2px solid #ede9e4" }}>
-                        <td colSpan={3} className="pt-2 text-right font-semibold pr-2" style={{ color: "#7a6a60" }}>Totales</td>
-                        <td className="pt-2 text-right tabular-nums font-bold" style={{ color: "#2a1f1a" }}>
+                      <tr style={{ borderTop: "2px solid #E6E1DA" }}>
+                        <td colSpan={3} className="pt-2 text-right font-semibold pr-2" style={{ color: "#8C857B" }}>Totales</td>
+                        <td className="pt-2 text-right tabular-nums font-bold" style={{ color: "#2E2B2A" }}>
                           {formatUYU(a.lineas.reduce((s, l) => s + l.debe, 0))}
                         </td>
-                        <td className="pt-2 text-right tabular-nums font-bold" style={{ color: "#2a1f1a" }}>
+                        <td className="pt-2 text-right tabular-nums font-bold" style={{ color: "#2E2B2A" }}>
                           {formatUYU(a.lineas.reduce((s, l) => s + l.haber, 0))}
                         </td>
                         <td />
