@@ -7,6 +7,8 @@ import { DrillableChart, DrillableHeatmap } from "@/components/CategoryDrilldown
 import { ExportButtons } from "@/components/ExportButtons";
 import { NegocioTrendChart } from "@/components/negocio/trend-chart";
 import { TxTable } from "@/components/TxTable";
+import { MetricasCecilia } from "@/components/personal/MetricasCecilia";
+import { GRUPOS_METRICAS, CATEGORIAS_IGNORAR, CATEGORIA_NORMALIZAR } from "@/lib/categorias-personal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Movimientos de Cecilia | Dilusso Joyas" };
@@ -98,6 +100,24 @@ export default async function PersonalPage({ searchParams }: Props) {
     }, {});
   const categoryData = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value }));
   const allCatDetail = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+
+  // Group expenses by metrics bucket (normalize old names first)
+  const gastosPorGrupo: Record<string, number> = {};
+  const ingresosPorGrupo: Record<string, number> = {};
+  for (const r of txs) {
+    const rawCat = r.categoria_personal ?? "";
+    const cat = CATEGORIA_NORMALIZAR[rawCat] ?? rawCat;
+    if (CATEGORIAS_IGNORAR.has(cat)) continue;
+    const amt = rowImporteUYU(r);
+    if ((r.debito ?? 0) > 0) {
+      for (const [grupo, cats] of Object.entries(GRUPOS_METRICAS)) {
+        if (cats.includes(cat)) { gastosPorGrupo[grupo] = (gastosPorGrupo[grupo] ?? 0) + amt; break; }
+      }
+    } else if ((r.credito ?? 0) > 0) {
+      if (cat === "B. INGRESO PASIVO") ingresosPorGrupo["B. INGRESO PASIVO"] = (ingresosPorGrupo["B. INGRESO PASIVO"] ?? 0) + amt;
+      if (cat === "C. INGRESO DE CARTERA") ingresosPorGrupo["C. INGRESO DE CARTERA"] = (ingresosPorGrupo["C. INGRESO DE CARTERA"] ?? 0) + amt;
+    }
+  }
 
   // Heatmap data (same as negocio)
   const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
@@ -192,6 +212,18 @@ export default async function PersonalPage({ searchParams }: Props) {
           detailTitle="Neto por mes"
         />
       </div>
+
+      {/* Metrics analysis */}
+      {Object.keys(gastosPorGrupo).length > 0 && (
+        <div className="mb-6">
+          <MetricasCecilia
+            ingresos={ingresos}
+            gastosPorGrupo={gastosPorGrupo}
+            ingresosPorGrupo={ingresosPorGrupo}
+            mesLabel={periodLabel}
+          />
+        </div>
+      )}
 
       {/* Trend chart + monthly table side by side */}
       {trend12.length > 0 && (
