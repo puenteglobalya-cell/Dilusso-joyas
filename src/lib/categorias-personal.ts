@@ -1,5 +1,6 @@
-// Canonical personal categories (numbered groups from the master dictionary)
+// Canonical personal categories — "cuentas madre" del diccionario
 export const CATEGORIAS_PERSONAL: string[] = [
+  // Gastos
   "1. HOGAR/VIVIENDA",
   "2. TRANSPORTE",
   "3. ALIMENTOS",
@@ -20,16 +21,21 @@ export const CATEGORIAS_PERSONAL: string[] = [
   "18. IMPUESTOS",
   "19. LECCIONES APRENDIDAS",
   "20. HONORARIOS PAGADOS",
+  "G. CAPRICHOS",         // vivienda propia, auto, lujos
+  // Ingresos
   "A. INGRESO GANADO",
   "B. INGRESO PASIVO",
   "C. INGRESO DE CARTERA",
+  // Otros
+  "F. ACTIVOS",
+  "J. PASIVOS",
   "10. TRASPASO",
   "NO IDENTIFICADO",
 ];
 
-// Maps any old/inconsistent category name → canonical name
+// Maps any old/legacy category name → canonical "cuenta madre"
 export const CATEGORIA_NORMALIZAR: Record<string, string> = {
-  // Servicios hogar → HOGAR/VIVIENDA
+  // Hogar
   "4. SERVICIOS HOGAR": "1. HOGAR/VIVIENDA",
   "Servicios del hogar": "1. HOGAR/VIVIENDA",
   "Alquiler vivienda": "1. HOGAR/VIVIENDA",
@@ -63,11 +69,16 @@ export const CATEGORIA_NORMALIZAR: Record<string, string> = {
   "Impuestos": "18. IMPUESTOS",
   // Deudas
   "Tarjeta de crédito": "16. DEUDAS REPAGADAS",
-  // Gastos varios → keep as-is or map to closest
+  // Inversiones
+  "INVERSIÓN": "13. INVERSION/AHORROS",
+  "Compra USDT": "13. INVERSION/AHORROS",
+  // Traspasos (ignorar)
+  "Transferencia entre cuenta": "10. TRASPASO",
+  // Varios
   "Gastos varios personales": "NO IDENTIFICADO",
 };
 
-// For metrics: which canonical groups map to which analysis bucket
+// Agrupación para métricas y análisis
 export const GRUPOS_METRICAS: Record<string, string[]> = {
   "HOGAR": ["1. HOGAR/VIVIENDA"],
   "TRANSPORTE": ["2. TRANSPORTE"],
@@ -84,6 +95,7 @@ export const GRUPOS_METRICAS: Record<string, string[]> = {
   "SERVICIOS": ["17. SERVICIOS"],
   "IMPUESTOS": ["18. IMPUESTOS"],
   "DEUDAS": ["16. DEUDAS REPAGADAS"],
+  "CAPRICHOS": ["G. CAPRICHOS"],
 };
 
 // Categories to ignore in expense totals (transfers between own accounts)

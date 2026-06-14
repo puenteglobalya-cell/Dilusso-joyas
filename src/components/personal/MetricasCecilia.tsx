@@ -34,20 +34,27 @@ export function MetricasCecilia({ ingresos, gastosPorGrupo, ingresosPorGrupo, me
 
   const ingresoTotal = ingresos + (ingresosPorGrupo["B. INGRESO PASIVO"] ?? 0) + (ingresosPorGrupo["C. INGRESO DE CARTERA"] ?? 0);
 
+  function pctOf(key: string) {
+    return ingresoTotal > 0 ? ((gastosPorGrupo[key] ?? 0) / ingresoTotal) * 100 : 0;
+  }
+
   const grupos: Grupo[] = [
-    { label: "Hogar / Vivienda", valor: gastosPorGrupo["HOGAR"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["HOGAR"] ?? 0) / ingresoTotal) * 100 : 0, meta: 33 },
-    { label: "Alimentos", valor: gastosPorGrupo["ALIMENTOS"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["ALIMENTOS"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Transporte", valor: gastosPorGrupo["TRANSPORTE"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["TRANSPORTE"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Entretenimiento", valor: gastosPorGrupo["ENTRETENIMIENTO"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["ENTRETENIMIENTO"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Vacaciones", valor: gastosPorGrupo["VACACIONES"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["VACACIONES"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Salud", valor: gastosPorGrupo["SALUD"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["SALUD"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Ropa", valor: gastosPorGrupo["ROPA"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["ROPA"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Cuidado personal", valor: gastosPorGrupo["CUIDADO PERSONAL"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["CUIDADO PERSONAL"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Educación / Hijos", valor: gastosPorGrupo["EDUCACION"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["EDUCACION"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Seguros", valor: gastosPorGrupo["SEGUROS"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["SEGUROS"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Servicios", valor: gastosPorGrupo["SERVICIOS"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["SERVICIOS"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Impuestos", valor: gastosPorGrupo["IMPUESTOS"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["IMPUESTOS"] ?? 0) / ingresoTotal) * 100 : 0 },
-    { label: "Deudas repagadas", valor: gastosPorGrupo["DEUDAS"] ?? 0, pct: ingresoTotal > 0 ? ((gastosPorGrupo["DEUDAS"] ?? 0) / ingresoTotal) * 100 : 0 },
+    { label: "Hogar / Vivienda",       valor: gastosPorGrupo["HOGAR"] ?? 0,           pct: pctOf("HOGAR"),           meta: 33 },
+    { label: "Alimentos",              valor: gastosPorGrupo["ALIMENTOS"] ?? 0,        pct: pctOf("ALIMENTOS") },
+    { label: "Transporte",             valor: gastosPorGrupo["TRANSPORTE"] ?? 0,       pct: pctOf("TRANSPORTE") },
+    { label: "Entretenimiento",        valor: gastosPorGrupo["ENTRETENIMIENTO"] ?? 0,  pct: pctOf("ENTRETENIMIENTO") },
+    { label: "Vacaciones",             valor: gastosPorGrupo["VACACIONES"] ?? 0,       pct: pctOf("VACACIONES") },
+    { label: "Salud",                  valor: gastosPorGrupo["SALUD"] ?? 0,            pct: pctOf("SALUD") },
+    { label: "Ropa y accesorios",      valor: gastosPorGrupo["ROPA"] ?? 0,            pct: pctOf("ROPA") },
+    { label: "Cuidado personal",       valor: gastosPorGrupo["CUIDADO PERSONAL"] ?? 0, pct: pctOf("CUIDADO PERSONAL") },
+    { label: "Educación / Hijos",      valor: gastosPorGrupo["EDUCACION"] ?? 0,        pct: pctOf("EDUCACION") },
+    { label: "Seguros",                valor: gastosPorGrupo["SEGUROS"] ?? 0,          pct: pctOf("SEGUROS") },
+    { label: "Servicios",              valor: gastosPorGrupo["SERVICIOS"] ?? 0,        pct: pctOf("SERVICIOS") },
+    { label: "Impuestos",              valor: gastosPorGrupo["IMPUESTOS"] ?? 0,        pct: pctOf("IMPUESTOS") },
+    { label: "Deudas repagadas",       valor: gastosPorGrupo["DEUDAS"] ?? 0,           pct: pctOf("DEUDAS") },
+    { label: "Regalos",                valor: gastosPorGrupo["REGALOS"] ?? 0,          pct: pctOf("REGALOS") },
+    { label: "Inversiones / Ahorros",  valor: gastosPorGrupo["INVERSIONES"] ?? 0,      pct: pctOf("INVERSIONES") },
+    { label: "Estilo de vida y lujos", valor: gastosPorGrupo["CAPRICHOS"] ?? 0,        pct: pctOf("CAPRICHOS") },
   ].filter(g => g.valor > 0);
 
   return (
