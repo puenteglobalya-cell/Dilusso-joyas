@@ -22,20 +22,24 @@ export async function GET() {
   }
 
   // 2. Normalize bank_statements.categoria_personal
-  let totalUpdated = 0;
+  const updateResults: string[] = [];
   for (const [oldName, newName] of Object.entries(CATEGORIA_NORMALIZAR)) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count } = await (sb.from("bank_statements") as any)
+      const { data, error } = await (sb.from("bank_statements") as any)
         .update({ categoria_personal: newName })
         .eq("categoria_personal", oldName)
-        .select("id", { count: "exact", head: true });
-      totalUpdated += count ?? 0;
-    } catch {
-      // ignore individual failures
+        .select("id");
+      if (error) {
+        updateResults.push(`ERROR ${oldName}: ${error.message}`);
+      } else if (data && data.length > 0) {
+        updateResults.push(`${oldName} → ${newName}: ${data.length} filas`);
+      }
+    } catch (e) {
+      updateResults.push(`EXCEPCION ${oldName}: ${String(e)}`);
     }
   }
-  results.push({ step: "Normalizar banco_statements", ok: true, detail: `${totalUpdated} filas actualizadas` });
+  results.push({ step: "Normalizar banco_statements", ok: true, detail: updateResults.length > 0 ? updateResults.join(" | ") : "Sin cambios" });
 
   return NextResponse.json({ ok: true, results });
 }
