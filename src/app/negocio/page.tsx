@@ -106,13 +106,18 @@ export default async function NegocioPage({ searchParams }: Props) {
     fetchBS(fechaDesde, fechaHasta),
   ]);
 
+  // Débitos que son traspasos internos (caja→banco, etc.) — no son gastos reales
+  const IGNORAR_DEBITOS = new Set([
+    "Traspaso", "traspaso", "TRASPASO",
+    "Venta efectivo",  // cierre de caja = traspaso efectivo→banco, no gasto
+  ]);
+
   const ingresos = txs.filter(r => (r.credito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
-  const egresos = txs.filter(r => (r.debito ?? 0) > 0).reduce((s, r) => s + rowImporteUYU(r), 0);
+  const egresos = txs.filter(r => (r.debito ?? 0) > 0 && !IGNORAR_DEBITOS.has(r.categoria_negocio ?? "")).reduce((s, r) => s + rowImporteUYU(r), 0);
   const resultado = ingresos - egresos;
   const margenNeto = pct(resultado, ingresos);
 
-  // Filter out TRASPASO from category charts
-  const IGNORAR_CATS = new Set(["Traspaso", "traspaso", "TRASPASO"]);
+  const IGNORAR_CATS = IGNORAR_DEBITOS;
 
   const byCategory = txs
     .filter(r => (r.debito ?? 0) > 0 && r.categoria_negocio && !IGNORAR_CATS.has(r.categoria_negocio))
@@ -131,7 +136,7 @@ export default async function NegocioPage({ searchParams }: Props) {
     }, {});
   const ingresosDetail = Object.entries(byCategoryIngresos).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
 
-  // Heatmap: category × month (egresses only, negocio) — exclude traspasos
+  // Heatmap: category × month (egresses only, negocio) — exclude traspasos y venta efectivo
   const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
   const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort().slice(-12);
   const heatMap: Record<string, Record<string, number>> = {};
@@ -151,7 +156,7 @@ export default async function NegocioPage({ searchParams }: Props) {
     const entry = monthMap.get(ym)!;
     const amt = rowImporteUYU(r);
     if ((r.credito ?? 0) > 0) entry.ingresos += amt;
-    else entry.egresos += amt;
+    else if (!IGNORAR_CATS.has(r.categoria_negocio ?? "")) entry.egresos += amt;
   }
   const trend12 = Array.from(monthMap.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
