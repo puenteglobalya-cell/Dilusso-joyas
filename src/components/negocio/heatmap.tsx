@@ -16,13 +16,14 @@ const MES: Record<string, string> = {
 };
 function fmtYM(ym: string) { return `${MES[ym.slice(5)] ?? ym.slice(5)}-${ym.slice(2,4)}`; }
 
-function heatColor(intensity: number): string {
-  if (intensity <= 0) return "bg-gray-50 text-gray-300";
-  if (intensity < 0.2) return "bg-red-100 text-red-700";
-  if (intensity < 0.4) return "bg-red-200 text-red-800";
-  if (intensity < 0.6) return "bg-red-300 text-red-900";
-  if (intensity < 0.8) return "bg-red-400 text-white";
-  return "bg-red-500 text-white";
+function heatColor(intensity: number): { bg: string; text: string } {
+  if (intensity <= 0)   return { bg: "#f5f0eb", text: "#c4b5a0" };
+  if (intensity < 0.15) return { bg: "#fef9ec", text: "#92400e" };
+  if (intensity < 0.30) return { bg: "#fef3c7", text: "#78350f" };
+  if (intensity < 0.50) return { bg: "#fde68a", text: "#451a03" };
+  if (intensity < 0.70) return { bg: "#fbbf24", text: "#1c0a00" };
+  if (intensity < 0.85) return { bg: "#f59e0b", text: "#fff" };
+  return { bg: "#d97706", text: "#fff" };
 }
 
 export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
@@ -46,12 +47,13 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
       <table className="text-xs w-full">
         <thead>
           <tr>
-            <th className="text-left pr-3 pb-2 font-medium text-slate-500 whitespace-nowrap min-w-[140px]">Categoría</th>
+            <th className="text-left pr-3 pb-2 font-medium whitespace-nowrap min-w-[140px]" style={{ color: "#9c8a7e" }}>Categoría</th>
             {months.map(m => (
-              <th key={m} className="px-1 pb-2 font-normal text-slate-400 whitespace-nowrap text-center">{fmtYM(m)}</th>
+              <th key={m} className="px-1 pb-2 font-normal whitespace-nowrap text-center" style={{ color: "#c4b5a0" }}>{fmtYM(m)}</th>
             ))}
             <th
-              className="px-2 pb-2 font-medium text-slate-500 text-right whitespace-nowrap cursor-pointer select-none hover:text-brand"
+              className="px-2 pb-2 font-medium text-right whitespace-nowrap cursor-pointer select-none"
+              style={{ color: "#7a6a60" }}
               onClick={() => setSortByTotal(s => !s)}
               title="Ordenar por total"
             >
@@ -59,21 +61,23 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
-          {sorted.map(({ cat, total }) => (
-            <tr key={cat} className="hover:bg-slate-50">
+        <tbody>
+          {sorted.map(({ cat, total }, idx) => (
+            <tr key={cat} style={{ borderTop: idx > 0 ? "1px solid #f5f0eb" : undefined }}>
               <td
-                className={`pr-3 py-1 text-slate-700 font-medium truncate max-w-[140px] ${onCellClick ? "cursor-pointer hover:text-brand underline-offset-2 hover:underline" : ""}`}
+                className={`pr-3 py-1.5 font-medium truncate max-w-[140px] ${onCellClick ? "cursor-pointer hover:underline underline-offset-2" : ""}`}
+                style={{ color: "#5c4d45" }}
                 title={cat}
                 onClick={() => onCellClick?.(cat, months[months.length - 1])}
-              >{cat}</td>
+              >{cat.replace(/^\d+\.\s*/, "")}</td>
               {months.map(m => {
                 const val = data[cat]?.[m] ?? 0;
-                const intensity = val / catMax[cat];
+                const { bg, text } = heatColor(val / catMax[cat]);
                 return (
-                  <td key={m} className="px-1 py-1 text-center rounded">
+                  <td key={m} className="px-1 py-1 text-center">
                     <span
-                      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${heatColor(intensity)} ${onCellClick && val > 0 ? "cursor-pointer hover:opacity-80" : ""}`}
+                      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium transition-opacity ${onCellClick && val > 0 ? "cursor-pointer hover:opacity-75" : ""}`}
+                      style={{ background: bg, color: text }}
                       title={val > 0 ? formatUYU(val) : undefined}
                       onClick={() => val > 0 && onCellClick?.(cat, m)}
                     >
@@ -83,9 +87,9 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
                 );
               })}
               <td
-                className={`px-2 py-1 text-right font-semibold text-red-700 whitespace-nowrap ${onCellClick ? "cursor-pointer hover:text-brand hover:underline underline-offset-2" : ""}`}
+                className={`px-2 py-1.5 text-right font-semibold whitespace-nowrap ${onCellClick ? "cursor-pointer hover:underline underline-offset-2" : ""}`}
+                style={{ color: "#d97706" }}
                 onClick={() => onCellClick?.(cat)}
-                title={onCellClick ? `Ver todos los movimientos de ${cat}` : undefined}
               >
                 {formatUYU(total)}
               </td>
