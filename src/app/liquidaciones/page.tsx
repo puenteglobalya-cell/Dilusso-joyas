@@ -23,6 +23,7 @@ interface MonthRecon {
 
 interface BSIncome {
   fecha: string;
+  descripcion: string | null;
   credito: number | null;
   importe_uyu: number | null;
   moneda: string;
@@ -78,7 +79,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     while (true) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (sb.from("bank_statements") as any)
-        .select("fecha,credito,importe_uyu,moneda,banco,categoria_negocio")
+        .select("fecha,descripcion,credito,importe_uyu,moneda,banco,categoria_negocio")
         .gt("credito", 0)
         .gte("fecha", fechaDesde)
         .lt("fecha", fechaHasta)
@@ -142,6 +143,10 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     e.facturado += (s.tarjeta ?? 0) + (s.fadaval ?? 0) + (s.efectivo ?? 0);
   }
 
+  // Keywords en descripción que identifican cobros de tarjeta (cuando no hay categoría asignada)
+  const TARJETA_DESC = ["posnet", "fiserv", "visanet", "mastercard", "visa", "creditel", "redpagos", "red pagos", "acreditacion tarjeta", "cobro tarjeta"];
+  const FADAVAL_DESC = ["fadaval"];
+
   const cobByMonth = new Map<string, { tarjeta: number; fadaval: number; oca: number }>();
   for (const r of bsIncome) {
     const ym = r.fecha.slice(0, 7);
@@ -149,11 +154,13 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     const e = cobByMonth.get(ym)!;
     const imp = r.moneda === "USD" ? Math.abs(r.importe_uyu ?? 0) : (r.credito ?? 0);
     const cat = (r.categoria_negocio ?? "").toLowerCase();
+    const desc = (r.descripcion ?? "").toLowerCase();
+
     if (r.banco === "OCA") {
       e.oca += imp;
-    } else if (cat.includes("fadaval")) {
+    } else if (cat.includes("fadaval") || FADAVAL_DESC.some(k => desc.includes(k))) {
       e.fadaval += imp;
-    } else if (cat.includes("venta tarjeta")) {
+    } else if (cat.includes("venta tarjeta") || TARJETA_DESC.some(k => desc.includes(k))) {
       e.tarjeta += imp;
     }
   }
