@@ -26,7 +26,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-surface flex items-center justify-center">
       <div className="w-full max-w-sm">
 
         {/* Logo */}
@@ -39,13 +39,13 @@ export default function LoginPage() {
             </div>
           </div>
           <p className="text-2xl font-bold tracking-widest text-black uppercase">DILUSSO</p>
-          <p className="text-sm tracking-[0.4em] text-gray-400 mt-0.5">j o y a s</p>
-          <p className="text-xs text-gray-400 mt-3 uppercase tracking-widest">Gestión Financiera</p>
+          <p className="text-sm tracking-[0.4em] text-subtle mt-0.5">j o y a s</p>
+          <p className="text-xs text-subtle mt-3 uppercase tracking-widest">Gestión Financiera</p>
         </div>
 
         <form onSubmit={handleLogin} className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">Email</label>
+            <label className="text-xs font-semibold text-muted uppercase tracking-wider block mb-1.5">Email</label>
             <input
               type="email"
               value={email}
@@ -57,7 +57,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">Contraseña</label>
+            <label className="text-xs font-semibold text-muted uppercase tracking-wider block mb-1.5">Contraseña</label>
             <input
               type="password"
               value={password}
@@ -70,7 +70,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-sm text-terracotta bg-terracotta/10 rounded-lg px-3 py-2">{error}</p>
           )}
 
           <button

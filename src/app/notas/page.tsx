@@ -11,14 +11,14 @@ interface Nota {
 }
 
 const CATEGORIAS = [
-  { value: "mejora", label: "Mejora", color: "bg-blue-100 text-blue-700" },
+  { value: "mejora", label: "Mejora", color: "bg-brand-light text-brand-dark" },
   { value: "bug", label: "Bug", color: "bg-red-100 text-red-700" },
   { value: "pendiente", label: "Pendiente", color: "bg-orange-100 text-orange-700" },
-  { value: "general", label: "General", color: "bg-gray-100 text-gray-600" },
+  { value: "general", label: "General", color: "bg-gray-100 text-ink" },
 ];
 
 function catStyle(cat: string) {
-  return CATEGORIAS.find(c => c.value === cat)?.color ?? "bg-gray-100 text-gray-600";
+  return CATEGORIAS.find(c => c.value === cat)?.color ?? "bg-gray-100 text-ink";
 }
 function catLabel(cat: string) {
   return CATEGORIAS.find(c => c.value === cat)?.label ?? cat;
@@ -77,11 +77,11 @@ export default function NotasPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Notas y mejoras</h1>
-          <p className="text-sm text-slate-500 mt-1">{pendientes} pendientes · {notas.length} total</p>
+          <p className="text-sm text-muted mt-1">{pendientes} pendientes · {notas.length} total</p>
         </div>
         <button
           onClick={() => setMostrarResueltas(v => !v)}
-          className="text-xs text-slate-500 hover:text-slate-700 underline"
+          className="text-xs text-muted hover:text-slate-700 underline"
         >
           {mostrarResueltas ? "Ocultar resueltas" : "Ver resueltas"}
         </button>
@@ -104,7 +104,7 @@ export default function NotasPage() {
                 key={c.value}
                 onClick={() => setCategoria(c.value)}
                 className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
-                  categoria === c.value ? c.color + " ring-2 ring-offset-1 ring-current" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  categoria === c.value ? c.color + " ring-2 ring-offset-1 ring-current" : "bg-gray-100 text-muted hover:bg-gray-200"
                 }`}
               >
                 {c.label}
@@ -123,9 +123,9 @@ export default function NotasPage() {
 
       {/* Lista */}
       {loading ? (
-        <p className="text-sm text-slate-400 text-center py-8">Cargando…</p>
+        <p className="text-sm text-subtle text-center py-8">Cargando…</p>
       ) : visibles.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="text-center py-12 text-subtle">
           <p className="text-sm">{mostrarResueltas ? "Sin notas" : "No hay notas pendientes"}</p>
         </div>
       ) : (
@@ -139,28 +139,28 @@ export default function NotasPage() {
                 onClick={() => toggleResuelta(nota)}
                 className={`mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                   nota.resuelta
-                    ? "bg-green-500 border-green-500 text-white"
+                    ? "bg-olive/100 border-green-500 text-white"
                     : "border-gray-300 hover:border-green-400"
                 }`}
               >
                 {nota.resuelta ? <Check className="w-3 h-3" /> : null}
               </button>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm ${nota.resuelta ? "line-through text-slate-400" : "text-slate-800"} whitespace-pre-wrap`}>
+                <p className={`text-sm ${nota.resuelta ? "line-through text-subtle" : "text-slate-800"} whitespace-pre-wrap`}>
                   {nota.contenido}
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catStyle(nota.categoria)}`}>
                     {catLabel(nota.categoria)}
                   </span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-subtle">
                     {new Date(nota.created_at).toLocaleDateString("es-UY", { day: "2-digit", month: "short", year: "numeric" })}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {nota.resuelta && (
-                  <button onClick={() => toggleResuelta(nota)} className="text-slate-300 hover:text-slate-500 transition-colors" title="Reabrir">
+                  <button onClick={() => toggleResuelta(nota)} className="text-slate-300 hover:text-muted transition-colors" title="Reabrir">
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 )}

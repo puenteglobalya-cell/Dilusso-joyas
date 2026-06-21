@@ -197,7 +197,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
               className={`px-3 h-8 flex items-center text-sm font-medium rounded-lg border transition-colors ${
                 a === añoFilter
                   ? "bg-brand text-white border-brand"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  : "bg-white text-ink border-gray-200 hover:bg-surface"
               }`}
             >
               {a}
@@ -205,16 +205,16 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
           ))}
         </div>
       </div>
-      <p className="text-sm text-slate-500 mb-6">Caja diaria — efectivo, tarjeta y Fadaval · {añoFilter}</p>
+      <p className="text-sm text-muted mb-6">Caja diaria — efectivo, tarjeta y Fadaval · {añoFilter}</p>
 
       {/* KPIs */}
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         {[
           { label: "Facturado", value: totals.facturado, color: "" },
-          { label: "Efectivo", value: totals.efectivo, color: "text-green-600" },
-          { label: "Tarjeta", value: totals.tarjeta, color: "text-blue-600" },
-          { label: "Fadaval", value: totals.fadaval, color: "text-purple-600" },
-          { label: "Gastos", value: totals.gastos, color: "text-red-600" },
+          { label: "Efectivo", value: totals.efectivo, color: "text-olive" },
+          { label: "Tarjeta", value: totals.tarjeta, color: "text-brand" },
+          { label: "Fadaval", value: totals.fadaval, color: "text-bronze" },
+          { label: "Gastos", value: totals.gastos, color: "text-terracotta" },
           { label: "Adelantos", value: totals.adelanto, color: "text-orange-600" },
         ].map(({ label, value, color }) => (
           <Card key={label}>
@@ -229,45 +229,45 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
       {/* Tabla de liquidaciones — agrupada por mes */}
       <div className="bg-white rounded-xl border overflow-x-auto mb-10">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
+          <thead className="bg-surface border-b">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Mes</th>
-              <th className="text-center px-4 py-3 font-medium text-slate-500">Liquidaciones</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Facturado</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Efectivo</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Tarjeta</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Fadaval</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Gastos</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Adelantos</th>
+              <th className="text-left px-4 py-3 font-medium text-muted">Mes</th>
+              <th className="text-center px-4 py-3 font-medium text-muted">Liquidaciones</th>
+              <th className="text-right px-4 py-3 font-medium text-muted">Facturado</th>
+              <th className="text-right px-4 py-3 font-medium text-muted">Efectivo</th>
+              <th className="text-right px-4 py-3 font-medium text-muted">Tarjeta</th>
+              <th className="text-right px-4 py-3 font-medium text-muted">Fadaval</th>
+              <th className="text-right px-4 py-3 font-medium text-muted">Gastos</th>
+              <th className="text-right px-4 py-3 font-medium text-muted">Adelantos</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {monthDetails.map((m) => (
-              <tr key={`${m.año}-${m.mes}`} className="hover:bg-slate-50">
+              <tr key={`${m.año}-${m.mes}`} className="hover:bg-surface">
                 <td className="px-4 py-3 font-medium">{monthName(m.mes)} {m.año}</td>
-                <td className="px-4 py-3 text-center text-slate-400 text-xs">{m.semanas}</td>
+                <td className="px-4 py-3 text-center text-subtle text-xs">{m.semanas}</td>
                 <td className="px-4 py-3 text-right font-medium">{formatUYU(m.facturado)}</td>
-                <td className="px-4 py-3 text-right text-green-600">{formatUYU(m.efectivo)}</td>
-                <td className="px-4 py-3 text-right text-blue-600">{formatUYU(m.tarjeta)}</td>
-                <td className="px-4 py-3 text-right text-purple-600">{formatUYU(m.fadaval)}</td>
-                <td className="px-4 py-3 text-right text-red-600">{formatUYU(m.gastos)}</td>
+                <td className="px-4 py-3 text-right text-olive">{formatUYU(m.efectivo)}</td>
+                <td className="px-4 py-3 text-right text-brand">{formatUYU(m.tarjeta)}</td>
+                <td className="px-4 py-3 text-right text-bronze">{formatUYU(m.fadaval)}</td>
+                <td className="px-4 py-3 text-right text-terracotta">{formatUYU(m.gastos)}</td>
                 <td className="px-4 py-3 text-right text-orange-600">{m.adelanto > 0 ? formatUYU(m.adelanto) : "—"}</td>
               </tr>
             ))}
             {!monthDetails.length && (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">Sin liquidaciones para este período</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-subtle">Sin liquidaciones para este período</td></tr>
             )}
           </tbody>
           {monthDetails.length > 0 && (
-            <tfoot className="border-t-2 bg-slate-50">
+            <tfoot className="border-t-2 bg-surface">
               <tr>
                 <td className="px-4 py-3 font-bold text-slate-700">Total {añoFilter}</td>
-                <td className="px-4 py-3 text-center text-slate-400 text-xs">{monthDetails.reduce((s, m) => s + m.semanas, 0)}</td>
+                <td className="px-4 py-3 text-center text-subtle text-xs">{monthDetails.reduce((s, m) => s + m.semanas, 0)}</td>
                 <td className="px-4 py-3 text-right font-bold">{formatUYU(totals.facturado)}</td>
-                <td className="px-4 py-3 text-right font-bold text-green-600">{formatUYU(totals.efectivo)}</td>
-                <td className="px-4 py-3 text-right font-bold text-blue-600">{formatUYU(totals.tarjeta)}</td>
-                <td className="px-4 py-3 text-right font-bold text-purple-600">{formatUYU(totals.fadaval)}</td>
-                <td className="px-4 py-3 text-right font-bold text-red-600">{formatUYU(totals.gastos)}</td>
+                <td className="px-4 py-3 text-right font-bold text-olive">{formatUYU(totals.efectivo)}</td>
+                <td className="px-4 py-3 text-right font-bold text-brand">{formatUYU(totals.tarjeta)}</td>
+                <td className="px-4 py-3 text-right font-bold text-bronze">{formatUYU(totals.fadaval)}</td>
+                <td className="px-4 py-3 text-right font-bold text-terracotta">{formatUYU(totals.gastos)}</td>
                 <td className="px-4 py-3 text-right font-bold text-orange-600">{formatUYU(totals.adelanto)}</td>
               </tr>
             </tfoot>
@@ -278,7 +278,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
       {/* ── Reconciliación: Liquidado vs Cobrado ─────────────────────────── */}
       <div className="mb-6">
         <h2 className="text-lg font-bold mb-1">Pendiente de cobro</h2>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-muted mb-4">
           Facturado (efectivo + tarjeta + Fadaval + OCA) vs lo acreditado en banco. El efectivo no pasa por banco.
         </p>
 
@@ -292,13 +292,13 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
           <Card>
             <CardHeader>
               <CardTitle>Cobrado en banco</CardTitle>
-              <CardValue className="text-green-600">{formatUYU(totalCobrado)}</CardValue>
+              <CardValue className="text-olive">{formatUYU(totalCobrado)}</CardValue>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader>
               <CardTitle>Pendiente banco</CardTitle>
-              <CardValue className={Math.abs(totalPendiente) < 500 ? "text-green-600" : totalPendiente > 0 ? "text-red-600" : "text-slate-600"}>
+              <CardValue className={Math.abs(totalPendiente) < 500 ? "text-olive" : totalPendiente > 0 ? "text-terracotta" : "text-ink"}>
                 {formatUYU(totalPendiente)}
               </CardValue>
             </CardHeader>
@@ -307,16 +307,16 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
 
         <div className="bg-white rounded-xl border overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
+            <thead className="bg-surface border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-500">Mes</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Liquidado</th>
+                <th className="text-left px-4 py-3 font-medium text-muted">Mes</th>
+                <th className="text-right px-4 py-3 font-medium text-muted">Liquidado</th>
                 <th className="text-right px-4 py-3 font-medium text-blue-500">Tarjeta banco</th>
                 <th className="text-right px-4 py-3 font-medium text-purple-500">Fadaval banco</th>
                 <th className="text-right px-4 py-3 font-medium text-orange-500">OCA banco</th>
-                <th className="text-right px-4 py-3 font-medium text-green-600">Total cobrado</th>
+                <th className="text-right px-4 py-3 font-medium text-olive">Total cobrado</th>
                 <th className="text-right px-4 py-3 font-medium text-red-500">Pendiente</th>
-                <th className="text-center px-4 py-3 font-medium text-slate-500">Estado</th>
+                <th className="text-center px-4 py-3 font-medium text-muted">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -325,14 +325,14 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
                 const diff = r.facturadoLiq - cobrado;
                 const ok = Math.abs(diff) < 500;
                 return (
-                  <tr key={`${r.año}-${r.mes}`} className="hover:bg-slate-50">
+                  <tr key={`${r.año}-${r.mes}`} className="hover:bg-surface">
                     <td className="px-4 py-3 font-medium">{monthName(r.mes)} {r.año}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatUYU(r.facturadoLiq)}</td>
-                    <td className="px-4 py-3 text-right text-blue-600">{formatUYU(r.tarjetaCob)}</td>
-                    <td className="px-4 py-3 text-right text-purple-600">{formatUYU(r.fadavalCob)}</td>
+                    <td className="px-4 py-3 text-right text-brand">{formatUYU(r.tarjetaCob)}</td>
+                    <td className="px-4 py-3 text-right text-bronze">{formatUYU(r.fadavalCob)}</td>
                     <td className="px-4 py-3 text-right text-orange-600">{r.ocaCob > 0 ? formatUYU(r.ocaCob) : "—"}</td>
-                    <td className="px-4 py-3 text-right text-green-600 font-medium">{formatUYU(cobrado)}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${ok ? "text-green-600" : diff > 0 ? "text-red-600" : "text-slate-500"}`}>
+                    <td className="px-4 py-3 text-right text-olive font-medium">{formatUYU(cobrado)}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${ok ? "text-olive" : diff > 0 ? "text-terracotta" : "text-muted"}`}>
                       {diff > 0 ? "+" : ""}{formatUYU(diff)}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -345,19 +345,19 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
                 );
               })}
               {recon.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">Sin datos de reconciliación</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-subtle">Sin datos de reconciliación</td></tr>
               )}
             </tbody>
             {recon.length > 0 && (
-              <tfoot className="border-t-2 bg-slate-50">
+              <tfoot className="border-t-2 bg-surface">
                 <tr>
                   <td className="px-4 py-3 font-bold text-slate-700">Total</td>
                   <td className="px-4 py-3 text-right font-bold">{formatUYU(totalLiquidado)}</td>
-                  <td className="px-4 py-3 text-right font-bold text-blue-600">{formatUYU(recon.reduce((s, r) => s + r.tarjetaCob, 0))}</td>
-                  <td className="px-4 py-3 text-right font-bold text-purple-600">{formatUYU(recon.reduce((s, r) => s + r.fadavalCob, 0))}</td>
+                  <td className="px-4 py-3 text-right font-bold text-brand">{formatUYU(recon.reduce((s, r) => s + r.tarjetaCob, 0))}</td>
+                  <td className="px-4 py-3 text-right font-bold text-bronze">{formatUYU(recon.reduce((s, r) => s + r.fadavalCob, 0))}</td>
                   <td className="px-4 py-3 text-right font-bold text-orange-600">{formatUYU(recon.reduce((s, r) => s + r.ocaCob, 0))}</td>
-                  <td className="px-4 py-3 text-right font-bold text-green-600">{formatUYU(totalCobrado)}</td>
-                  <td className={`px-4 py-3 text-right font-bold ${Math.abs(totalPendiente) < 500 ? "text-green-600" : "text-red-600"}`}>
+                  <td className="px-4 py-3 text-right font-bold text-olive">{formatUYU(totalCobrado)}</td>
+                  <td className={`px-4 py-3 text-right font-bold ${Math.abs(totalPendiente) < 500 ? "text-olive" : "text-terracotta"}`}>
                     {totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}
                   </td>
                   <td />
@@ -366,7 +366,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
             )}
           </table>
         </div>
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-xs text-subtle mt-2">
           Pendiente positivo = falta acreditar en banco · Negativo = acreditado de más (cobro de mes anterior) · ✓ = diferencia menor a $500
         </p>
       </div>

@@ -17,7 +17,7 @@ function fmt(v: number) {
 
 export function DashboardChart({ data }: { data: DataPoint[] }) {
   if (!data.length) {
-    return <p className="text-sm text-slate-400 text-center py-8">Sin datos aún</p>;
+    return <p className="text-sm text-subtle text-center py-8">Sin datos aún</p>;
   }
   return (
     <ResponsiveContainer width="100%" height={300}>

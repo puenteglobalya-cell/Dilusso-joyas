@@ -52,7 +52,7 @@ export function UserPermissionsTable({ profiles, permissions: initialPerms, secc
     <div className="space-y-8">
       {contadores.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Contadores</h2>
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Contadores</h2>
           <div className="bg-white rounded-xl border overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
@@ -60,7 +60,7 @@ export function UserPermissionsTable({ profiles, permissions: initialPerms, secc
                   <tr key={p.id} className="border-b last:border-0">
                     <td className="px-4 py-3">
                       <p className="font-medium">{p.nombre ?? p.email}</p>
-                      <p className="text-xs text-slate-400">{p.email}</p>
+                      <p className="text-xs text-subtle">{p.email}</p>
                     </td>
                     <td className="px-4 py-3"><Badge>Acceso total</Badge></td>
                   </tr>
@@ -72,17 +72,17 @@ export function UserPermissionsTable({ profiles, permissions: initialPerms, secc
       )}
 
       <div>
-        <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Clientes</h2>
+        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Clientes</h2>
         {clientes.length === 0 ? (
-          <p className="text-sm text-slate-400">Sin clientes registrados aún</p>
+          <p className="text-sm text-subtle">Sin clientes registrados aún</p>
         ) : (
           <div className="bg-white rounded-xl border overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
+              <thead className="bg-surface border-b">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-slate-500">Usuario</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted">Usuario</th>
                   {secciones.map((s) => (
-                    <th key={s.key} className="text-center px-3 py-3 font-medium text-slate-500 whitespace-nowrap">
+                    <th key={s.key} className="text-center px-3 py-3 font-medium text-muted whitespace-nowrap">
                       {s.label}
                     </th>
                   ))}
@@ -93,7 +93,7 @@ export function UserPermissionsTable({ profiles, permissions: initialPerms, secc
                   <tr key={profile.id}>
                     <td className="px-4 py-3">
                       <p className="font-medium">{profile.nombre ?? profile.email}</p>
-                      <p className="text-xs text-slate-400">{profile.email}</p>
+                      <p className="text-xs text-subtle">{profile.email}</p>
                     </td>
                     {secciones.map((s) => {
                       const enabled = isEnabled(profile.id, s.key);

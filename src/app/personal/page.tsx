@@ -36,9 +36,7 @@ function rowImporteUYU(r: BSRow): number {
   return (r.debito ?? 0) + (r.credito ?? 0);
 }
 
-// Today: 2026-06-14
-const TODAY = "2026-06-14";
-const TODAY_DATE = new Date(TODAY);
+const TODAY_DATE = new Date();
 
 // Categories to exclude from bar charts / heatmap
 const IGNORAR_CATS_PERSONAL = new Set([

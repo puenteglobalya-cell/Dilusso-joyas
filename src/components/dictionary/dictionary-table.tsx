@@ -61,7 +61,7 @@ export function DictionaryTable({ entries }: { entries: Regla[] }) {
       {/* Search + filters */}
       <div className="flex gap-2 flex-wrap mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-subtle" />
           <input
             type="text"
             placeholder="Buscar keyword…"
@@ -70,7 +70,7 @@ export function DictionaryTable({ entries }: { entries: Regla[] }) {
             className="w-full h-9 pl-9 pr-8 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
+            <button onClick={() => setSearch("")} className="absolute right-2.5 top-2.5 text-subtle hover:text-ink">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -92,26 +92,26 @@ export function DictionaryTable({ entries }: { entries: Regla[] }) {
             Limpiar
           </button>
         )}
-        <span className="text-xs text-gray-400 self-center ml-auto">
+        <span className="text-xs text-subtle self-center ml-auto">
           {sorted.length} de {entries.length} reglas
         </span>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
+          <thead className="bg-surface border-b">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">
+              <th className="text-left px-4 py-3 font-medium text-muted">
                 <button onClick={() => toggleSort("keyword")} className="hover:text-slate-800">
                   Keyword <SortIcon active={sortKey === "keyword"} dir={sortDir} />
                 </button>
               </th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">
+              <th className="text-left px-4 py-3 font-medium text-muted">
                 <button onClick={() => toggleSort("tipo")} className="hover:text-slate-800">
                   Tipo <SortIcon active={sortKey === "tipo"} dir={sortDir} />
                 </button>
               </th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">
+              <th className="text-left px-4 py-3 font-medium text-muted">
                 <button onClick={() => toggleSort("categoria")} className="hover:text-slate-800">
                   Categoría <SortIcon active={sortKey === "categoria"} dir={sortDir} />
                 </button>
@@ -121,7 +121,7 @@ export function DictionaryTable({ entries }: { entries: Regla[] }) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {sorted.map((e) => (
-              <tr key={e.keyword} className="hover:bg-slate-50">
+              <tr key={e.keyword} className="hover:bg-surface">
                 <td className="px-4 py-3 font-mono text-xs font-medium">
                   {search ? highlightMatch(e.keyword, search) : e.keyword}
                 </td>
@@ -130,7 +130,7 @@ export function DictionaryTable({ entries }: { entries: Regla[] }) {
                     <Badge variant={e.tipo === "negocio" ? "default" : "outline"}>{e.tipo}</Badge>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{catOf(e) || "—"}</td>
+                <td className="px-4 py-3 text-ink">{catOf(e) || "—"}</td>
                 <td className="px-4 py-3 text-right">
                   <DeleteDictionaryEntry keyword={e.keyword} />
                 </td>
@@ -138,10 +138,10 @@ export function DictionaryTable({ entries }: { entries: Regla[] }) {
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-12 text-center text-subtle">
                   {entries.length === 0 ? (
                     <>
-                      <p className="font-medium text-slate-500 mb-1">El diccionario está vacío</p>
+                      <p className="font-medium text-muted mb-1">El diccionario está vacío</p>
                       <p className="text-xs">Clasificá un movimiento y guardá la keyword para que aparezca aquí</p>
                     </>
                   ) : (

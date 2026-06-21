@@ -61,7 +61,7 @@ export function GapAdjuster({ gaps, banco, moneda }: Props) {
 
   if (gaps.length === 0) {
     return (
-      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-6 text-sm text-green-700">
+      <div className="flex items-center gap-2 bg-olive/10 border border-olive/30 rounded-lg px-4 py-3 mb-6 text-sm text-olive">
         <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
         Continuidad de saldos OK — el saldo final de cada período coincide con el saldo inicial del siguiente
       </div>
@@ -71,7 +71,7 @@ export function GapAdjuster({ gaps, banco, moneda }: Props) {
   return (
     <>
       {success && (
-        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-3 text-sm text-green-700">
+        <div className="flex items-center gap-2 bg-olive/10 border border-olive/30 rounded-lg px-4 py-3 mb-3 text-sm text-olive">
           <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
           {success}
         </div>
@@ -91,7 +91,7 @@ export function GapAdjuster({ gaps, banco, moneda }: Props) {
                 <span className="font-medium">{g.fecha}:</span>{" "}
                 saldo declarado {formatUYU(g.recibido)} ≠ saldo calculado del período anterior {formatUYU(g.esperado)}
                 {" "}
-                <span className={g.diff > 0 ? "text-green-700 font-medium" : "text-red-700 font-medium"}>
+                <span className={g.diff > 0 ? "text-olive font-medium" : "text-red-700 font-medium"}>
                   ({g.diff > 0 ? "+" : ""}{formatUYU(g.diff)})
                 </span>
               </p>
@@ -124,17 +124,17 @@ export function GapAdjuster({ gaps, banco, moneda }: Props) {
               <h3 className="text-base font-bold flex items-center gap-2">
                 <Wrench className="w-4 h-4" /> Ajustar diferencia
               </h3>
-              <button onClick={() => { setModal(null); setError(null); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setModal(null); setError(null); }} className="text-subtle hover:text-ink">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1 text-gray-600">
+            <div className="bg-surface rounded-lg p-3 text-xs space-y-1 text-ink">
               <p>Banco: <span className="font-semibold text-gray-800">{banco} — {moneda}</span></p>
               <p>Período que cierra: antes de <span className="font-semibold text-gray-800">{modal.gap.fecha}</span></p>
               <p>
                 Diferencia:{" "}
-                <span className={`font-semibold ${modal.gap.diff > 0 ? "text-green-700" : "text-red-700"}`}>
+                <span className={`font-semibold ${modal.gap.diff > 0 ? "text-olive" : "text-red-700"}`}>
                   {modal.gap.diff > 0 ? "+" : ""}{formatUYU(modal.gap.diff)}
                 </span>
                 {" "}→ se insertará como{" "}
@@ -145,7 +145,7 @@ export function GapAdjuster({ gaps, banco, moneda }: Props) {
             </div>
 
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Descripción del ajuste</label>
+              <label className="text-xs text-muted mb-1 block">Descripción del ajuste</label>
               <input
                 type="text"
                 value={modal.descripcion}
@@ -156,7 +156,7 @@ export function GapAdjuster({ gaps, banco, moneda }: Props) {
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
+              <p className="text-sm text-terracotta flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />{error}
               </p>
             )}
@@ -172,7 +172,7 @@ export function GapAdjuster({ gaps, banco, moneda }: Props) {
               <button
                 onClick={() => { setModal(null); setError(null); }}
                 disabled={loading}
-                className="flex-1 h-10 border text-gray-700 font-semibold rounded-lg text-sm hover:bg-gray-50"
+                className="flex-1 h-10 border text-ink font-semibold rounded-lg text-sm hover:bg-surface"
               >
                 Cancelar
               </button>

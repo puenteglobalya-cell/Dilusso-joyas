@@ -30,7 +30,7 @@ export default function AdminPage() {
     <div className="p-8 max-w-5xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Administración</h1>
-        <p className="text-sm text-gray-500 mt-1">Importaciones, validaciones y herramientas de mantenimiento.</p>
+        <p className="text-sm text-muted mt-1">Importaciones, validaciones y herramientas de mantenimiento.</p>
       </div>
 
       {/* Tab bar */}
@@ -42,7 +42,7 @@ export default function AdminPage() {
             className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
               tab === t.id
                 ? "border-brand text-brand bg-white"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {t.icon}{t.label}
@@ -61,7 +61,7 @@ export default function AdminPage() {
       {tab === "cheques" && <ChequesPanel />}
       {tab === "reconciliar" && (
         <div className="text-center py-8">
-          <p className="text-slate-600 mb-4">La herramienta de reconciliación está en su propia página.</p>
+          <p className="text-ink mb-4">La herramienta de reconciliación está en su propia página.</p>
           <a href="/admin/reconciliar" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90">
             Ir a Reconciliar Excel →
           </a>

@@ -85,7 +85,7 @@ export function CategoriasPanel() {
   return (
     <div className="p-6">
       {msg && (
-        <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${msg.ok ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+        <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${msg.ok ? "bg-olive/10 text-olive border border-olive/30" : "bg-terracotta/10 text-red-700 border border-terracotta/30"}`}>
           {msg.text}
         </div>
       )}
@@ -95,10 +95,10 @@ export function CategoriasPanel() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-xl p-6 w-96">
             <h3 className="font-bold mb-1">Unificar categoría</h3>
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-muted mb-4">
               Todos los movimientos de <strong>"{mergeFrom.name}"</strong> ({mergeFrom.uso}) se moverán a la categoría destino.
             </p>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Categoría destino</label>
+            <label className="text-xs font-medium text-ink block mb-1">Categoría destino</label>
             <select
               className="w-full border rounded-lg px-3 py-2 text-sm mb-4"
               value={mergeTo}
@@ -110,7 +110,7 @@ export function CategoriasPanel() {
               ))}
             </select>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => { setMergeFrom(null); setMergeTo(""); }} className="px-4 py-2 text-sm rounded-lg border hover:bg-slate-50">Cancelar</button>
+              <button onClick={() => { setMergeFrom(null); setMergeTo(""); }} className="px-4 py-2 text-sm rounded-lg border hover:bg-surface">Cancelar</button>
               <button onClick={handleMerge} disabled={!mergeTo} className="px-4 py-2 text-sm rounded-lg bg-brand text-white disabled:opacity-50 hover:bg-brand/90">Unificar</button>
             </div>
           </div>
@@ -121,7 +121,7 @@ export function CategoriasPanel() {
       <div className="flex gap-2 mb-6">
         {(["negocio", "personal"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-brand text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-brand text-white" : "bg-slate-100 text-ink hover:bg-slate-200"}`}>
             {t === "negocio" ? "Negocio" : "Personal"} ({cats.filter(c => c.type === t).length})
           </button>
         ))}
@@ -143,15 +143,15 @@ export function CategoriasPanel() {
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-slate-400 text-sm">Cargando…</div>
+        <div className="text-center py-8 text-subtle text-sm">Cargando…</div>
       ) : (
         <div className="bg-white rounded-xl border overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
+            <thead className="bg-surface border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-500">Categoría</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-500">Movimientos</th>
-                <th className="px-4 py-3 font-medium text-slate-500 text-right">Acciones</th>
+                <th className="text-left px-4 py-3 font-medium text-muted">Categoría</th>
+                <th className="text-right px-4 py-3 font-medium text-muted">Movimientos</th>
+                <th className="px-4 py-3 font-medium text-muted text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -159,7 +159,7 @@ export function CategoriasPanel() {
                 const key = `${cat.name}|${cat.type}`;
                 const isEditing = editId === key;
                 return (
-                  <tr key={key} className="hover:bg-slate-50 group">
+                  <tr key={key} className="hover:bg-surface group">
                     <td className="px-4 py-2.5">
                       {isEditing ? (
                         <div className="flex items-center gap-2">
@@ -170,8 +170,8 @@ export function CategoriasPanel() {
                             onKeyDown={e => { if (e.key === "Enter") handleRename(cat); if (e.key === "Escape") setEditId(null); }}
                             className="border rounded px-2 py-1 text-sm flex-1"
                           />
-                          <button onClick={() => handleRename(cat)} className="text-green-600 hover:text-green-700"><Check className="w-4 h-4" /></button>
-                          <button onClick={() => setEditId(null)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                          <button onClick={() => handleRename(cat)} className="text-olive hover:text-olive"><Check className="w-4 h-4" /></button>
+                          <button onClick={() => setEditId(null)} className="text-subtle hover:text-ink"><X className="w-4 h-4" /></button>
                         </div>
                       ) : (
                         <span className="font-medium">{cat.name}</span>
@@ -189,7 +189,7 @@ export function CategoriasPanel() {
                         <button
                           onClick={() => { setEditId(key); setEditVal(cat.name); }}
                           title="Renombrar"
-                          className="p-1.5 rounded hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                          className="p-1.5 rounded hover:bg-blue-50 text-brand hover:text-brand-dark"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -203,7 +203,7 @@ export function CategoriasPanel() {
                         <button
                           onClick={() => handleDelete(cat)}
                           title={cat.uso > 0 ? `Eliminar (${cat.uso} movimientos quedarán sin clasificar)` : "Eliminar"}
-                          className="p-1.5 rounded hover:bg-red-50 text-red-500 hover:text-red-600"
+                          className="p-1.5 rounded hover:bg-terracotta/10 text-red-500 hover:text-terracotta"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -213,7 +213,7 @@ export function CategoriasPanel() {
                 );
               })}
               {visible.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400">Sin categorías</td></tr>
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-subtle">Sin categorías</td></tr>
               )}
             </tbody>
           </table>

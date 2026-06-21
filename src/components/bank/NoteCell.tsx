@@ -52,10 +52,10 @@ export function NoteCell({ id, nota: initialNota, onSaved }: Props) {
           placeholder="Agregar comentario…"
         />
         <div className="flex flex-col gap-1">
-          <button onClick={save} disabled={saving} className="p-1 rounded hover:bg-green-100 text-green-600">
+          <button onClick={save} disabled={saving} className="p-1 rounded hover:bg-green-100 text-olive">
             <Check className="w-3.5 h-3.5" />
           </button>
-          <button onClick={cancel} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+          <button onClick={cancel} className="p-1 rounded hover:bg-gray-100 text-subtle">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -67,7 +67,7 @@ export function NoteCell({ id, nota: initialNota, onSaved }: Props) {
     return (
       <div className="group flex items-start gap-1 max-w-[220px]">
         <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 leading-snug">{nota}</span>
-        <button onClick={startEdit} className="opacity-0 group-hover:opacity-100 shrink-0 mt-0.5 p-0.5 rounded hover:bg-gray-100 text-gray-400">
+        <button onClick={startEdit} className="opacity-0 group-hover:opacity-100 shrink-0 mt-0.5 p-0.5 rounded hover:bg-gray-100 text-subtle">
           <Pencil className="w-3 h-3" />
         </button>
       </div>
@@ -76,7 +76,7 @@ export function NoteCell({ id, nota: initialNota, onSaved }: Props) {
 
   return (
     <button onClick={startEdit} title="Agregar comentario"
-      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-500">
+      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-100 text-gray-300 hover:text-muted">
       <MessageSquare className="w-3.5 h-3.5" />
     </button>
   );

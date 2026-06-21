@@ -91,7 +91,7 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Consolidado</h1>
-          <p className="text-sm text-slate-500 mt-1">{all.length} movimientos</p>
+          <p className="text-sm text-muted mt-1">{all.length} movimientos</p>
         </div>
         <ExportButtons params={{
           año: String(añoFilter),
@@ -104,22 +104,22 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
       <TransactionFilters />
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <KpiCard title="Ingresos" value={formatUYU(totalIngresos)} valueClass="text-green-600" detail={ingresosDetail} detailTitle="Ingresos por banco" />
-        <KpiCard title="Egresos" value={formatUYU(totalSalidas)} valueClass="text-red-600" detail={egresosDetail} detailTitle="Egresos por banco" />
-        <KpiCard title="Neto" value={formatUYU(neto)} valueClass={neto >= 0 ? "text-green-600" : "text-red-600"} />
+        <KpiCard title="Ingresos" value={formatUYU(totalIngresos)} valueClass="text-olive" detail={ingresosDetail} detailTitle="Ingresos por banco" />
+        <KpiCard title="Egresos" value={formatUYU(totalSalidas)} valueClass="text-terracotta" detail={egresosDetail} detailTitle="Egresos por banco" />
+        <KpiCard title="Neto" value={formatUYU(neto)} valueClass={neto >= 0 ? "text-olive" : "text-terracotta"} />
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
+          <thead className="bg-surface border-b">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Fecha</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Banco</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Descripción</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Tipo</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-500">Categoría</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-500">Importe UYU</th>
-              <th className="text-center px-4 py-3 font-medium text-slate-500">Estado</th>
+              <th className="text-left px-4 py-3 font-medium text-muted">Fecha</th>
+              <th className="text-left px-4 py-3 font-medium text-muted">Banco</th>
+              <th className="text-left px-4 py-3 font-medium text-muted">Descripción</th>
+              <th className="text-left px-4 py-3 font-medium text-muted">Tipo</th>
+              <th className="text-left px-4 py-3 font-medium text-muted">Categoría</th>
+              <th className="text-right px-4 py-3 font-medium text-muted">Importe UYU</th>
+              <th className="text-center px-4 py-3 font-medium text-muted">Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -127,17 +127,17 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
               const esIngreso = (r.credito ?? 0) > 0;
               const cat = r.tipo === "negocio" ? r.categoria_negocio : r.categoria_personal;
               return (
-                <tr key={r.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(r.fecha)}</td>
+                <tr key={r.id} className="hover:bg-surface">
+                  <td className="px-4 py-3 text-muted whitespace-nowrap">{formatDate(r.fecha)}</td>
                   <td className="px-4 py-3 font-medium">{r.banco}</td>
-                  <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{r.descripcion ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink max-w-xs truncate">{r.descripcion ?? "—"}</td>
                   <td className="px-4 py-3">
                     {r.tipo ? (
                       <Badge variant={r.tipo === "negocio" ? "default" : "outline"}>{r.tipo}</Badge>
                     ) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{cat ?? "—"}</td>
-                  <td className={`px-4 py-3 text-right font-medium ${esIngreso ? "text-green-600" : "text-red-600"}`}>
+                  <td className="px-4 py-3 text-muted">{cat ?? "—"}</td>
+                  <td className={`px-4 py-3 text-right font-medium ${esIngreso ? "text-olive" : "text-terracotta"}`}>
                     {esIngreso ? "+" : "-"}{formatUYU(rowImporteUYU(r))}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -150,8 +150,8 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
             })}
             {!all.length && (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
-                  <p className="font-medium text-slate-500 mb-1">Sin movimientos para este período</p>
+                <td colSpan={7} className="px-4 py-12 text-center text-subtle">
+                  <p className="font-medium text-muted mb-1">Sin movimientos para este período</p>
                   <Link href="/extractos" className="text-xs text-brand underline">Ir a extractos →</Link>
                 </td>
               </tr>

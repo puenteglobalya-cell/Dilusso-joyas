@@ -116,7 +116,7 @@ export function DuplicadosPanel() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold flex items-center gap-2"><Copy className="w-4 h-4" /> Validar duplicados</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-muted mt-0.5">
               Detecta movimientos con misma fecha, banco, monto y descripción (normalizada). Las descripciones con caracteres raros se pre-marcan para borrar.
             </p>
           </div>
@@ -131,16 +131,16 @@ export function DuplicadosPanel() {
         </div>
 
         {error && (
-          <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2">
+          <div className="mt-3 bg-terracotta/10 border border-terracotta/30 rounded-lg p-3 flex gap-2">
             <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
             <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
         {deleted != null && (
-          <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 flex gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-            <p className="text-sm text-green-700">{deleted} movimientos eliminados. Re-escaneando…</p>
+          <div className="mt-3 bg-olive/10 border border-olive/30 rounded-lg p-3 flex gap-2">
+            <CheckCircle className="w-4 h-4 text-olive shrink-0" />
+            <p className="text-sm text-olive">{deleted} movimientos eliminados. Re-escaneando…</p>
           </div>
         )}
 
@@ -148,7 +148,7 @@ export function DuplicadosPanel() {
           <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm">
               {groups.length === 0
-                ? <span className="text-green-700 font-medium">✓ No se encontraron duplicados</span>
+                ? <span className="text-olive font-medium">✓ No se encontraron duplicados</span>
                 : <span className="text-orange-700 font-medium">{groups.length} grupos — {total} filas extra ({selectedVisible} seleccionadas en vista)</span>
               }
             </p>
@@ -176,7 +176,7 @@ export function DuplicadosPanel() {
                 <option value="">Todos los bancos</option>
                 {bancoOptions.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
-              <ChevronDown className="absolute right-2 top-2 w-3 h-3 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 top-2 w-3 h-3 text-subtle pointer-events-none" />
             </div>
             <div className="relative">
               <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
@@ -184,33 +184,33 @@ export function DuplicadosPanel() {
                 <option value="">Todos los meses</option>
                 {monthOptions.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
-              <ChevronDown className="absolute right-2 top-2 w-3 h-3 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 top-2 w-3 h-3 text-subtle pointer-events-none" />
             </div>
-            <button onClick={selectAllVisible} className="h-8 px-3 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">Sel. todos</button>
-            <button onClick={deselectAllVisible} className="h-8 px-3 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">Desel. todos</button>
-            <span className="text-xs text-gray-400 self-center">{visibleGroups.length} grupos</span>
+            <button onClick={selectAllVisible} className="h-8 px-3 text-xs border border-gray-200 rounded-lg hover:bg-surface">Sel. todos</button>
+            <button onClick={deselectAllVisible} className="h-8 px-3 text-xs border border-gray-200 rounded-lg hover:bg-surface">Desel. todos</button>
+            <span className="text-xs text-subtle self-center">{visibleGroups.length} grupos</span>
           </div>
 
           <div className="bg-white rounded-xl border overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-slate-50 border-b">
+              <thead className="bg-surface border-b">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-slate-500">Banco</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-500">Fecha</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-500">Descripción</th>
-                  <th className="px-3 py-2 text-right font-medium text-slate-500">Débito</th>
-                  <th className="px-3 py-2 text-right font-medium text-slate-500">Crédito</th>
-                  <th className="px-3 py-2 text-center font-medium text-slate-500">IDs (marcar = eliminar)</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted">Banco</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted">Fecha</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted">Descripción</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted">Débito</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted">Crédito</th>
+                  <th className="px-3 py-2 text-center font-medium text-muted">IDs (marcar = eliminar)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {visibleGroups.map((g, gi) => (
-                  <tr key={gi} className="hover:bg-slate-50">
+                  <tr key={gi} className="hover:bg-surface">
                     <td className="px-3 py-2 font-medium">{g.banco}</td>
-                    <td className="px-3 py-2 text-slate-500">{g.fecha}</td>
-                    <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate">{g.descripcion}</td>
-                    <td className="px-3 py-2 text-right text-red-600">{fmtAmt(g.debito, g.moneda)}</td>
-                    <td className="px-3 py-2 text-right text-green-600">{fmtAmt(g.credito, g.moneda)}</td>
+                    <td className="px-3 py-2 text-muted">{g.fecha}</td>
+                    <td className="px-3 py-2 text-ink max-w-[200px] truncate">{g.descripcion}</td>
+                    <td className="px-3 py-2 text-right text-terracotta">{fmtAmt(g.debito, g.moneda)}</td>
+                    <td className="px-3 py-2 text-right text-olive">{fmtAmt(g.credito, g.moneda)}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1.5 justify-center">
                         {g.ids.map((id, idx) => (
@@ -221,7 +221,7 @@ export function DuplicadosPanel() {
                               onChange={() => toggleId(id)}
                               className="w-3 h-3 accent-red-600"
                             />
-                            <span className={`text-[10px] font-mono ${selected.has(id) ? "text-red-600" : "text-slate-400"}`}>
+                            <span className={`text-[10px] font-mono ${selected.has(id) ? "text-terracotta" : "text-subtle"}`}>
                               {idx === 0 ? "conservar" : `dup-${idx}`}
                               {g.dirty[idx] && <span title="Descripción con caracteres raros"> 🔡</span>}
                             </span>
@@ -244,11 +244,11 @@ export function DuplicadosPanel() {
             <h3 className="text-lg font-bold text-red-700 flex items-center gap-2">
               <Trash2 className="w-5 h-5" /> Confirmar eliminación
             </h3>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-ink">
               Estás por eliminar <span className="font-bold">{selected.size} movimientos</span> marcados como duplicados.
               Esta acción no se puede deshacer.
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted">
               El servidor re-verificará que cada ID tenga un par antes de borrar. Después se re-escaneará automáticamente.
             </p>
             <div className="flex gap-3 pt-2">
@@ -263,7 +263,7 @@ export function DuplicadosPanel() {
               <button
                 onClick={() => setConfirming(false)}
                 disabled={deleting}
-                className="flex-1 h-10 border text-gray-700 font-semibold rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 h-10 border text-ink font-semibold rounded-lg text-sm hover:bg-surface disabled:opacity-50"
               >
                 Cancelar
               </button>

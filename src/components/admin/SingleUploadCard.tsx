@@ -73,7 +73,7 @@ export function SingleUploadCard() {
     <div className="bg-white rounded-xl border p-5 flex flex-col gap-4">
       <div>
         <h2 className="text-base font-semibold">Extracto individual</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Subí un archivo para un banco específico.</p>
+        <p className="text-xs text-muted mt-0.5">Subí un archivo para un banco específico.</p>
       </div>
 
       <div className="relative">
@@ -84,20 +84,20 @@ export function SingleUploadCard() {
         >
           {BANKS.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
         </select>
-        <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-subtle pointer-events-none" />
       </div>
 
-      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:bg-surface">
         {file ? (
           <div className="text-center px-3">
-            <p className="text-sm font-medium text-gray-700 truncate max-w-[200px]">{file.name}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+            <p className="text-sm font-medium text-ink truncate max-w-[200px]">{file.name}</p>
+            <p className="text-xs text-subtle mt-0.5">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
           </div>
         ) : (
           <div className="text-center">
-            <Upload className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-            <p className="text-xs text-gray-500">Seleccionar archivo</p>
-            <p className="text-xs text-gray-400">{bankConfig.accept.split(",").join(", ")}</p>
+            <Upload className="w-4 h-4 text-subtle mx-auto mb-1" />
+            <p className="text-xs text-muted">Seleccionar archivo</p>
+            <p className="text-xs text-subtle">{bankConfig.accept.split(",").join(", ")}</p>
           </div>
         )}
         <input type="file" className="hidden" accept={bankConfig.accept} onChange={e => setFile(e.target.files?.[0] ?? null)} />
@@ -114,8 +114,8 @@ export function SingleUploadCard() {
       <StatusBox result={result} error={error} />
 
       {availableMonths.length > 0 && (
-        <div className="border border-red-100 rounded-lg p-3 space-y-2 bg-red-50/40">
-          <p className="text-xs text-gray-500 font-medium">Borrar datos cargados</p>
+        <div className="border border-red-100 rounded-lg p-3 space-y-2 bg-terracotta/10/40">
+          <p className="text-xs text-muted font-medium">Borrar datos cargados</p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <select
@@ -126,12 +126,12 @@ export function SingleUploadCard() {
                 <option value="">— Seleccionar mes —</option>
                 {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
-              <ChevronDown className="absolute right-2 top-2 w-3 h-3 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2 top-2 w-3 h-3 text-subtle pointer-events-none" />
             </div>
             <button
               onClick={() => selectedMonth && handleDelete(selectedMonth)}
               disabled={deleteLoading || !selectedMonth}
-              className="flex items-center gap-1 text-xs px-3 h-8 border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-40"
+              className="flex items-center gap-1 text-xs px-3 h-8 border border-terracotta/30 text-terracotta rounded hover:bg-terracotta/10 disabled:opacity-40"
             >
               <Trash2 className="w-3 h-3" />
               {deleteLoading ? "…" : "Borrar mes"}
@@ -140,7 +140,7 @@ export function SingleUploadCard() {
           <button
             onClick={() => handleDelete()}
             disabled={deleteLoading}
-            className="text-xs text-red-400 hover:text-red-600 underline disabled:opacity-50"
+            className="text-xs text-red-400 hover:text-terracotta underline disabled:opacity-50"
           >
             Borrar todos los datos de este banco
           </button>

@@ -135,14 +135,14 @@ export default function ReconciliarPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Reconciliación por Excel</h1>
-      <p className="text-sm text-slate-500 mb-6">
+      <p className="text-sm text-muted mb-6">
         Subí tu Excel con movimientos clasificados. El sistema busca coincidencias por banco + fecha + importe
         entre los movimientos sin clasificar y aplica la categorización automáticamente.
       </p>
 
       <div className="bg-white rounded-xl border p-6 mb-6">
         <div className="flex items-center gap-4">
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="text-sm text-slate-600" />
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="text-sm text-ink" />
           <button
             onClick={handleUpload}
             disabled={loading}
@@ -154,11 +154,11 @@ export default function ReconciliarPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700 text-sm mb-4">{error}</div>
+        <div className="bg-terracotta/10 border border-terracotta/30 rounded-lg px-4 py-3 text-red-700 text-sm mb-4">{error}</div>
       )}
 
       {applied && (
-        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-green-700 text-sm mb-4 font-medium">
+        <div className="bg-olive/10 border border-olive/30 rounded-lg px-4 py-3 text-olive text-sm mb-4 font-medium">
           ✓ {applied.updated} movimientos clasificados exitosamente.
         </div>
       )}
@@ -167,15 +167,15 @@ export default function ReconciliarPage() {
         <>
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-xl border p-4">
-              <p className="text-xs text-slate-500 mb-1">Filas clasificadas en Excel</p>
+              <p className="text-xs text-muted mb-1">Filas clasificadas en Excel</p>
               <p className="text-2xl font-bold">{result.total_excel.toLocaleString()}</p>
             </div>
             <div className="bg-white rounded-xl border p-4">
-              <p className="text-xs text-slate-500 mb-1">Matches encontrados en sistema</p>
-              <p className="text-2xl font-bold text-green-600">{result.total_matches.toLocaleString()}</p>
+              <p className="text-xs text-muted mb-1">Matches encontrados en sistema</p>
+              <p className="text-2xl font-bold text-olive">{result.total_matches.toLocaleString()}</p>
             </div>
             <div className="bg-white rounded-xl border p-4">
-              <p className="text-xs text-slate-500 mb-1">Seleccionados para aplicar</p>
+              <p className="text-xs text-muted mb-1">Seleccionados para aplicar</p>
               <p className="text-2xl font-bold text-brand">{selected.size.toLocaleString()}</p>
             </div>
           </div>
@@ -215,13 +215,13 @@ export default function ReconciliarPage() {
                 {(filterTipo || filterBanco || filterCat) && (
                   <button
                     onClick={() => { setFilterTipo(""); setFilterBanco(""); setFilterCat(""); }}
-                    className="text-xs text-slate-500 underline px-1"
+                    className="text-xs text-muted underline px-1"
                   >
                     Limpiar filtros
                   </button>
                 )}
 
-                <span className="ml-auto text-xs text-slate-400 self-center">
+                <span className="ml-auto text-xs text-subtle self-center">
                   {visible.length} de {result.matches.length} filas
                 </span>
               </div>
@@ -235,7 +235,7 @@ export default function ReconciliarPage() {
                   <button
                     onClick={handleApply}
                     disabled={applying || selected.size === 0}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-green-700 transition-colors"
+                    className="px-4 py-2 bg-olive text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-olive/80 transition-colors"
                   >
                     {applying ? "Aplicando…" : `Aplicar ${selected.size} clasificaciones`}
                   </button>
@@ -244,34 +244,34 @@ export default function ReconciliarPage() {
 
               <div className="bg-white rounded-xl border overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+                  <thead className="bg-surface border-b">
                     <tr>
                       <th className="px-3 py-3 w-8">
                         <input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} />
                       </th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("fecha")}>
+                      <th className="text-left px-3 py-3 font-medium text-muted cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("fecha")}>
                         Fecha <SortIcon col="fecha" />
                       </th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("banco")}>
+                      <th className="text-left px-3 py-3 font-medium text-muted cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("banco")}>
                         Banco <SortIcon col="banco" />
                       </th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none" onClick={() => toggleSort("descripcion")}>
+                      <th className="text-left px-3 py-3 font-medium text-muted cursor-pointer select-none" onClick={() => toggleSort("descripcion")}>
                         Descripción <SortIcon col="descripcion" />
                       </th>
-                      <th className="text-right px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("importe")}>
+                      <th className="text-right px-3 py-3 font-medium text-muted cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("importe")}>
                         Importe <SortIcon col="importe" />
                       </th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("tipo")}>
+                      <th className="text-left px-3 py-3 font-medium text-muted cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("tipo")}>
                         Tipo <SortIcon col="tipo" />
                       </th>
-                      <th className="text-left px-3 py-3 font-medium text-slate-500 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("categoria")}>
+                      <th className="text-left px-3 py-3 font-medium text-muted cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("categoria")}>
                         Categoría <SortIcon col="categoria" />
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {visible.map(m => (
-                      <tr key={m.id} className={`hover:bg-slate-50 ${selected.has(m.id) ? "" : "opacity-40"}`}>
+                      <tr key={m.id} className={`hover:bg-surface ${selected.has(m.id) ? "" : "opacity-40"}`}>
                         <td className="px-3 py-2 text-center">
                           <input
                             type="checkbox"
@@ -283,29 +283,29 @@ export default function ReconciliarPage() {
                             }}
                           />
                         </td>
-                        <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatDate(m.fecha)}</td>
+                        <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(m.fecha)}</td>
                         <td className="px-3 py-2 font-medium">{m.banco}</td>
-                        <td className="px-3 py-2 text-slate-600 max-w-xs truncate">{m.descripcion ?? "—"}</td>
-                        <td className={`px-3 py-2 text-right ${m.debito ? "text-red-600" : "text-green-600"}`}>
+                        <td className="px-3 py-2 text-ink max-w-xs truncate">{m.descripcion ?? "—"}</td>
+                        <td className={`px-3 py-2 text-right ${m.debito ? "text-terracotta" : "text-olive"}`}>
                           {m.debito ? `-${formatUYU(m.debito)}` : m.credito ? `+${formatUYU(m.credito)}` : "—"}
                         </td>
                         <td className="px-3 py-2">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${m.tipo_propuesto === "negocio" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${m.tipo_propuesto === "negocio" ? "bg-brand-light text-brand-dark" : "bg-bronze/10 text-bronze"}`}>
                             {m.tipo_propuesto}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-slate-600 text-xs">{catOf(m) || "—"}</td>
+                        <td className="px-3 py-2 text-ink text-xs">{catOf(m) || "—"}</td>
                       </tr>
                     ))}
                     {visible.length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Sin resultados para los filtros aplicados</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center text-subtle">Sin resultados para los filtros aplicados</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </>
           ) : (
-            <div className="bg-slate-50 rounded-xl border p-8 text-center text-slate-400">
+            <div className="bg-surface rounded-xl border p-8 text-center text-subtle">
               No se encontraron movimientos sin clasificar que coincidan con el Excel.
             </div>
           )}

@@ -32,10 +32,10 @@ export default async function ExtractosPage() {
     return (
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-2">Extractos bancarios</h1>
-        <p className="text-sm text-gray-500 mb-6">Movimientos importados directamente desde los extractos de cada banco.</p>
-        <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-12 text-center">
+        <p className="text-sm text-muted mb-6">Movimientos importados directamente desde los extractos de cada banco.</p>
+        <div className="bg-surface border border-dashed border-gray-200 rounded-xl p-12 text-center">
           <Building2 className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm font-medium">No hay extractos importados todavía</p>
+          <p className="text-muted text-sm font-medium">No hay extractos importados todavía</p>
           <Link href="/admin" className="text-brand text-sm underline mt-2 inline-block">Importar extracto →</Link>
         </div>
       </div>
@@ -45,7 +45,7 @@ export default async function ExtractosPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-2">Extractos bancarios</h1>
-      <p className="text-sm text-gray-500 mb-6">Cada cuenta se muestra por separado según banco y moneda.</p>
+      <p className="text-sm text-muted mb-6">Cada cuenta se muestra por separado según banco y moneda.</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {keys.map((key) => {
@@ -81,7 +81,7 @@ export default async function ExtractosPage() {
                   <div>
                     <p className="font-bold text-gray-900 text-lg leading-tight">{banco}</p>
                     <span className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full
-                      ${moneda === "USD" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                      ${moneda === "USD" ? "bg-green-100 text-olive" : "bg-brand-light text-brand-dark"}`}>
                       {moneda}
                     </span>
                   </div>
@@ -91,13 +91,13 @@ export default async function ExtractosPage() {
                 </div>
 
                 {cuentas.length > 0 && (
-                  <p className="text-xs font-mono text-gray-400 mb-3">{cuentas.join(" · ")}</p>
+                  <p className="text-xs font-mono text-subtle mb-3">{cuentas.join(" · ")}</p>
                 )}
 
                 <p className="text-2xl font-bold text-gray-900 mb-1">{total}</p>
-                <p className="text-xs text-gray-500">movimientos</p>
+                <p className="text-xs text-muted">movimientos</p>
 
-                <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
+                <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-subtle">
                   <p>{hasta?.slice(0, 7)} → {desde?.slice(0, 7)}</p>
                   {errores > 0 && <p className="text-orange-500 mt-0.5">{errores} inconsistencias</p>}
                 </div>

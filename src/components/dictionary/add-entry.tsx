@@ -43,7 +43,7 @@ export function AddDictionaryEntry({ categories }: { categories: Category[] }) {
       <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-lg">Nueva entrada</h2>
-          <button onClick={() => setOpen(false)}><X className="w-5 h-5 text-slate-400" /></button>
+          <button onClick={() => setOpen(false)}><X className="w-5 h-5 text-subtle" /></button>
         </div>
         <div className="space-y-3">
           <div>

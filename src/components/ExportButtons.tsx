@@ -25,16 +25,16 @@ export function ExportButtons({ params = {}, className = "" }: Props) {
       <a
         href={buildXlsxUrl()}
         download
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg text-ink hover:bg-surface transition-colors"
       >
-        <FileSpreadsheet className="w-3.5 h-3.5 text-green-600" />
+        <FileSpreadsheet className="w-3.5 h-3.5 text-olive" />
         Excel
       </a>
       <button
         onClick={handlePrint}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg text-ink hover:bg-surface transition-colors"
       >
-        <Printer className="w-3.5 h-3.5 text-slate-500" />
+        <Printer className="w-3.5 h-3.5 text-muted" />
         PDF
       </button>
     </div>

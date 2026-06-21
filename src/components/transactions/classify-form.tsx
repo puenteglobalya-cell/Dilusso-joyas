@@ -46,7 +46,7 @@ export function ClassifyForm({ transactionId, detalle, banco, categories }: Prop
   }
 
   if (done) {
-    return <p className="text-sm text-green-600 font-medium">✓ Clasificada correctamente</p>;
+    return <p className="text-sm text-olive font-medium">✓ Clasificada correctamente</p>;
   }
 
   return (
@@ -71,7 +71,7 @@ export function ClassifyForm({ transactionId, detalle, banco, categories }: Prop
         ))}
       </select>
 
-      <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+      <label className="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
         <input
           type="checkbox"
           checked={saveToDict}

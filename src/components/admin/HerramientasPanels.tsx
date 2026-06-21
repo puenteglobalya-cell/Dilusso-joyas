@@ -29,12 +29,12 @@ export function ExcelPanel() {
     <div className="bg-white rounded-xl border p-5 flex flex-col gap-4">
       <div>
         <h2 className="text-base font-semibold">Excel maestro</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Importa el Excel de Cecilia (Consolidado + Liquidaciones).</p>
+        <p className="text-xs text-muted mt-0.5">Importa el Excel de Cecilia (Consolidado + Liquidaciones).</p>
       </div>
-      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:bg-surface">
         {file
-          ? <p className="text-sm font-medium text-gray-700 px-3 truncate">{file.name}</p>
-          : <><Upload className="w-4 h-4 text-gray-400 mb-1" /><p className="text-xs text-gray-500">.xlsx, .xls</p></>
+          ? <p className="text-sm font-medium text-ink px-3 truncate">{file.name}</p>
+          : <><Upload className="w-4 h-4 text-subtle mb-1" /><p className="text-xs text-muted">.xlsx, .xls</p></>
         }
         <input type="file" className="hidden" accept=".xlsx,.xls" onChange={e => setFile(e.target.files?.[0] ?? null)} />
       </label>
@@ -70,16 +70,16 @@ export function TcPanel() {
     <div className="bg-white rounded-xl border p-5 flex flex-col gap-4">
       <div>
         <h2 className="text-base font-semibold">Tipo de cambio USD/UYU</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Recalcula el importe UYU de movimientos en dólares.</p>
+        <p className="text-xs text-muted mt-0.5">Recalcula el importe UYU de movimientos en dólares.</p>
       </div>
       <div className="flex gap-2 items-end">
         <div className="flex-1">
-          <label className="text-xs text-gray-500 mb-1 block">Mes</label>
+          <label className="text-xs text-muted mb-1 block">Mes</label>
           <input type="month" value={mes} onChange={e => setMes(e.target.value)}
             className="w-full h-9 border border-gray-200 rounded-lg px-3 text-sm" />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-gray-500 mb-1 block">TC</label>
+          <label className="text-xs text-muted mb-1 block">TC</label>
           <input type="number" step="0.01" value={tc} onChange={e => setTc(e.target.value)}
             placeholder="41.50" className="w-full h-9 border border-gray-200 rounded-lg px-3 text-sm" />
         </div>
@@ -89,7 +89,7 @@ export function TcPanel() {
           {loading ? "…" : "OK"}
         </button>
       </div>
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-red-600" : "text-green-700"}`}>{msg}</p>}
+      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-terracotta" : "text-olive"}`}>{msg}</p>}
     </div>
   );
 }
@@ -112,13 +112,13 @@ export function AplicarReglasPanel() {
     <div className="bg-white rounded-xl border p-5 flex flex-col gap-4">
       <div>
         <h2 className="text-base font-semibold">Aplicar reglas de clasificación</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Recorre todos los sin clasificar y aplica el diccionario.</p>
+        <p className="text-xs text-muted mt-0.5">Recorre todos los sin clasificar y aplica el diccionario.</p>
       </div>
       <button onClick={aplicar} disabled={loading}
         className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 w-fit">
         {loading ? "Aplicando…" : "Aplicar reglas"}
       </button>
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-red-600" : "text-green-700"}`}>{msg}</p>}
+      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-terracotta" : "text-olive"}`}>{msg}</p>}
     </div>
   );
 }
@@ -141,14 +141,14 @@ export function TransferPanel() {
     <div className="bg-white rounded-xl border p-5 flex flex-col gap-4">
       <div>
         <h2 className="text-base font-semibold">Traspasos entre cuentas</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Detecta movimientos espejo entre bancos (mismo monto, ±2 días) y los marca como traspaso.</p>
+        <p className="text-xs text-muted mt-0.5">Detecta movimientos espejo entre bancos (mismo monto, ±2 días) y los marca como traspaso.</p>
       </div>
       <button onClick={detect} disabled={loading}
         className="flex items-center gap-1.5 h-9 px-4 bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg disabled:opacity-50 w-fit">
         <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
         {loading ? "Detectando…" : "Detectar traspasos"}
       </button>
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-red-600" : "text-green-700"}`}>{msg}</p>}
+      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-terracotta" : "text-olive"}`}>{msg}</p>}
     </div>
   );
 }

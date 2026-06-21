@@ -23,7 +23,7 @@ export default async function DiccionarioPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Diccionario de clasificación</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-muted mt-1">
             {entries.length} reglas — se aplican al importar y al usar &quot;Aplicar reglas a sin clasificar&quot;
           </p>
         </div>

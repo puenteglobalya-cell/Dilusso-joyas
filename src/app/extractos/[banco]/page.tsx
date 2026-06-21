@@ -110,10 +110,10 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
   if (rows.length === 0) {
     return (
       <div className="p-8">
-        <Link href="/extractos" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
+        <Link href="/extractos" className="flex items-center gap-1 text-sm text-muted hover:text-ink mb-6">
           <ArrowLeft className="w-4 h-4" /> Extractos
         </Link>
-        <p className="text-gray-500">No hay movimientos para {pageTitle}.</p>
+        <p className="text-muted">No hay movimientos para {pageTitle}.</p>
       </div>
     );
   }
@@ -131,18 +131,18 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
 
     return (
       <div className="p-8 max-w-5xl">
-        <Link href="/extractos" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
+        <Link href="/extractos" className="flex items-center gap-1 text-sm text-muted hover:text-ink mb-6">
           <ArrowLeft className="w-4 h-4" /> Extractos
         </Link>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">{pageTitle}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
+            <p className="text-sm text-muted mt-0.5">{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
           </div>
           <div className="flex items-center gap-3">
             <a
               href={`/api/admin/export-bank-xlsx?banco=${encodeURIComponent(bancoNombre)}${moneda ? `&moneda=${moneda}` : ""}`}
-              className="flex items-center gap-1.5 text-xs px-3 h-8 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
+              className="flex items-center gap-1.5 text-xs px-3 h-8 border border-gray-200 rounded-lg hover:bg-surface text-ink"
               download
             >
               <Download className="w-3.5 h-3.5" />Excel
@@ -152,20 +152,20 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl border p-4">
-            <p className="text-xs text-gray-500 mb-1">Gastos UYU</p>
-            <p className="text-lg font-bold text-red-600">{formatUYU(gastosUYU)}</p>
+            <p className="text-xs text-muted mb-1">Gastos UYU</p>
+            <p className="text-lg font-bold text-terracotta">{formatUYU(gastosUYU)}</p>
           </div>
           <div className="bg-white rounded-xl border p-4">
-            <p className="text-xs text-gray-500 mb-1">Gastos USD</p>
-            <p className="text-lg font-bold text-red-600">U$ {gastosUSD.toFixed(2)}</p>
+            <p className="text-xs text-muted mb-1">Gastos USD</p>
+            <p className="text-lg font-bold text-terracotta">U$ {gastosUSD.toFixed(2)}</p>
           </div>
           <div className="bg-white rounded-xl border p-4">
-            <p className="text-xs text-gray-500 mb-1">Pagos UYU</p>
-            <p className="text-lg font-bold text-green-600">{formatUYU(pagosUYU)}</p>
+            <p className="text-xs text-muted mb-1">Pagos UYU</p>
+            <p className="text-lg font-bold text-olive">{formatUYU(pagosUYU)}</p>
           </div>
           <div className="bg-white rounded-xl border p-4">
-            <p className="text-xs text-gray-500 mb-1">Pagos USD</p>
-            <p className="text-lg font-bold text-green-600">U$ {pagosUSD.toFixed(2)}</p>
+            <p className="text-xs text-muted mb-1">Pagos USD</p>
+            <p className="text-lg font-bold text-olive">U$ {pagosUSD.toFixed(2)}</p>
           </div>
         </div>
         <BankStatementTable rows={rowsWithSaldo} isCreditCard catsNegocio={catsNegocio} catsPersonal={catsPersonal} />
@@ -199,14 +199,14 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
 
   return (
     <div className="p-8 max-w-5xl">
-      <Link href="/extractos" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
+      <Link href="/extractos" className="flex items-center gap-1 text-sm text-muted hover:text-ink mb-6">
         <ArrowLeft className="w-4 h-4" /> Extractos
       </Link>
 
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">{pageTitle}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{rows[0]?.cuenta && `Cuenta ${rows[0].cuenta} · `}{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
+          <p className="text-sm text-muted mt-0.5">{rows[0]?.cuenta && `Cuenta ${rows[0].cuenta} · `}{rows.length} movimientos · {meses[0]} a {meses[meses.length - 1]}</p>
         </div>
         <Link href="/admin" className="text-xs text-brand underline">Importar más →</Link>
       </div>
@@ -214,20 +214,20 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border p-4">
-          <p className="text-xs text-gray-500 mb-1">Saldo inicial</p>
+          <p className="text-xs text-muted mb-1">Saldo inicial</p>
           <p className="text-lg font-bold">{saldoInicial != null ? formatUYU(saldoInicial) : "—"}</p>
         </div>
         <div className="bg-white rounded-xl border p-4">
-          <p className="text-xs text-gray-500 mb-1">Saldo final</p>
+          <p className="text-xs text-muted mb-1">Saldo final</p>
           <p className="text-lg font-bold">{saldoFinal != null ? formatUYU(saldoFinal) : "—"}</p>
         </div>
         <div className="bg-white rounded-xl border p-4">
-          <p className="text-xs text-gray-500 mb-1">Total ingresos</p>
-          <p className="text-lg font-bold text-green-600">{formatUYU(totalCredito)}</p>
+          <p className="text-xs text-muted mb-1">Total ingresos</p>
+          <p className="text-lg font-bold text-olive">{formatUYU(totalCredito)}</p>
         </div>
         <div className="bg-white rounded-xl border p-4">
-          <p className="text-xs text-gray-500 mb-1">Total egresos</p>
-          <p className="text-lg font-bold text-red-600">{formatUYU(totalDebito)}</p>
+          <p className="text-xs text-muted mb-1">Total egresos</p>
+          <p className="text-lg font-bold text-terracotta">{formatUYU(totalDebito)}</p>
         </div>
       </div>
 

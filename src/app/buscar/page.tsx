@@ -56,12 +56,12 @@ export default function BuscarPage() {
   return (
     <div className="p-8 max-w-5xl">
       <h1 className="text-2xl font-bold mb-1">Buscar movimientos</h1>
-      <p className="text-sm text-gray-500 mb-6">Búsqueda por descripción en todos los bancos.</p>
+      <p className="text-sm text-muted mb-6">Búsqueda por descripción en todos los bancos.</p>
 
       {/* Search bar + filters */}
       <div className="bg-white rounded-xl border p-4 space-y-3 mb-5">
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-subtle" />
           <input
             autoFocus
             type="text"
@@ -71,7 +71,7 @@ export default function BuscarPage() {
             className="w-full h-9 pl-9 pr-8 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand"
           />
           {q && (
-            <button onClick={() => { setQ(""); setRows([]); setSearched(false); }} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
+            <button onClick={() => { setQ(""); setRows([]); setSearched(false); }} className="absolute right-2.5 top-2.5 text-subtle hover:text-ink">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -96,16 +96,16 @@ export default function BuscarPage() {
       </div>
 
       {/* Results */}
-      {loading && <p className="text-sm text-gray-400">Buscando…</p>}
+      {loading && <p className="text-sm text-subtle">Buscando…</p>}
       {!loading && searched && rows.length === 0 && (
-        <p className="text-sm text-gray-400">Sin resultados para <span className="font-medium">&quot;{q}&quot;</span>.</p>
+        <p className="text-sm text-subtle">Sin resultados para <span className="font-medium">&quot;{q}&quot;</span>.</p>
       )}
       {!loading && rows.length > 0 && (
         <>
-          <p className="text-xs text-gray-400 mb-2">{rows.length} resultado{rows.length !== 1 ? "s" : ""}{rows.length === 200 ? " (máx. 200)" : ""}</p>
+          <p className="text-xs text-subtle mb-2">{rows.length} resultado{rows.length !== 1 ? "s" : ""}{rows.length === 200 ? " (máx. 200)" : ""}</p>
           <div className="bg-white rounded-xl border overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b text-xs text-slate-500">
+              <thead className="bg-surface border-b text-xs text-muted">
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">Fecha</th>
                   <th className="px-4 py-2 text-left font-medium">Banco</th>
@@ -120,25 +120,25 @@ export default function BuscarPage() {
                   const { label, esIngreso } = fmtAmt(r);
                   const cat = r.tipo === "negocio" ? r.categoria_negocio : r.categoria_personal;
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{formatDate(r.fecha)}</td>
+                    <tr key={r.id} className="hover:bg-surface">
+                      <td className="px-4 py-2.5 text-muted whitespace-nowrap">{formatDate(r.fecha)}</td>
                       <td className="px-4 py-2.5 font-medium text-slate-700">{r.banco}</td>
                       <td className="px-4 py-2.5 max-w-xs">
-                        <span className="text-slate-600">
+                        <span className="text-ink">
                           {q ? highlightMatch(r.descripcion ?? "", q) : (r.descripcion ?? "—")}
                         </span>
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-medium whitespace-nowrap ${esIngreso ? "text-green-600" : "text-red-600"}`}>
+                      <td className={`px-4 py-2.5 text-right font-medium whitespace-nowrap ${esIngreso ? "text-olive" : "text-terracotta"}`}>
                         {label}
                       </td>
                       <td className="px-4 py-2.5">
                         {r.tipo ? (
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.tipo === "negocio" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.tipo === "negocio" ? "bg-brand-light text-brand-dark" : "bg-bronze/10 text-bronze"}`}>
                             {r.tipo}
                           </span>
                         ) : <span className="text-gray-300 text-xs">—</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-slate-500 text-xs">{cat ?? "—"}</td>
+                      <td className="px-4 py-2.5 text-muted text-xs">{cat ?? "—"}</td>
                     </tr>
                   );
                 })}

@@ -42,8 +42,8 @@ const CATS_PERSONAL = [
 ];
 
 const TIPO_BADGE: Record<string, string> = {
-  negocio: "bg-blue-100 text-blue-700",
-  personal: "bg-purple-100 text-purple-700",
+  negocio: "bg-brand-light text-brand-dark",
+  personal: "bg-bronze/10 text-bronze",
 };
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
@@ -148,15 +148,15 @@ function EditPopover({
       <div ref={ref} style={style} className="w-80 bg-white rounded-xl shadow-xl border p-4 z-50 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-800">Clasificar movimiento</p>
-          <button onClick={onClose}><X className="w-4 h-4 text-gray-400 hover:text-gray-600" /></button>
+          <button onClick={onClose}><X className="w-4 h-4 text-subtle hover:text-ink" /></button>
         </div>
 
-        <p className="text-xs text-gray-500 truncate" title={row.descripcion ?? ""}>{row.descripcion}</p>
+        <p className="text-xs text-muted truncate" title={row.descripcion ?? ""}>{row.descripcion}</p>
 
         {!askDict ? (
           <>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Tipo</label>
+              <label className="text-xs text-muted mb-1 block">Tipo</label>
               <div className="flex gap-2">
                 {TIPOS.map((t) => (
                   <button
@@ -164,15 +164,15 @@ function EditPopover({
                     onClick={() => setTipo(t)}
                     className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors
                       ${tipo === t
-                        ? t === "negocio" ? "bg-blue-100 border-blue-300 text-blue-700" : "bg-purple-100 border-purple-300 text-purple-700"
-                        : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                        ? t === "negocio" ? "bg-brand-light border-brand text-brand-dark" : "bg-bronze/10 border-bronze/30 text-bronze"
+                        : "border-gray-200 text-muted hover:bg-surface"}`}
                   >
                     {t}
                   </button>
                 ))}
                 <button
                   onClick={() => setTipo("")}
-                  className={`px-2 py-1.5 text-xs rounded-lg border transition-colors ${tipo === "" ? "bg-gray-100 border-gray-300" : "border-gray-200 text-gray-400 hover:bg-gray-50"}`}
+                  className={`px-2 py-1.5 text-xs rounded-lg border transition-colors ${tipo === "" ? "bg-gray-100 border-gray-300" : "border-gray-200 text-subtle hover:bg-surface"}`}
                 >
                   —
                 </button>
@@ -181,7 +181,7 @@ function EditPopover({
 
             {tipo === "negocio" && (
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Categoría negocio <span className="text-gray-400">(podés escribir una nueva)</span></label>
+                <label className="text-xs text-muted mb-1 block">Categoría negocio <span className="text-subtle">(podés escribir una nueva)</span></label>
                 <input
                   list="cats-negocio"
                   value={catNeg}
@@ -197,7 +197,7 @@ function EditPopover({
 
             {tipo === "personal" && (
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Categoría personal <span className="text-gray-400">(podés escribir una nueva)</span></label>
+                <label className="text-xs text-muted mb-1 block">Categoría personal <span className="text-subtle">(podés escribir una nueva)</span></label>
                 <input
                   list="cats-personal"
                   value={catPer}
@@ -223,11 +223,11 @@ function EditPopover({
         ) : (
           /* ── Preguntar si guardar en diccionario ── */
           <div className="space-y-3">
-            <p className="text-xs text-gray-700 font-medium">
+            <p className="text-xs text-ink font-medium">
               ¿Querés guardar una regla en el diccionario para clasificar automáticamente en el futuro?
             </p>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Keyword (parte del texto a detectar)</label>
+              <label className="text-xs text-muted mb-1 block">Keyword (parte del texto a detectar)</label>
               <input
                 type="text"
                 value={keyword}
@@ -240,7 +240,7 @@ function EditPopover({
               <button
                 onClick={() => save(false)}
                 disabled={saving}
-                className="flex-1 py-2 border border-gray-200 text-xs font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2 border border-gray-200 text-xs font-medium rounded-lg hover:bg-surface disabled:opacity-50 transition-colors"
               >
                 Solo esta vez
               </button>
@@ -404,7 +404,7 @@ export default function BankStatementTable({
 
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             {sorted.length} de {rows.length} movimientos
             {hasFilters && (
               <button
@@ -420,7 +420,7 @@ export default function BankStatementTable({
             className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
               filters.clasificado === "No"
                 ? "bg-orange-100 border-orange-300 text-orange-700"
-                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                : "border-gray-200 text-muted hover:bg-surface"
             }`}
           >
             {filters.clasificado === "No" ? "✗ Sin clasificar" : "Ver sin clasificar"}
@@ -429,20 +429,20 @@ export default function BankStatementTable({
         <div className="flex gap-2 print:hidden">
           <button
             onClick={downloadCSV}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-surface transition-colors"
           >
             <Download className="w-4 h-4" /> CSV
           </button>
           <a
             href={`/api/export/xlsx?banco=${encodeURIComponent(rows[0]?.banco ?? "")}`}
             download
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-surface transition-colors"
           >
-            <FileSpreadsheet className="w-4 h-4 text-green-600" /> Excel
+            <FileSpreadsheet className="w-4 h-4 text-olive" /> Excel
           </a>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-surface transition-colors"
           >
             <Printer className="w-4 h-4" /> PDF
           </button>
@@ -452,7 +452,7 @@ export default function BankStatementTable({
       <div className="bg-white rounded-xl border overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
+            <tr className="border-b bg-surface text-left text-xs text-muted uppercase tracking-wider">
               <Th k="fecha" label="Fecha" />
               <Th k="descripcion" label="Descripción" />
               {hasNumero && <th className="px-4 py-3 font-medium text-right">N° cheque</th>}
@@ -518,7 +518,7 @@ export default function BankStatementTable({
           <tbody className="divide-y divide-gray-100">
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-sm text-gray-400">
+                <td colSpan={12} className="px-4 py-8 text-center text-sm text-subtle">
                   Sin resultados para los filtros aplicados
                 </td>
               </tr>
@@ -527,19 +527,19 @@ export default function BankStatementTable({
               return (
                 <tr
                   key={row.id ?? i}
-                  className={isSaldoAnterior ? "bg-gray-50 font-medium" : "hover:bg-gray-50"}
+                  className={isSaldoAnterior ? "bg-surface font-medium" : "hover:bg-surface"}
                 >
-                  <td className="px-4 py-2 text-gray-500 whitespace-nowrap tabular-nums text-xs">{row.fecha}</td>
+                  <td className="px-4 py-2 text-muted whitespace-nowrap tabular-nums text-xs">{row.fecha}</td>
                   <td className="px-4 py-2 text-gray-800 min-w-[280px] max-w-sm truncate" title={row.descripcion ?? ""}>
                     {row.descripcion ?? "—"}
                   </td>
                   {hasNumero && (
-                    <td className="px-4 py-2 text-right tabular-nums text-gray-400 text-xs">{row.numero ?? ""}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-subtle text-xs">{row.numero ?? ""}</td>
                   )}
-                  <td className="px-4 py-2 text-right text-red-600 tabular-nums">
+                  <td className="px-4 py-2 text-right text-terracotta tabular-nums">
                     {row.debito != null ? formatUYU(row.debito) : ""}
                   </td>
-                  <td className="px-4 py-2 text-right text-green-600 tabular-nums">
+                  <td className="px-4 py-2 text-right text-olive tabular-nums">
                     {row.credito != null ? formatUYU(row.credito) : ""}
                   </td>
                   {!isCreditCard && (
@@ -548,10 +548,10 @@ export default function BankStatementTable({
                     </td>
                   )}
                   {monedas.length > 1 && (
-                    <td className="px-4 py-2 text-xs text-gray-400">{row.moneda}</td>
+                    <td className="px-4 py-2 text-xs text-subtle">{row.moneda}</td>
                   )}
                   {hasUsd && (
-                    <td className="px-4 py-2 text-right tabular-nums text-xs text-gray-500">
+                    <td className="px-4 py-2 text-right tabular-nums text-xs text-muted">
                       {row.importe_uyu != null ? formatUYU(Math.abs(row.importe_uyu)) : ""}
                     </td>
                   )}
@@ -564,11 +564,11 @@ export default function BankStatementTable({
                         className="text-left"
                       >
                         {row.tipo ? (
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium cursor-pointer hover:opacity-80 ${TIPO_BADGE[row.tipo] ?? "bg-gray-100 text-gray-600"}`}>
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium cursor-pointer hover:opacity-80 ${TIPO_BADGE[row.tipo] ?? "bg-gray-100 text-ink"}`}>
                             {row.tipo}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-300 hover:text-gray-500 cursor-pointer">+ clasificar</span>
+                          <span className="text-xs text-gray-300 hover:text-muted cursor-pointer">+ clasificar</span>
                         )}
                       </button>
                     ) : null}
@@ -579,9 +579,9 @@ export default function BankStatementTable({
                     onClick={(e) => !isSaldoAnterior && openEdit(row, e)}
                   >
                     {row.tipo === "negocio"
-                      ? <span className="text-gray-500">{row.categoria_negocio || ""}</span>
+                      ? <span className="text-muted">{row.categoria_negocio || ""}</span>
                       : row.tipo === "personal"
-                        ? <span className="text-gray-500">{row.categoria_personal || ""}</span>
+                        ? <span className="text-muted">{row.categoria_personal || ""}</span>
                         : row.clasificado === "No" && !isSaldoAnterior
                           ? <span className="text-orange-400">Sin clasificar</span>
                           : null}

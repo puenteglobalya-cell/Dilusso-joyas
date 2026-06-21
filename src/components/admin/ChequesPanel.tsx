@@ -150,7 +150,7 @@ export function ChequesPanel() {
       {/* Paste import */}
       <div className="bg-white rounded-xl border p-5">
         <h2 className="text-base font-semibold mb-1">Importar registro de cheques</h2>
-        <p className="text-xs text-gray-500 mb-3">
+        <p className="text-xs text-muted mb-3">
           Pegá la planilla desde Excel (columnas separadas por tab): Número, Fecha de cobro, Proveedor, Tipo mercadería, Monto $, Monto USD, Banco.
           Los duplicados (mismo número + fecha + monto) se omiten automáticamente.
         </p>
@@ -170,12 +170,12 @@ export function ChequesPanel() {
             {importing ? "Importando…" : "Importar cheques"}
           </button>
           {importResult?.ok && (
-            <span className="text-sm text-green-600">
+            <span className="text-sm text-olive">
               ✓ {importResult.inserted} nuevos · {importResult.skipped} duplicados omitidos ({importResult.parsed} leídos)
               {aplicarResult?.clasificados ? ` · ${aplicarResult.clasificados} movimientos clasificados` : ""}
             </span>
           )}
-          {importResult?.error && <span className="text-sm text-red-600">{importResult.error}</span>}
+          {importResult?.error && <span className="text-sm text-terracotta">{importResult.error}</span>}
         </div>
         {!!importResult?.errores?.length && (
           <div className="mt-2 text-xs text-orange-600 space-y-0.5">
@@ -193,34 +193,34 @@ export function ChequesPanel() {
               <button
                 onClick={aplicarClasificacion}
                 disabled={aplicando}
-                className="h-8 px-3 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+                className="h-8 px-3 text-xs font-semibold bg-olive hover:bg-olive/80 text-white rounded-lg disabled:opacity-50"
               >
                 {aplicando ? "Clasificando…" : `Clasificar conciliados (${counts.ok})`}
               </button>
             )}
             {aplicarResult?.clasificados != null && !aplicando && (
-              <span className="text-xs text-green-600">✓ {aplicarResult.clasificados} clasificados</span>
+              <span className="text-xs text-olive">✓ {aplicarResult.clasificados} clasificados</span>
             )}
           </div>
           <div className="flex gap-1.5 text-xs">
-            <button onClick={() => setFiltro("")} className={`px-2.5 py-1 rounded-full border ${filtro === "" ? "bg-gray-800 text-white border-gray-800" : "text-gray-500"}`}>Todos</button>
-            <button onClick={() => setFiltro("ok")} className={`px-2.5 py-1 rounded-full border ${filtro === "ok" ? "bg-green-600 text-white border-green-600" : "text-green-700 border-green-300"}`}>✓ Conciliados {counts.ok}</button>
+            <button onClick={() => setFiltro("")} className={`px-2.5 py-1 rounded-full border ${filtro === "" ? "bg-gray-800 text-white border-gray-800" : "text-muted"}`}>Todos</button>
+            <button onClick={() => setFiltro("ok")} className={`px-2.5 py-1 rounded-full border ${filtro === "ok" ? "bg-olive text-white border-green-600" : "text-olive border-green-300"}`}>✓ Conciliados {counts.ok}</button>
             <button onClick={() => setFiltro("parcial")} className={`px-2.5 py-1 rounded-full border ${filtro === "parcial" ? "bg-orange-500 text-white border-orange-500" : "text-orange-700 border-orange-300"}`}>⚠ Revisar {counts.parcial}</button>
             <button onClick={() => setFiltro("sin")} className={`px-2.5 py-1 rounded-full border ${filtro === "sin" ? "bg-red-600 text-white border-red-600" : "text-red-700 border-red-300"}`}>✗ Sin movimiento {counts.sin}</button>
           </div>
         </div>
 
-        {loadError && <p className="text-sm text-red-600 mb-2">{loadError}</p>}
-        {!cheques && <p className="text-sm text-gray-400">Cargando…</p>}
+        {loadError && <p className="text-sm text-terracotta mb-2">{loadError}</p>}
+        {!cheques && <p className="text-sm text-subtle">Cargando…</p>}
         {cheques && cheques.length === 0 && !loadError && (
-          <p className="text-sm text-gray-400">Sin cheques registrados todavía — pegá la planilla arriba.</p>
+          <p className="text-sm text-subtle">Sin cheques registrados todavía — pegá la planilla arriba.</p>
         )}
 
         {list.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b bg-gray-50 text-left text-gray-500 uppercase tracking-wider">
+                <tr className="border-b bg-surface text-left text-muted uppercase tracking-wider">
                   <th className="px-3 py-2 font-medium">Nº</th>
                   <th className="px-3 py-2 font-medium whitespace-nowrap">Fecha cobro</th>
                   <th className="px-3 py-2 font-medium">Proveedor</th>
@@ -233,16 +233,16 @@ export function ChequesPanel() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {list.map(c => (
-                  <tr key={c.id} className="hover:bg-slate-50">
+                  <tr key={c.id} className="hover:bg-surface">
                     <td className="px-3 py-2 font-mono font-medium">{c.numero}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-gray-500">{fmtFecha(c.fecha_cobro)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-muted">{fmtFecha(c.fecha_cobro)}</td>
                     <td className="px-3 py-2">{c.proveedor ?? "—"}</td>
-                    <td className="px-3 py-2 text-gray-500">{c.tipo_mercaderia ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted">{c.tipo_mercaderia ?? "—"}</td>
                     <td className="px-3 py-2 text-right font-medium">{fmtMonto(c.monto_uyu)}</td>
                     <td className="px-3 py-2 text-right font-medium">{fmtMonto(c.monto_usd)}</td>
                     <td className="px-3 py-2">
                       {c.match ? (
-                        <span className={c.match.clasificado === "Si" ? "text-blue-600" : "text-green-700"} title={c.match.descripcion ?? ""}>
+                        <span className={c.match.clasificado === "Si" ? "text-brand" : "text-olive"} title={c.match.descripcion ?? ""}>
                           {c.match.clasificado === "Si" ? "✓ Clasificado" : "✓ Coincide"} · {fmtFecha(c.match.fecha)} · {c.match.moneda} {fmtMonto(c.match.debito)}
                         </span>
                       ) : c.matchParcial ? (
@@ -260,10 +260,10 @@ export function ChequesPanel() {
                       ) : (
                         <span className="text-red-500">✗ Sin movimiento en banco</span>
                       )}
-                      {c.nota && <span className="block text-[10px] text-gray-400">{c.nota}</span>}
+                      {c.nota && <span className="block text-[10px] text-subtle">{c.nota}</span>}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <button onClick={() => borrar(c.id)} className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500">
+                      <button onClick={() => borrar(c.id)} className="p-1 rounded hover:bg-terracotta/10 text-gray-300 hover:text-red-500">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>

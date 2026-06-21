@@ -91,17 +91,17 @@ export function BulkUploadCard({ onImportDone }: { onImportDone?: () => void }) 
     <div className="bg-white rounded-xl border p-5 flex flex-col gap-4">
       <div>
         <h2 className="text-base font-semibold flex items-center gap-2"><FolderUp className="w-4 h-4" /> Subida masiva</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Arrastrá varios archivos — el sistema detecta el banco automáticamente.</p>
+        <p className="text-xs text-muted mt-0.5">Arrastrá varios archivos — el sistema detecta el banco automáticamente.</p>
       </div>
 
       <div
         ref={dropRef}
         onClick={() => inputRef.current?.click()}
-        className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+        className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:bg-surface"
       >
-        <Upload className="w-4 h-4 text-gray-400 mb-1" />
-        <p className="text-xs text-gray-500">Arrastrar o hacer clic</p>
-        <p className="text-xs text-gray-400">PDF, XLS, XLSX</p>
+        <Upload className="w-4 h-4 text-subtle mb-1" />
+        <p className="text-xs text-muted">Arrastrar o hacer clic</p>
+        <p className="text-xs text-subtle">PDF, XLS, XLSX</p>
         <input ref={inputRef} type="file" multiple accept=".pdf,.xls,.xlsx" className="hidden"
           onChange={e => { if (e.target.files) addFiles(Array.from(e.target.files)); e.target.value = ""; }} />
       </div>
@@ -110,20 +110,20 @@ export function BulkUploadCard({ onImportDone }: { onImportDone?: () => void }) 
         <div className="space-y-1.5 max-h-48 overflow-y-auto">
           {files.map(f => (
             <div key={f.id} className="flex items-center gap-2 border rounded-lg px-3 py-1.5 text-xs">
-              <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              <span className="flex-1 truncate text-gray-700">{f.file.name}</span>
+              <FileText className="w-3.5 h-3.5 text-subtle shrink-0" />
+              <span className="flex-1 truncate text-ink">{f.file.name}</span>
               <span className={`px-2 py-0.5 rounded-full shrink-0 ${
-                f.status === "detecting" ? "bg-gray-100 text-gray-500" :
-                f.status === "unknown"   ? "bg-red-100 text-red-600" :
-                "bg-blue-100 text-blue-700"
+                f.status === "detecting" ? "bg-gray-100 text-muted" :
+                f.status === "unknown"   ? "bg-red-100 text-terracotta" :
+                "bg-brand-light text-brand-dark"
               }`}>
                 {f.status === "detecting" ? "Detectando…" : f.bancoLabel ?? "No detectado"}
               </span>
-              {f.status === "importing" && <RefreshCw className="w-3.5 h-3.5 text-gray-400 animate-spin shrink-0" />}
-              {f.status === "done" && <span className="text-green-700 shrink-0">{f.warning ? `⚠ ${f.warning}` : `✓ ${f.inserted}`}</span>}
-              {f.status === "error" && <span className="text-red-600 shrink-0 max-w-[120px] truncate" title={f.errorMsg}>✗ {f.errorMsg}</span>}
+              {f.status === "importing" && <RefreshCw className="w-3.5 h-3.5 text-subtle animate-spin shrink-0" />}
+              {f.status === "done" && <span className="text-olive shrink-0">{f.warning ? `⚠ ${f.warning}` : `✓ ${f.inserted}`}</span>}
+              {f.status === "error" && <span className="text-terracotta shrink-0 max-w-[120px] truncate" title={f.errorMsg}>✗ {f.errorMsg}</span>}
               {!importing && f.status !== "importing" && (
-                <button onClick={() => setFiles(prev => prev.filter(x => x.id !== f.id))} className="text-gray-300 hover:text-gray-500 shrink-0">
+                <button onClick={() => setFiles(prev => prev.filter(x => x.id !== f.id))} className="text-gray-300 hover:text-muted shrink-0">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -142,10 +142,10 @@ export function BulkUploadCard({ onImportDone }: { onImportDone?: () => void }) 
             {importing ? "Importando…" : `Importar ${readyCount} archivo${readyCount !== 1 ? "s" : ""}`}
           </button>
           {!importing && (
-            <button onClick={() => setFiles([])} className="text-xs text-gray-400 hover:text-gray-600">Limpiar</button>
+            <button onClick={() => setFiles([])} className="text-xs text-subtle hover:text-ink">Limpiar</button>
           )}
           {totalInserted > 0 && (
-            <span className="text-xs text-green-700 font-medium">✓ {totalInserted} movimientos</span>
+            <span className="text-xs text-olive font-medium">✓ {totalInserted} movimientos</span>
           )}
         </div>
       )}

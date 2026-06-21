@@ -41,9 +41,7 @@ function pct(num: number, den: number): number {
   return den === 0 ? 0 : Math.round((num / den) * 1000) / 10;
 }
 
-// Today: 2026-06-14
-const TODAY = "2026-06-14";
-const TODAY_DATE = new Date(TODAY);
+const TODAY_DATE = new Date();
 
 export default async function NegocioPage({ searchParams }: Props) {
   const sp = await searchParams;
