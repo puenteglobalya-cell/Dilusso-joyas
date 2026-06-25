@@ -57,8 +57,8 @@ async function findMatch(sb: ReturnType<typeof createServerClient>, importe: num
 
   if (fecha) {
     const d = new Date(fecha);
-    const from = new Date(d); from.setDate(d.getDate() - 10);
-    const to = new Date(d);   to.setDate(d.getDate() + 10);
+    const from = new Date(d); from.setDate(d.getDate() - 5);
+    const to = new Date(d);   to.setDate(d.getDate() + 30);
     query = query.gte("fecha", from.toISOString().split("T")[0]).lte("fecha", to.toISOString().split("T")[0]);
   }
 
