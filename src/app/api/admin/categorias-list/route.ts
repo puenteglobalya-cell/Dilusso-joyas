@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const sb = createServerClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (sb.from("categories") as any).select("name, type").order("name");

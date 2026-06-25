@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,9 @@ const BANCO_MAP: Record<string, { banco: string; moneda?: string }> = {
 };
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const { banco, mes } = await req.json();
   if (!banco) return NextResponse.json({ error: "No banco" }, { status: 400 });
 

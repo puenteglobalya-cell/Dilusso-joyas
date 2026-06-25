@@ -1,9 +1,13 @@
 import { createServerClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const sb = createServerClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (sb.from("bank_statements") as any)

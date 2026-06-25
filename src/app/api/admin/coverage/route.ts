@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,9 @@ const BANCOS = [
 ];
 
 export async function GET() {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const sb = createServerClient();
 
   // Supabase PostgREST has a server-side max_rows limit (typically 1000).

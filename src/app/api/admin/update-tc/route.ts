@@ -5,10 +5,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const { mes, tc } = await req.json() as { mes: string; tc: number };
 
   if (!mes || !tc || tc <= 0) {

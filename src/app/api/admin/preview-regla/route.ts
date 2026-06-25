@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 // GET /api/admin/preview-regla?keyword=xxx
 // Returns count of unclassified rows matching ILIKE %keyword%
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const kw = req.nextUrl.searchParams.get("keyword")?.trim();
   if (!kw || kw.length < 2) return NextResponse.json({ count: 0 });
 

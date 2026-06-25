@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,9 @@ const BANCO_MAP: Record<string, { banco: string; moneda?: string }> = {
 };
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const banco = req.nextUrl.searchParams.get("banco");
   if (!banco) return NextResponse.json({ months: [] });
 

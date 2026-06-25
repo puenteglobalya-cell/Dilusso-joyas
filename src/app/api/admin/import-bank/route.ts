@@ -3,10 +3,14 @@ import { createServerClient } from "@/lib/supabase";
 import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, parseItauCardPdf, detectXlsBanco, BankRow } from "@/lib/bank-parsers";
 import { clasificar } from "@/lib/clasificador";
 import { getTc } from "@/lib/tipo-cambio";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const banco = formData.get("banco") as string | null;

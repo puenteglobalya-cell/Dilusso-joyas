@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // GET: reclassify all "Insumos Relojes" rows → tipo=negocio, categoria_negocio=Insumos/Materiales
 export async function GET() {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const sb = createServerClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

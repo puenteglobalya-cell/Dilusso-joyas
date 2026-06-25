@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const { name, type } = await req.json() as { name: string; type: "negocio" | "personal" };
   if (!name?.trim() || !type) return NextResponse.json({ error: "Faltan campos" }, { status: 400 });
   const sb = createServerClient();

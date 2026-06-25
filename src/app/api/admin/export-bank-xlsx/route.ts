@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import * as XLSX from "xlsx";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 // GET /api/admin/export-bank-xlsx?banco=BBVA&moneda=UYU
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const banco = req.nextUrl.searchParams.get("banco");
   const moneda = req.nextUrl.searchParams.get("moneda");
 

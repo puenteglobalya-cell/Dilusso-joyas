@@ -13,12 +13,16 @@ import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankP
 import { clasificar } from "@/lib/clasificador";
 import { getTc } from "@/lib/tipo-cambio";
 import { normalizeDesc } from "@/lib/normalize";
+import { requireAdmin } from "@/lib/admin-auth";
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const body = await req.json() as { base64?: string; filename?: string; banco?: string };
 
   if (!body.base64) return NextResponse.json({ error: "No base64" }, { status: 400 });

@@ -3,10 +3,14 @@ import { createServerClient } from "@/lib/supabase";
 import { parseExtracto } from "@/lib/parsers";
 import { classifyTransactions } from "@/lib/classifier";
 import type { VendorDictionary } from "@/lib/database.types";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

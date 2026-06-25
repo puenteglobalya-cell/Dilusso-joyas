@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { getTc } from "@/lib/tipo-cambio";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,9 @@ type DbRow = {
 };
 
 export async function POST(_req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const sb = createServerClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

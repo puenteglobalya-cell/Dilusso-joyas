@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { detectXlsBanco } from "@/lib/bank-parsers";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -50,6 +51,9 @@ function detectFromPdfText(text: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   const body = await req.json() as { base64?: string; filename?: string };
   if (!body.base64 || !body.filename) {
     return NextResponse.json({ error: "Missing base64 or filename" }, { status: 400 });
