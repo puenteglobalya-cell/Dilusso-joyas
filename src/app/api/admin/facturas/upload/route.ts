@@ -145,6 +145,59 @@ async function findMatch(
   return results;
 }
 
+async function detectarDuplicado(
+  sb: ReturnType<typeof createServerClient>,
+  extracted: Extracted,
+  tipo: string,
+): Promise<{ duplicado: boolean; facturaId?: string; motivo?: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (sb.from("facturas") as any)
+    .select("id, filename, proveedor, fecha_factura, importe, notas")
+    .eq("tipo", tipo);
+
+  if (extracted.esComprobante) {
+    // Comprobante: misma fecha + concepto similar
+    if (!extracted.fecha && !extracted.concepto) return { duplicado: false };
+
+    if (extracted.fecha) query = query.eq("fecha_factura", extracted.fecha);
+
+    const { data } = await query.ilike("notas", `%${(extracted.concepto ?? "").slice(0, 30)}%`).limit(5);
+    if (data?.length) return { duplicado: true, facturaId: data[0].id, motivo: "mismo comprobante (fecha + concepto)" };
+  } else {
+    // Factura: proveedor + fecha + importe ±1%
+    if (!extracted.fecha || !extracted.importe) return { duplicado: false };
+
+    const min = extracted.importe * 0.99;
+    const max = extracted.importe * 1.01;
+
+    const { data } = await query
+      .eq("fecha_factura", extracted.fecha)
+      .gte("importe", min)
+      .lte("importe", max)
+      .limit(5);
+
+    if (data?.length) return { duplicado: true, facturaId: data[0].id, motivo: "misma fecha + importe similar" };
+
+    // Segunda pasada: mismo proveedor + mismo mes + mismo importe (sin fecha exacta)
+    if (extracted.proveedor) {
+      const año = parseInt(extracted.fecha.split("-")[0]);
+      const mes = parseInt(extracted.fecha.split("-")[1]);
+      const { data: d2 } = await (sb.from("facturas") as any)
+        .select("id, filename")
+        .eq("tipo", tipo)
+        .eq("año", año)
+        .eq("mes", mes)
+        .ilike("proveedor", `%${extracted.proveedor.slice(0, 15)}%`)
+        .gte("importe", min)
+        .lte("importe", max)
+        .limit(5);
+      if (d2?.length) return { duplicado: true, facturaId: d2[0].id, motivo: "mismo proveedor + mes + importe" };
+    }
+  }
+
+  return { duplicado: false };
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
@@ -169,6 +222,13 @@ export async function POST(req: NextRequest) {
       const now = new Date();
       const año = extracted.fecha ? parseInt(extracted.fecha.split("-")[0]) : now.getFullYear();
       const mes = extracted.fecha ? parseInt(extracted.fecha.split("-")[1]) : now.getMonth() + 1;
+
+      // Chequeo de duplicados antes de subir
+      const dupCheck = await detectarDuplicado(sb, extracted, tipo);
+      if (dupCheck.duplicado) {
+        results.push({ ok: false, filename: file.name, duplicado: true, facturaId: dupCheck.facturaId, motivo: dupCheck.motivo });
+        continue;
+      }
 
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
       const path = `${tipo}/${año}/${String(mes).padStart(2,"0")}/${Date.now()}_${safeName}`;

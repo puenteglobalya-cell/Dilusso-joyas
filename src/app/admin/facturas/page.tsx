@@ -36,6 +36,8 @@ interface UploadResult {
   ok: boolean;
   filename: string;
   error?: string;
+  duplicado?: boolean;
+  motivo?: string;
   autoMatched?: boolean;
   matches?: BankStatement[];
   row?: Factura;
@@ -249,9 +251,10 @@ export default function FacturasPage() {
               border: `1px solid ${r.ok ? "#586E5030" : "#946E6130"}`,
             }}>
               <span className="font-medium truncate" style={{ color: "#2E2B2A" }}>{r.filename}</span>
-              <span style={{ color: r.ok ? "#586E50" : "#946E61" }}>
+              <span style={{ color: r.ok ? "#586E50" : r.duplicado ? "#C5A059" : "#946E61" }}>
                 {r.ok
                   ? r.autoMatched ? "✓ vinculado automáticamente" : `✓ guardado${(r.matches?.length ?? 0) > 0 ? ` · ${r.matches!.length} candidato${r.matches!.length !== 1 ? "s" : ""}` : ""}`
+                  : r.duplicado ? `⚠ duplicado — ${r.motivo}`
                   : `Error: ${r.error}`}
               </span>
             </div>
