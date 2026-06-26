@@ -59,6 +59,7 @@ export default function FacturasPage() {
   const [linkModal, setLinkModal] = useState<{ factura: Factura; matches: BankStatement[] } | null>(null);
   const [searchMatches, setSearchMatches] = useState<BankStatement[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [reglaModal, setReglaModal] = useState<{ factura: Factura; statement: BankStatement } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (t: Tipo) => {
@@ -107,14 +108,51 @@ export default function FacturasPage() {
     load(tipo);
   }
 
-  async function linkTo(facturaId: string, statementId: string) {
-    await fetch(`/api/admin/facturas/${facturaId}`, {
+  async function linkTo(factura: Factura, statement: BankStatement) {
+    await fetch(`/api/admin/facturas/${factura.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bank_statement_id: statementId }),
+      body: JSON.stringify({ bank_statement_id: statement.id }),
     });
     setLinkModal(null);
+    // Proponer crear regla
+    setReglaModal({ factura, statement });
     load(tipo);
+  }
+
+  async function crearRegla(factura: Factura, statement: BankStatement) {
+    const desc = statement.descripcion ?? "";
+    const esGenerico = desc.length < 6 || /^\d+$/.test(desc) || /debito auto|cargo auto|db\s/i.test(desc);
+    const importe = statement.debito ?? factura.importe ?? 0;
+    const dia = statement.fecha ? parseInt(statement.fecha.split("-")[2]) : null;
+
+    const regla: Record<string, unknown> = {
+      descripcion_regla: factura.proveedor ?? factura.filename,
+      tipo: factura.tipo,
+      moneda: statement.moneda,
+      banco: statement.banco,
+      factura_id: factura.id,
+      categoria_negocio: statement.tipo === "negocio" ? (statement as BankStatement & { categoria_negocio?: string }).categoria_negocio ?? null : null,
+      categoria_personal: statement.tipo === "personal" ? (statement as BankStatement & { categoria_personal?: string }).categoria_personal ?? null : null,
+    };
+
+    if (esGenerico && importe > 0) {
+      // Descripción genérica: usar importe ±5% + día ±3
+      regla.importe_min = Math.floor(importe * 0.95);
+      regla.importe_max = Math.ceil(importe * 1.05);
+      if (dia) { regla.dia_mes_min = Math.max(1, dia - 3); regla.dia_mes_max = Math.min(31, dia + 3); }
+    } else {
+      // Descripción útil: usar keyword
+      const words = desc.split(/\s+/).filter(w => w.length > 3 && !/^\d+$/.test(w));
+      regla.keyword = words[0]?.toLowerCase() ?? desc.toLowerCase().slice(0, 20);
+    }
+
+    await fetch("/api/admin/reglas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(regla),
+    });
+    setReglaModal(null);
   }
 
   async function deleteFactura(id: string) {
@@ -337,7 +375,7 @@ export default function FacturasPage() {
                   {searchMatches.map(m => (
                     <button
                       key={m.id}
-                      onClick={() => linkTo(linkModal.factura.id, m.id)}
+                      onClick={() => linkTo(linkModal.factura, m)}
                       className="w-full rounded-xl px-4 py-3 text-left transition-colors hover:bg-white"
                       style={{ border: "1px solid #E6E1DA" }}
                     >
@@ -354,6 +392,39 @@ export default function FacturasPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Propuesta de regla al vincular */}
+      {reglaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.4)" }}>
+          <div className="rounded-2xl w-full max-w-md" style={{ background: "#FCFBFA", border: "1px solid #E6E1DA" }}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: "#E6E1DA" }}>
+              <p className="font-semibold text-sm" style={{ color: "#2E2B2A" }}>¿Crear regla automática?</p>
+            </div>
+            <div className="p-5">
+              <p className="text-sm mb-3" style={{ color: "#8C857B" }}>
+                La próxima vez que entre un movimiento similar de <strong style={{ color: "#2E2B2A" }}>{reglaModal.statement.banco}</strong> se clasificará automáticamente como <strong style={{ color: "#2E2B2A" }}>{reglaModal.factura.proveedor ?? reglaModal.factura.filename}</strong>.
+              </p>
+              <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F5F0E8", color: "#2E2B2A" }}>
+                <p><span style={{ color: "#8C857B" }}>Descripción:</span> {reglaModal.statement.descripcion ?? "—"}</p>
+                <p><span style={{ color: "#8C857B" }}>Banco:</span> {reglaModal.statement.banco}</p>
+                <p><span style={{ color: "#8C857B" }}>Importe:</span> {formatImporte(reglaModal.statement.debito, reglaModal.statement.moneda)}</p>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t flex justify-end gap-2" style={{ borderColor: "#E6E1DA" }}>
+              <button onClick={() => setReglaModal(null)} className="px-4 py-2 rounded-xl text-sm" style={{ color: "#8C857B" }}>
+                No, gracias
+              </button>
+              <button
+                onClick={() => crearRegla(reglaModal.factura, reglaModal.statement)}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: "#C5A059", color: "#fff" }}
+              >
+                Crear regla
+              </button>
             </div>
           </div>
         </div>
