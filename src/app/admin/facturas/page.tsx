@@ -41,6 +41,7 @@ interface UploadResult {
   autoMatched?: boolean;
   matches?: BankStatement[];
   row?: Factura;
+  _file?: File; // guardado localmente para re-subir forzado
 }
 
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -74,19 +75,31 @@ export default function FacturasPage() {
 
   useEffect(() => { load(tipo); }, [tipo, load]);
 
-  async function uploadFiles(files: File[]) {
+  async function uploadFiles(files: File[], forzar = false) {
     const pdfs = files.filter(f => f.name.toLowerCase().endsWith(".pdf"));
     if (!pdfs.length) return;
     setUploading(true);
-    setUploadResults([]);
+    if (!forzar) setUploadResults([]);
     const fd = new FormData();
     pdfs.forEach(f => fd.append("files", f));
     fd.append("tipo", tipo);
+    if (forzar) fd.append("forzar", "true");
     const res = await fetch("/api/admin/facturas/upload", { method: "POST", body: fd });
     const data = await res.json();
-    setUploadResults(data.results ?? []);
+    const results: UploadResult[] = (data.results ?? []).map((r: UploadResult, i: number) => ({ ...r, _file: pdfs[i] }));
+    if (forzar) {
+      // Reemplazar solo los que se re-subieron
+      setUploadResults(prev => prev.map(p => results.find(r => r.filename === p.filename) ?? p));
+    } else {
+      setUploadResults(results);
+    }
     setUploading(false);
     load(tipo);
+  }
+
+  async function forzarUpload(result: UploadResult) {
+    if (!result._file) return;
+    await uploadFiles([result._file], true);
   }
 
   function onDrop(e: React.DragEvent) {
@@ -251,12 +264,21 @@ export default function FacturasPage() {
               border: `1px solid ${r.ok ? "#586E5030" : "#946E6130"}`,
             }}>
               <span className="font-medium truncate" style={{ color: "#2E2B2A" }}>{r.filename}</span>
-              <span style={{ color: r.ok ? "#586E50" : r.duplicado ? "#C5A059" : "#946E61" }}>
-                {r.ok
-                  ? r.autoMatched ? "✓ vinculado automáticamente" : `✓ guardado${(r.matches?.length ?? 0) > 0 ? ` · ${r.matches!.length} candidato${r.matches!.length !== 1 ? "s" : ""}` : ""}`
-                  : r.duplicado ? `⚠ duplicado — ${r.motivo}`
-                  : `Error: ${r.error}`}
-              </span>
+              <div className="flex items-center gap-2">
+                <span style={{ color: r.ok ? "#586E50" : r.duplicado ? "#C5A059" : "#946E61" }}>
+                  {r.ok
+                    ? r.autoMatched ? "✓ vinculado automáticamente" : `✓ guardado${(r.matches?.length ?? 0) > 0 ? ` · ${r.matches!.length} candidato${r.matches!.length !== 1 ? "s" : ""}` : ""}`
+                    : r.duplicado ? `⚠ duplicado — ${r.motivo}`
+                    : `Error: ${r.error}`}
+                </span>
+                {r.duplicado && r._file && (
+                  <button
+                    onClick={() => forzarUpload(r)}
+                    className="text-xs px-2 py-0.5 rounded-lg border"
+                    style={{ color: "#8C857B", borderColor: "#E6E1DA", background: "#fff" }}
+                  >Subir igual</button>
+                )}
+              </div>
             </div>
           ))}
         </div>

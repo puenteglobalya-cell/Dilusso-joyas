@@ -205,6 +205,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const files = formData.getAll("files") as File[];
   const tipo = formData.get("tipo") as string;
+  const forzar = formData.get("forzar") === "true";
 
   if (!files.length) return NextResponse.json({ error: "Sin archivos" }, { status: 400 });
   if (!["negocio", "personal"].includes(tipo)) return NextResponse.json({ error: "tipo inválido" }, { status: 400 });
@@ -223,11 +224,13 @@ export async function POST(req: NextRequest) {
       const año = extracted.fecha ? parseInt(extracted.fecha.split("-")[0]) : now.getFullYear();
       const mes = extracted.fecha ? parseInt(extracted.fecha.split("-")[1]) : now.getMonth() + 1;
 
-      // Chequeo de duplicados antes de subir
-      const dupCheck = await detectarDuplicado(sb, extracted, tipo);
-      if (dupCheck.duplicado) {
-        results.push({ ok: false, filename: file.name, duplicado: true, facturaId: dupCheck.facturaId, motivo: dupCheck.motivo });
-        continue;
+      // Chequeo de duplicados antes de subir (saltear si forzar=true)
+      if (!forzar) {
+        const dupCheck = await detectarDuplicado(sb, extracted, tipo);
+        if (dupCheck.duplicado) {
+          results.push({ ok: false, filename: file.name, duplicado: true, facturaId: dupCheck.facturaId, motivo: dupCheck.motivo });
+          continue;
+        }
       }
 
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
