@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   const importe = parseFloat(searchParams.get("importe") ?? "0");
   const moneda = searchParams.get("moneda") ?? "UYU";
   const fecha = searchParams.get("fecha");
+  const banco = searchParams.get("banco"); // para comprobantes
+  const esComprobante = searchParams.get("esComprobante") === "true";
 
   if (!importe) return NextResponse.json({ matches: [] });
 
@@ -24,12 +26,14 @@ export async function GET(req: NextRequest) {
     .gte("debito", min)
     .lte("debito", max)
     .order("fecha", { ascending: false })
-    .limit(10);
+    .limit(15);
+
+  if (banco) query = query.eq("banco", banco);
 
   if (fecha) {
     const d = new Date(fecha);
     const from = new Date(d); from.setDate(d.getDate() - 5);
-    const to = new Date(d);   to.setDate(d.getDate() + 30);
+    const to = new Date(d);   to.setDate(d.getDate() + (esComprobante ? 3 : 30));
     query = query.gte("fecha", from.toISOString().split("T")[0]).lte("fecha", to.toISOString().split("T")[0]);
   }
 
