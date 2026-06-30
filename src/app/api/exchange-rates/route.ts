@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const sb = createServerClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (sb.from("exchange_rates") as any).upsert(
-    { date, rate, source },
+    { date, fecha: date, rate, source },
     { onConflict: "date" }
   );
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

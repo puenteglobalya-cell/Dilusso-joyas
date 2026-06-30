@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = createServerClient();
-  const rows = [...rates.entries()].map(([date, rate]) => ({ date, rate, source: "BCU" }));
+  const rows = [...rates.entries()].map(([date, rate]) => ({ date, fecha: date, rate, source: "BCU" }));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (sb.from("exchange_rates") as any).upsert(rows, { onConflict: "date" });
 
