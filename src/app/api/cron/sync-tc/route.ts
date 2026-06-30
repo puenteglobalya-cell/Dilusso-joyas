@@ -18,15 +18,17 @@ export const runtime = "nodejs";
 const BCU_URL =
   "https://cotizaciones.bcu.gub.uy/wscotizaciones/ServicioWebSocketify/GetCotizacion";
 
-async function fetchTCFromBCU(date: string): Promise<number | null> {
-  // date format: YYYY-MM-DD → BCU expects DD/MM/YYYY
+function toBcuDate(date: string): string {
   const [y, m, d] = date.split("-");
-  const bcuDate = `${d}/${m}/${y}`;
+  return `${d}/${m}/${y}`;
+}
 
+// Devuelve un mapa fecha(YYYY-MM-DD) -> tasa para todo el rango pedido
+async function fetchTCRangeFromBCU(desde: string, hasta: string): Promise<Map<string, number>> {
   const body = JSON.stringify({
-    Moneda: 2222,        // USD interbancario
-    FechaDesde: bcuDate,
-    FechaHasta: bcuDate,
+    Moneda: 2222, // USD interbancario
+    FechaDesde: toBcuDate(desde),
+    FechaHasta: toBcuDate(hasta),
   });
 
   const res = await fetch(BCU_URL, {
@@ -35,17 +37,20 @@ async function fetchTCFromBCU(date: string): Promise<number | null> {
     body,
   });
 
-  if (!res.ok) return null;
+  const out = new Map<string, number>();
+  if (!res.ok) return out;
 
   const json = await res.json();
-  // Response: { Cotizaciones: [{ CotizacionCompra, CotizacionVenta }] }
-  const cotizaciones = json?.Cotizaciones;
-  if (!cotizaciones?.length) return null;
-
-  const { CotizacionCompra, CotizacionVenta } = cotizaciones[0];
-  if (!CotizacionCompra || !CotizacionVenta) return null;
-
-  return Math.round(((CotizacionCompra + CotizacionVenta) / 2) * 100) / 100;
+  const cotizaciones = json?.Cotizaciones ?? [];
+  for (const c of cotizaciones) {
+    const { Fecha, CotizacionCompra, CotizacionVenta } = c;
+    if (!Fecha || !CotizacionCompra || !CotizacionVenta) continue;
+    // Fecha viene como DD/MM/YYYY
+    const [d, m, y] = String(Fecha).split("/");
+    const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    out.set(iso, Math.round(((CotizacionCompra + CotizacionVenta) / 2) * 100) / 100);
+  }
+  return out;
 }
 
 export async function GET(req: NextRequest) {
@@ -57,21 +62,22 @@ export async function GET(req: NextRequest) {
 
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-  const rate = await fetchTCFromBCU(today);
+  const { searchParams } = new URL(req.url);
+  const desde = searchParams.get("desde") ?? today;
+  const hasta = searchParams.get("hasta") ?? today;
 
-  if (!rate) {
-    // Weekend or holiday — BCU returns no data, that's normal
-    return NextResponse.json({ ok: true, skipped: true, date: today, reason: "sin cotización BCU (feriado/fin de semana)" });
+  const rates = await fetchTCRangeFromBCU(desde, hasta);
+
+  if (!rates.size) {
+    return NextResponse.json({ ok: true, skipped: true, desde, hasta, reason: "sin cotización BCU para el rango (feriados/fines de semana)" });
   }
 
   const sb = createServerClient();
+  const rows = [...rates.entries()].map(([date, rate]) => ({ date, rate, source: "BCU" }));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (sb.from("exchange_rates") as any).upsert(
-    { date: today, rate, source: "BCU" },
-    { onConflict: "date" }
-  );
+  const { error } = await (sb.from("exchange_rates") as any).upsert(rows, { onConflict: "date" });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, date: today, rate, source: "BCU" });
+  return NextResponse.json({ ok: true, desde, hasta, actualizados: rows.length, rates: Object.fromEntries(rates) });
 }
