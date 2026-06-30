@@ -73,11 +73,29 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = createServerClient();
-  const rows = [...rates.entries()].map(([date, rate]) => ({ date, fecha: date, rate, source: "BCU" }));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (sb.from("exchange_rates") as any).upsert(rows, { onConflict: "date" });
+  // No hay constraint único en "date", así que hacemos upsert manual: buscar fila existente y update, o insert.
+  let actualizados = 0;
+  for (const [date, rate] of rates) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (sb.from("exchange_rates") as any)
+      .select("id")
+      .eq("date", date)
+      .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (existing) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (sb.from("exchange_rates") as any)
+        .update({ fecha: date, usd_uyu: rate, rate, source: "BCU" })
+        .eq("id", existing.id);
+      if (error) return NextResponse.json({ error: error.message, date }, { status: 500 });
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (sb.from("exchange_rates") as any)
+        .insert({ date, fecha: date, usd_uyu: rate, rate, source: "BCU" });
+      if (error) return NextResponse.json({ error: error.message, date }, { status: 500 });
+    }
+    actualizados++;
+  }
 
-  return NextResponse.json({ ok: true, desde, hasta, actualizados: rows.length, rates: Object.fromEntries(rates) });
+  return NextResponse.json({ ok: true, desde, hasta, actualizados, rates: Object.fromEntries(rates) });
 }
