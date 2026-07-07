@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/sync-tc",
       "schedule": "0 10 * * 1-5"
+    },
+    {
+      "path": "/api/cron/keep-alive",
+      "schedule": "0 10 * * 6"
     }
   ]
 }
