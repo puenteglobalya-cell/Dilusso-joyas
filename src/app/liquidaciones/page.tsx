@@ -280,8 +280,9 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
         allKeys.forEach(k => {
           const d = detailMap.get(k);
           const r = reconMap.get(k);
+          const c = cobByMonth.get(k);
           const liqTotal   = (d?.efectivo ?? 0) + (d?.tarjeta ?? 0) + (d?.fadaval ?? 0);
-          const bancoTotal = (r?.tarjetaCob ?? 0) + (r?.fadavalCob ?? 0) + (r?.ocaCob ?? 0);
+          const bancoTotal = (c?.efectivo ?? 0) + (r?.tarjetaCob ?? 0) + (r?.fadavalCob ?? 0) + (r?.ocaCob ?? 0);
           totalRows.set(k, { liq: liqTotal, banco: bancoTotal });
         });
 
