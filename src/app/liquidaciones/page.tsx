@@ -155,16 +155,18 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
   const TARJETA_DESC = ["posnet", "fiserv", "visanet", "mastercard", "visa", "creditel", "redpagos", "red pagos", "acreditacion tarjeta", "cobro tarjeta"];
   const FADAVAL_DESC = ["fadaval"];
 
-  const cobByMonth = new Map<string, { tarjeta: number; fadaval: number; oca: number }>();
+  const cobByMonth = new Map<string, { tarjeta: number; fadaval: number; oca: number; efectivo: number }>();
   for (const r of bsIncome) {
     const ym = r.fecha.slice(0, 7);
-    if (!cobByMonth.has(ym)) cobByMonth.set(ym, { tarjeta: 0, fadaval: 0, oca: 0 });
+    if (!cobByMonth.has(ym)) cobByMonth.set(ym, { tarjeta: 0, fadaval: 0, oca: 0, efectivo: 0 });
     const e = cobByMonth.get(ym)!;
     const imp = r.moneda === "USD" ? Math.abs(r.importe_uyu ?? 0) : (r.credito ?? 0);
     const cat = (r.categoria_negocio ?? "").toLowerCase();
     const desc = (r.descripcion ?? "").toLowerCase();
 
-    if (r.banco === "OCA") {
+    if (r.banco === "Efectivo") {
+      e.efectivo += imp;
+    } else if (r.banco === "OCA") {
       e.oca += imp;
     } else if (cat.includes("fadaval") || FADAVAL_DESC.some(k => desc.includes(k))) {
       e.fadaval += imp;
@@ -249,12 +251,12 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
         type AuditRow = { liq: number; banco: number };
         type Canal = { title: string; color: string; rows: Map<string, AuditRow>; nota?: string };
 
-        // Efectivo: liquidación vs bank_statements banco=Efectivo (clasificado como ingreso)
-        // No pasa por extracto bancario tradicional — el banco side acá es 0 (no hay movimiento en extracto)
+        // Efectivo: liquidación vs bank_statements banco='Efectivo' (resumen mensual cargado)
         const efectivoRows = new Map<string, AuditRow>();
         allKeys.forEach(k => {
           const d = detailMap.get(k);
-          efectivoRows.set(k, { liq: d?.efectivo ?? 0, banco: 0 });
+          const c = cobByMonth.get(k);
+          efectivoRows.set(k, { liq: d?.efectivo ?? 0, banco: c?.efectivo ?? 0 });
         });
 
         // Tarjeta (incluye OCA banco — ambas son cobros con tarjeta)
@@ -284,7 +286,7 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
         });
 
         const canales: Canal[] = [
-          { title: "Efectivo", color: "#586E50", rows: efectivoRows, nota: "El efectivo no transita por extracto bancario — la diferencia es el total en efectivo sin contrapartida en banco." },
+          { title: "Efectivo", color: "#586E50", rows: efectivoRows, nota: "Banco/Sistema = movimientos con banco='Efectivo' en bank_statements (resumen mensual cargado vía SQL)." },
           { title: "Tarjeta (incluye OCA)", color: "#A3907A", rows: tarjetaRows, nota: "Banco = acreditaciones tarjeta + OCA, ambas son cobros con tarjeta." },
           { title: "Fadaval", color: "#A3907A", rows: fadavalRows },
           { title: "Total general", color: "#2E2B2A", rows: totalRows },
@@ -335,11 +337,9 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
                                 {diff === 0 ? "—" : (diff > 0 ? "+" : "") + fmt(diff)}
                               </td>
                               <td className="px-4 py-2.5 text-center">
-                                {canal.title === "Efectivo"
-                                  ? <span className="text-xs text-muted">—</span>
-                                  : ok
-                                    ? <CheckCircle className="w-3.5 h-3.5 text-green-500 mx-auto" />
-                                    : <AlertCircle className="w-3.5 h-3.5 text-yellow-500 mx-auto" />
+                                {ok
+                                  ? <CheckCircle className="w-3.5 h-3.5 text-green-500 mx-auto" />
+                                  : <AlertCircle className="w-3.5 h-3.5 text-yellow-500 mx-auto" />
                                 }
                               </td>
                             </tr>
