@@ -469,7 +469,8 @@ export function parseBBVAPdf(text: string): BankRow[] {
     const rawSaldoStr = allNums[allNums.length - 1];
     const negMatch = combined.match(NEG_SALDO_PAT);
     const isNegSaldo = negMatch != null && negMatch[1] === rawSaldoStr;
-    const saldo = isNegSaldo ? -parseUY(rawSaldoStr) : parseUY(rawSaldoStr);
+    const parsedSaldo = parseUY(rawSaldoStr);
+    const saldo = (isNegSaldo && parsedSaldo !== null) ? -parsedSaldo : parsedSaldo;
     const amount = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : null;
 
     // Concept: everything before first number, strip embedded "fecha valor"
