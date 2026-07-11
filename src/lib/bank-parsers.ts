@@ -468,7 +468,7 @@ export function parseBBVAPdf(text: string): BankRow[] {
     // Detect negative saldo: "20,50-" → saldo = -20.50
     const rawSaldoStr = allNums[allNums.length - 1];
     const negMatch = combined.match(NEG_SALDO_PAT);
-    const isNegSaldo = negMatch && negMatch[1] === rawSaldoStr;
+    const isNegSaldo = negMatch != null && negMatch[1] === rawSaldoStr;
     const saldo = isNegSaldo ? -parseUY(rawSaldoStr) : parseUY(rawSaldoStr);
     const amount = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : null;
 
