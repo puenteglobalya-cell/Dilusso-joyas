@@ -236,170 +236,117 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
         ))}
       </div>
 
-      {/* Tabla de liquidaciones — agrupada por mes */}
-      <div className="bg-white rounded-xl border overflow-x-auto mb-10">
+      {/* ── Tabla unificada: liquidación + extracto + conciliación por mes ── */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-base font-semibold text-ink">Detalle por mes</h2>
+          <div className="flex gap-4 text-xs text-muted">
+            <span>Liquidado (tar+fad): <strong className="text-ink">{formatUYU(totalLiquidado)}</strong></span>
+            <span>Cobrado en banco: <strong className="text-olive">{formatUYU(totalCobrado)}</strong></span>
+            <span>Pendiente: <strong className={Math.abs(totalPendiente) < 500 ? "text-olive" : "text-terracotta"}>{totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border overflow-x-auto mb-6">
         <table className="w-full text-sm">
-          <thead className="bg-surface border-b">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-muted">Mes</th>
-              <th className="text-center px-4 py-3 font-medium text-muted">Liquidaciones</th>
-              <th className="text-right px-4 py-3 font-medium text-muted">Facturado</th>
-              <th className="text-right px-4 py-3 font-medium text-muted">Efectivo</th>
-              <th className="text-right px-4 py-3 font-medium text-muted">Tarjeta</th>
-              <th className="text-right px-4 py-3 font-medium text-muted">Fadaval</th>
-              <th className="text-right px-4 py-3 font-medium text-muted">Gastos</th>
-              <th className="text-right px-4 py-3 font-medium text-muted">Adelantos</th>
+          <thead>
+            {/* Cabeceras de grupo */}
+            <tr style={{ background: "#F5F0E8", borderBottom: "1px solid #E6E1DA" }}>
+              <th className="px-3 py-2 text-left" />
+              <th colSpan={4} className="px-3 py-2 text-center text-[11px] font-semibold tracking-widest uppercase" style={{ color: "#8C857B" }}>
+                Liquidación
+              </th>
+              <th colSpan={3} className="px-3 py-2 text-center text-[11px] font-semibold tracking-widest uppercase border-l border-slate-200" style={{ color: "#586E50" }}>
+                Extracto banco
+              </th>
+              <th colSpan={2} className="px-3 py-2 text-center text-[11px] font-semibold tracking-widest uppercase border-l border-slate-200" style={{ color: "#946E61" }}>
+                Conciliación
+              </th>
+            </tr>
+            <tr className="bg-surface border-b text-[11px] font-medium text-muted">
+              <th className="text-left px-3 py-2 whitespace-nowrap">Mes</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap">Facturado</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap text-olive">Efectivo</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap text-brand">Tarjeta</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap text-bronze">Fadaval</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap text-brand border-l border-slate-200">Tarjeta banco</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap text-bronze">Fadaval banco</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap" style={{ color: "#7C5C3B" }}>OCA banco</th>
+              <th className="text-right px-3 py-2 whitespace-nowrap border-l border-slate-200">Pendiente</th>
+              <th className="text-center px-3 py-2">Ok</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {monthDetails.map((m) => (
-              <tr key={`${m.año}-${m.mes}`} className="hover:bg-surface">
-                <td className="px-4 py-3 font-medium">{monthName(m.mes)} {m.año}</td>
-                <td className="px-4 py-3 text-center text-subtle text-xs">{m.semanas}</td>
-                <td className="px-4 py-3 text-right font-medium">{formatUYU(m.facturado)}</td>
-                <td className="px-4 py-3 text-right text-olive">{formatUYU(m.efectivo)}</td>
-                <td className="px-4 py-3 text-right text-brand">{formatUYU(m.tarjeta)}</td>
-                <td className="px-4 py-3 text-right text-bronze">{formatUYU(m.fadaval)}</td>
-                <td className="px-4 py-3 text-right text-terracotta">{formatUYU(m.gastos)}</td>
-                <td className="px-4 py-3 text-right text-orange-600">{m.adelanto > 0 ? formatUYU(m.adelanto) : "—"}</td>
-              </tr>
-            ))}
-            {!monthDetails.length && (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-subtle">Sin liquidaciones para este período</td></tr>
-            )}
-          </tbody>
-          {monthDetails.length > 0 && (
-            <tfoot className="border-t-2 bg-surface">
-              <tr>
-                <td className="px-4 py-3 font-bold text-slate-700">Total {añoFilter}</td>
-                <td className="px-4 py-3 text-center text-subtle text-xs">{monthDetails.reduce((s, m) => s + m.semanas, 0)}</td>
-                <td className="px-4 py-3 text-right font-bold">{formatUYU(totals.facturado)}</td>
-                <td className="px-4 py-3 text-right font-bold text-olive">{formatUYU(totals.efectivo)}</td>
-                <td className="px-4 py-3 text-right font-bold text-brand">{formatUYU(totals.tarjeta)}</td>
-                <td className="px-4 py-3 text-right font-bold text-bronze">{formatUYU(totals.fadaval)}</td>
-                <td className="px-4 py-3 text-right font-bold text-terracotta">{formatUYU(totals.gastos)}</td>
-                <td className="px-4 py-3 text-right font-bold text-orange-600">{formatUYU(totals.adelanto)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
+            {(() => {
+              // Unificar los meses de ambas fuentes ordenados desc
+              const allKeys = Array.from(new Set([
+                ...monthDetails.map(m => `${m.año}-${String(m.mes).padStart(2,"0")}`),
+                ...recon.map(r => `${r.año}-${String(r.mes).padStart(2,"0")}`),
+              ])).sort().reverse();
 
-      {/* ── Conciliación: Liquidación vs Extracto bancario ───────────────── */}
-      <div className="mb-6">
-        <h2 className="text-lg font-bold mb-1">Conciliación cobros</h2>
-        <p className="text-sm text-muted mb-4">
-          Tarjeta y Fadaval de la liquidación vs lo acreditado en el extracto bancario. El efectivo se muestra aparte — no pasa por banco.
-        </p>
+              const detailMap = new Map(monthDetails.map(m => [`${m.año}-${String(m.mes).padStart(2,"0")}`, m]));
+              const reconMap  = new Map(recon.map(r => [`${r.año}-${String(r.mes).padStart(2,"0")}`, r]));
 
-        {/* KPIs resumen */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Liquidado (tarjeta + Fadaval)</CardTitle>
-              <CardValue>{formatUYU(totalLiquidado)}</CardValue>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Cobrado en banco</CardTitle>
-              <CardValue className="text-olive">{formatUYU(totalCobrado)}</CardValue>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Pendiente a cobrar</CardTitle>
-              <CardValue className={Math.abs(totalPendiente) < 500 ? "text-olive" : totalPendiente > 0 ? "text-terracotta" : "text-ink"}>
-                {totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}
-              </CardValue>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Efectivo (fuera de banco)</CardTitle>
-              <CardValue className="text-muted">{formatUYU(recon.reduce((s, r) => s + r.efectivoLiq, 0))}</CardValue>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Tabla mes a mes */}
-        <div className="bg-white rounded-xl border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              {/* Cabeceras de grupo */}
-              <tr className="border-b" style={{ background: "#F5F0E8" }}>
-                <th className="px-4 py-2" />
-                <th colSpan={2} className="px-4 py-2 text-center text-xs font-semibold tracking-wide uppercase" style={{ color: "#8C857B" }}>Liquidación</th>
-                <th colSpan={3} className="px-4 py-2 text-center text-xs font-semibold tracking-wide uppercase border-l" style={{ color: "#8C857B" }}>Extracto banco</th>
-                <th colSpan={2} className="px-4 py-2 text-center text-xs font-semibold tracking-wide uppercase border-l" style={{ color: "#8C857B" }}>Resultado</th>
-              </tr>
-              <tr className="bg-surface border-b text-xs font-medium text-muted">
-                <th className="text-left px-4 py-2">Mes</th>
-                <th className="text-right px-4 py-2">Tarjeta</th>
-                <th className="text-right px-4 py-2">Fadaval</th>
-                <th className="text-right px-4 py-2 border-l">Tarjeta banco</th>
-                <th className="text-right px-4 py-2">Fadaval banco</th>
-                <th className="text-right px-4 py-2">OCA banco</th>
-                <th className="text-right px-4 py-2 border-l font-semibold">Pendiente</th>
-                <th className="text-center px-4 py-2">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {recon.map((r) => {
-                const liquidado = r.tarjetaLiq + r.fadavalLiq;
-                const cobrado   = r.tarjetaCob + r.fadavalCob + r.ocaCob;
+              return allKeys.map(k => {
+                const d = detailMap.get(k);
+                const r = reconMap.get(k);
+                const liquidado = (r?.tarjetaLiq ?? 0) + (r?.fadavalLiq ?? 0);
+                const cobrado   = (r?.tarjetaCob ?? 0) + (r?.fadavalCob ?? 0) + (r?.ocaCob ?? 0);
                 const diff      = liquidado - cobrado;
                 const ok        = Math.abs(diff) < 500;
-                const rowBg     = ok ? "" : diff > 5000 ? "bg-red-50" : "";
+                const rowBg     = !ok && diff > 5000 ? "bg-red-50" : "";
                 return (
-                  <tr key={`${r.año}-${r.mes}`} className={`hover:bg-surface ${rowBg}`}>
-                    <td className="px-4 py-3 font-medium whitespace-nowrap">{monthName(r.mes)} {r.año}</td>
+                  <tr key={k} className={`hover:bg-surface ${rowBg}`}>
+                    <td className="px-3 py-2.5 font-medium whitespace-nowrap">{d ? `${monthName(d.mes)} ${d.año}` : k}</td>
                     {/* Liquidación */}
-                    <td className="px-4 py-3 text-right text-brand">{r.tarjetaLiq > 0 ? formatUYU(r.tarjetaLiq) : "—"}</td>
-                    <td className="px-4 py-3 text-right text-bronze">{r.fadavalLiq > 0 ? formatUYU(r.fadavalLiq) : "—"}</td>
-                    {/* Banco */}
-                    <td className="px-4 py-3 text-right text-brand border-l">{r.tarjetaCob > 0 ? formatUYU(r.tarjetaCob) : "—"}</td>
-                    <td className="px-4 py-3 text-right text-bronze">{r.fadavalCob > 0 ? formatUYU(r.fadavalCob) : "—"}</td>
-                    <td className="px-4 py-3 text-right" style={{ color: "#7C5C3B" }}>{r.ocaCob > 0 ? formatUYU(r.ocaCob) : "—"}</td>
-                    {/* Resultado */}
-                    <td className={`px-4 py-3 text-right font-semibold border-l ${ok ? "text-olive" : diff > 0 ? "text-terracotta" : "text-muted"}`}>
+                    <td className="px-3 py-2.5 text-right font-medium">{d ? formatUYU(d.facturado) : "—"}</td>
+                    <td className="px-3 py-2.5 text-right text-olive">{d?.efectivo ? formatUYU(d.efectivo) : "—"}</td>
+                    <td className="px-3 py-2.5 text-right text-brand">{d?.tarjeta ? formatUYU(d.tarjeta) : "—"}</td>
+                    <td className="px-3 py-2.5 text-right text-bronze">{d?.fadaval ? formatUYU(d.fadaval) : "—"}</td>
+                    {/* Extracto banco */}
+                    <td className="px-3 py-2.5 text-right text-brand border-l border-slate-200">{r?.tarjetaCob ? formatUYU(r.tarjetaCob) : "—"}</td>
+                    <td className="px-3 py-2.5 text-right text-bronze">{r?.fadavalCob ? formatUYU(r.fadavalCob) : "—"}</td>
+                    <td className="px-3 py-2.5 text-right" style={{ color: "#7C5C3B" }}>{r?.ocaCob ? formatUYU(r.ocaCob) : "—"}</td>
+                    {/* Conciliación */}
+                    <td className={`px-3 py-2.5 text-right font-semibold border-l border-slate-200 ${ok ? "text-olive" : diff > 0 ? "text-terracotta" : "text-muted"}`}>
                       {diff === 0 ? "—" : (diff > 0 ? "+" : "") + formatUYU(diff)}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2.5 text-center">
                       {ok
-                        ? <CheckCircle className="w-4 h-4 text-green-500 mx-auto" />
-                        : <AlertCircle className="w-4 h-4 text-yellow-500 mx-auto" />
+                        ? <CheckCircle className="w-3.5 h-3.5 text-green-500 mx-auto" />
+                        : <AlertCircle className="w-3.5 h-3.5 text-yellow-500 mx-auto" />
                       }
                     </td>
                   </tr>
                 );
-              })}
-              {recon.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-subtle">Sin datos de conciliación para este período</td></tr>
-              )}
-            </tbody>
-            {recon.length > 0 && (
-              <tfoot className="border-t-2 bg-surface text-sm font-bold">
-                <tr>
-                  <td className="px-4 py-3 text-slate-700">Total {añoFilter}</td>
-                  <td className="px-4 py-3 text-right text-brand">{formatUYU(recon.reduce((s, r) => s + r.tarjetaLiq, 0))}</td>
-                  <td className="px-4 py-3 text-right text-bronze">{formatUYU(recon.reduce((s, r) => s + r.fadavalLiq, 0))}</td>
-                  <td className="px-4 py-3 text-right text-brand border-l">{formatUYU(recon.reduce((s, r) => s + r.tarjetaCob, 0))}</td>
-                  <td className="px-4 py-3 text-right text-bronze">{formatUYU(recon.reduce((s, r) => s + r.fadavalCob, 0))}</td>
-                  <td className="px-4 py-3 text-right" style={{ color: "#7C5C3B" }}>{formatUYU(recon.reduce((s, r) => s + r.ocaCob, 0))}</td>
-                  <td className={`px-4 py-3 text-right border-l ${Math.abs(totalPendiente) < 500 ? "text-olive" : "text-terracotta"}`}>
-                    {totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
+              });
+            })()}
+            {monthDetails.length === 0 && recon.length === 0 && (
+              <tr><td colSpan={10} className="px-4 py-12 text-center text-subtle">Sin datos para este período</td></tr>
             )}
-          </table>
-        </div>
-        <p className="text-xs text-subtle mt-2">
-          Pendiente = liquidado (tarjeta + Fadaval) − cobrado en banco · Positivo = falta acreditar · Negativo = cobro anticipado de mes anterior · ✓ = diferencia menor a $500
-        </p>
+          </tbody>
+          <tfoot className="border-t-2 bg-surface text-[11px] font-bold">
+            <tr>
+              <td className="px-3 py-2.5 text-slate-700">Total {añoFilter}</td>
+              <td className="px-3 py-2.5 text-right">{formatUYU(totals.facturado)}</td>
+              <td className="px-3 py-2.5 text-right text-olive">{formatUYU(totals.efectivo)}</td>
+              <td className="px-3 py-2.5 text-right text-brand">{formatUYU(totals.tarjeta)}</td>
+              <td className="px-3 py-2.5 text-right text-bronze">{formatUYU(totals.fadaval)}</td>
+              <td className="px-3 py-2.5 text-right text-brand border-l border-slate-200">{formatUYU(recon.reduce((s, r) => s + r.tarjetaCob, 0))}</td>
+              <td className="px-3 py-2.5 text-right text-bronze">{formatUYU(recon.reduce((s, r) => s + r.fadavalCob, 0))}</td>
+              <td className="px-3 py-2.5 text-right" style={{ color: "#7C5C3B" }}>{formatUYU(recon.reduce((s, r) => s + r.ocaCob, 0))}</td>
+              <td className={`px-3 py-2.5 text-right border-l border-slate-200 ${Math.abs(totalPendiente) < 500 ? "text-olive" : "text-terracotta"}`}>
+                {totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}
+              </td>
+              <td />
+            </tr>
+          </tfoot>
+        </table>
       </div>
+      <p className="text-xs text-subtle mb-8">
+        Pendiente = tarjeta + Fadaval liquidados − cobrado en banco · Positivo = falta acreditar · Negativo = cobro anticipado · ✓ = diferencia menor a $500
+      </p>
     </div>
   );
 }
