@@ -236,116 +236,145 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
         ))}
       </div>
 
-      {/* ── Tabla unificada: liquidación + extracto + conciliación por mes ── */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-base font-semibold text-ink">Detalle por mes</h2>
-          <div className="flex gap-4 text-xs text-muted">
-            <span>Liquidado (tar+fad): <strong className="text-ink">{formatUYU(totalLiquidado)}</strong></span>
-            <span>Cobrado en banco: <strong className="text-olive">{formatUYU(totalCobrado)}</strong></span>
-            <span>Pendiente: <strong className={Math.abs(totalPendiente) < 500 ? "text-olive" : "text-terracotta"}>{totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}</strong></span>
+      {/* ── Tablas de auditoría por canal ─────────────────────────────────── */}
+      {(() => {
+        const allKeys = Array.from(new Set([
+          ...monthDetails.map(m => `${m.año}-${String(m.mes).padStart(2,"0")}`),
+          ...recon.map(r => `${r.año}-${String(r.mes).padStart(2,"0")}`),
+        ])).sort().reverse();
+
+        const detailMap = new Map(monthDetails.map(m => [`${m.año}-${String(m.mes).padStart(2,"0")}`, m]));
+        const reconMap  = new Map(recon.map(r  => [`${r.año}-${String(r.mes).padStart(2,"0")}`, r]));
+
+        type AuditRow = { liq: number; banco: number };
+        type Canal = { title: string; color: string; rows: Map<string, AuditRow>; nota?: string };
+
+        // Efectivo: liquidación vs bank_statements banco=Efectivo (clasificado como ingreso)
+        // No pasa por extracto bancario tradicional — el banco side acá es 0 (no hay movimiento en extracto)
+        const efectivoRows = new Map<string, AuditRow>();
+        allKeys.forEach(k => {
+          const d = detailMap.get(k);
+          efectivoRows.set(k, { liq: d?.efectivo ?? 0, banco: 0 });
+        });
+
+        // Tarjeta
+        const tarjetaRows = new Map<string, AuditRow>();
+        allKeys.forEach(k => {
+          const d = detailMap.get(k);
+          const r = reconMap.get(k);
+          tarjetaRows.set(k, { liq: d?.tarjeta ?? 0, banco: r?.tarjetaCob ?? 0 });
+        });
+
+        // Fadaval
+        const fadavalRows = new Map<string, AuditRow>();
+        allKeys.forEach(k => {
+          const d = detailMap.get(k);
+          const r = reconMap.get(k);
+          fadavalRows.set(k, { liq: d?.fadaval ?? 0, banco: r?.fadavalCob ?? 0 });
+        });
+
+        // OCA (solo banco, no se carga en liquidación)
+        const ocaRows = new Map<string, AuditRow>();
+        allKeys.forEach(k => {
+          const r = reconMap.get(k);
+          ocaRows.set(k, { liq: 0, banco: r?.ocaCob ?? 0 });
+        });
+
+        // Total
+        const totalRows = new Map<string, AuditRow>();
+        allKeys.forEach(k => {
+          const d = detailMap.get(k);
+          const r = reconMap.get(k);
+          const liqTotal   = (d?.efectivo ?? 0) + (d?.tarjeta ?? 0) + (d?.fadaval ?? 0);
+          const bancoTotal = (r?.tarjetaCob ?? 0) + (r?.fadavalCob ?? 0) + (r?.ocaCob ?? 0);
+          totalRows.set(k, { liq: liqTotal, banco: bancoTotal });
+        });
+
+        const canales: Canal[] = [
+          { title: "Efectivo", color: "#586E50", rows: efectivoRows, nota: "El efectivo no transita por extracto bancario — la diferencia es el total en efectivo sin contrapartida en banco." },
+          { title: "Tarjeta", color: "#A3907A", rows: tarjetaRows },
+          { title: "Fadaval", color: "#A3907A", rows: fadavalRows },
+          { title: "OCA", color: "#7C5C3B", rows: ocaRows, nota: "OCA se registra solo en el banco (acreditación directa), no en la liquidación semanal." },
+          { title: "Total general", color: "#2E2B2A", rows: totalRows },
+        ];
+
+        const fmt = (n: number) => formatUYU(n);
+        const label = (k: string) => {
+          const d = detailMap.get(k);
+          if (d) return `${monthName(d.mes)} ${d.año}`;
+          const [y, m] = k.split("-");
+          return `${monthName(parseInt(m))} ${y}`;
+        };
+
+        return (
+          <div className="space-y-8 mb-4">
+            {canales.map(canal => {
+              const rows = Array.from(canal.rows.entries());
+              const totLiq   = rows.reduce((s, [, v]) => s + v.liq, 0);
+              const totBanco = rows.reduce((s, [, v]) => s + v.banco, 0);
+              const totDiff  = totLiq - totBanco;
+              return (
+                <div key={canal.title}>
+                  <h2 className="text-base font-bold mb-1" style={{ color: canal.color }}>{canal.title}</h2>
+                  {canal.nota && <p className="text-xs text-muted mb-2">{canal.nota}</p>}
+                  <div className="bg-white rounded-xl border overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-surface border-b text-xs font-medium text-muted">
+                        <tr>
+                          <th className="text-left px-4 py-2">Mes</th>
+                          <th className="text-right px-4 py-2">Liquidación</th>
+                          <th className="text-right px-4 py-2">Banco / Sistema</th>
+                          <th className="text-right px-4 py-2">Diferencia</th>
+                          <th className="text-center px-4 py-2">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {rows.map(([k, v]) => {
+                          const diff = v.liq - v.banco;
+                          const ok   = canal.title === "Efectivo" || Math.abs(diff) < 500;
+                          const skip = canal.title === "OCA" && v.liq === 0 && v.banco === 0;
+                          if (skip) return null;
+                          return (
+                            <tr key={k} className={`hover:bg-surface ${!ok && diff > 5000 ? "bg-red-50" : ""}`}>
+                              <td className="px-4 py-2.5 font-medium whitespace-nowrap">{label(k)}</td>
+                              <td className="px-4 py-2.5 text-right">{v.liq > 0 ? fmt(v.liq) : "—"}</td>
+                              <td className="px-4 py-2.5 text-right text-olive">{v.banco > 0 ? fmt(v.banco) : "—"}</td>
+                              <td className={`px-4 py-2.5 text-right font-semibold ${ok ? "text-olive" : diff > 0 ? "text-terracotta" : "text-muted"}`}>
+                                {diff === 0 ? "—" : (diff > 0 ? "+" : "") + fmt(diff)}
+                              </td>
+                              <td className="px-4 py-2.5 text-center">
+                                {canal.title === "Efectivo"
+                                  ? <span className="text-xs text-muted">—</span>
+                                  : ok
+                                    ? <CheckCircle className="w-3.5 h-3.5 text-green-500 mx-auto" />
+                                    : <AlertCircle className="w-3.5 h-3.5 text-yellow-500 mx-auto" />
+                                }
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="border-t-2 bg-surface text-xs font-bold">
+                        <tr>
+                          <td className="px-4 py-2.5">Total {añoFilter}</td>
+                          <td className="px-4 py-2.5 text-right">{fmt(totLiq)}</td>
+                          <td className="px-4 py-2.5 text-right text-olive">{fmt(totBanco)}</td>
+                          <td className={`px-4 py-2.5 text-right ${Math.abs(totDiff) < 500 ? "text-olive" : totDiff > 0 ? "text-terracotta" : "text-muted"}`}>
+                            {totDiff === 0 ? "—" : (totDiff > 0 ? "+" : "") + fmt(totDiff)}
+                          </td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border overflow-x-auto mb-6">
-        <table className="w-full text-sm">
-          <thead>
-            {/* Cabeceras de grupo */}
-            <tr style={{ background: "#F5F0E8", borderBottom: "1px solid #E6E1DA" }}>
-              <th className="px-3 py-2 text-left" />
-              <th colSpan={4} className="px-3 py-2 text-center text-[11px] font-semibold tracking-widest uppercase" style={{ color: "#8C857B" }}>
-                Liquidación
-              </th>
-              <th colSpan={3} className="px-3 py-2 text-center text-[11px] font-semibold tracking-widest uppercase border-l border-slate-200" style={{ color: "#586E50" }}>
-                Extracto banco
-              </th>
-              <th colSpan={2} className="px-3 py-2 text-center text-[11px] font-semibold tracking-widest uppercase border-l border-slate-200" style={{ color: "#946E61" }}>
-                Conciliación
-              </th>
-            </tr>
-            <tr className="bg-surface border-b text-[11px] font-medium text-muted">
-              <th className="text-left px-3 py-2 whitespace-nowrap">Mes</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap">Facturado</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap text-olive">Efectivo</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap text-brand">Tarjeta</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap text-bronze">Fadaval</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap text-brand border-l border-slate-200">Tarjeta banco</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap text-bronze">Fadaval banco</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap" style={{ color: "#7C5C3B" }}>OCA banco</th>
-              <th className="text-right px-3 py-2 whitespace-nowrap border-l border-slate-200">Pendiente</th>
-              <th className="text-center px-3 py-2">Ok</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {(() => {
-              // Unificar los meses de ambas fuentes ordenados desc
-              const allKeys = Array.from(new Set([
-                ...monthDetails.map(m => `${m.año}-${String(m.mes).padStart(2,"0")}`),
-                ...recon.map(r => `${r.año}-${String(r.mes).padStart(2,"0")}`),
-              ])).sort().reverse();
-
-              const detailMap = new Map(monthDetails.map(m => [`${m.año}-${String(m.mes).padStart(2,"0")}`, m]));
-              const reconMap  = new Map(recon.map(r => [`${r.año}-${String(r.mes).padStart(2,"0")}`, r]));
-
-              return allKeys.map(k => {
-                const d = detailMap.get(k);
-                const r = reconMap.get(k);
-                const liquidado = (r?.tarjetaLiq ?? 0) + (r?.fadavalLiq ?? 0);
-                const cobrado   = (r?.tarjetaCob ?? 0) + (r?.fadavalCob ?? 0) + (r?.ocaCob ?? 0);
-                const diff      = liquidado - cobrado;
-                const ok        = Math.abs(diff) < 500;
-                const rowBg     = !ok && diff > 5000 ? "bg-red-50" : "";
-                return (
-                  <tr key={k} className={`hover:bg-surface ${rowBg}`}>
-                    <td className="px-3 py-2.5 font-medium whitespace-nowrap">{d ? `${monthName(d.mes)} ${d.año}` : k}</td>
-                    {/* Liquidación */}
-                    <td className="px-3 py-2.5 text-right font-medium">{d ? formatUYU(d.facturado) : "—"}</td>
-                    <td className="px-3 py-2.5 text-right text-olive">{d?.efectivo ? formatUYU(d.efectivo) : "—"}</td>
-                    <td className="px-3 py-2.5 text-right text-brand">{d?.tarjeta ? formatUYU(d.tarjeta) : "—"}</td>
-                    <td className="px-3 py-2.5 text-right text-bronze">{d?.fadaval ? formatUYU(d.fadaval) : "—"}</td>
-                    {/* Extracto banco */}
-                    <td className="px-3 py-2.5 text-right text-brand border-l border-slate-200">{r?.tarjetaCob ? formatUYU(r.tarjetaCob) : "—"}</td>
-                    <td className="px-3 py-2.5 text-right text-bronze">{r?.fadavalCob ? formatUYU(r.fadavalCob) : "—"}</td>
-                    <td className="px-3 py-2.5 text-right" style={{ color: "#7C5C3B" }}>{r?.ocaCob ? formatUYU(r.ocaCob) : "—"}</td>
-                    {/* Conciliación */}
-                    <td className={`px-3 py-2.5 text-right font-semibold border-l border-slate-200 ${ok ? "text-olive" : diff > 0 ? "text-terracotta" : "text-muted"}`}>
-                      {diff === 0 ? "—" : (diff > 0 ? "+" : "") + formatUYU(diff)}
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      {ok
-                        ? <CheckCircle className="w-3.5 h-3.5 text-green-500 mx-auto" />
-                        : <AlertCircle className="w-3.5 h-3.5 text-yellow-500 mx-auto" />
-                      }
-                    </td>
-                  </tr>
-                );
-              });
-            })()}
-            {monthDetails.length === 0 && recon.length === 0 && (
-              <tr><td colSpan={10} className="px-4 py-12 text-center text-subtle">Sin datos para este período</td></tr>
-            )}
-          </tbody>
-          <tfoot className="border-t-2 bg-surface text-[11px] font-bold">
-            <tr>
-              <td className="px-3 py-2.5 text-slate-700">Total {añoFilter}</td>
-              <td className="px-3 py-2.5 text-right">{formatUYU(totals.facturado)}</td>
-              <td className="px-3 py-2.5 text-right text-olive">{formatUYU(totals.efectivo)}</td>
-              <td className="px-3 py-2.5 text-right text-brand">{formatUYU(totals.tarjeta)}</td>
-              <td className="px-3 py-2.5 text-right text-bronze">{formatUYU(totals.fadaval)}</td>
-              <td className="px-3 py-2.5 text-right text-brand border-l border-slate-200">{formatUYU(recon.reduce((s, r) => s + r.tarjetaCob, 0))}</td>
-              <td className="px-3 py-2.5 text-right text-bronze">{formatUYU(recon.reduce((s, r) => s + r.fadavalCob, 0))}</td>
-              <td className="px-3 py-2.5 text-right" style={{ color: "#7C5C3B" }}>{formatUYU(recon.reduce((s, r) => s + r.ocaCob, 0))}</td>
-              <td className={`px-3 py-2.5 text-right border-l border-slate-200 ${Math.abs(totalPendiente) < 500 ? "text-olive" : "text-terracotta"}`}>
-                {totalPendiente > 0 ? "+" : ""}{formatUYU(totalPendiente)}
-              </td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+        );
+      })()}
       <p className="text-xs text-subtle mb-8">
-        Pendiente = tarjeta + Fadaval liquidados − cobrado en banco · Positivo = falta acreditar · Negativo = cobro anticipado · ✓ = diferencia menor a $500
+        Diferencia positiva = liquidado pero no acreditado aún · Negativa = acreditado de más (cobro de mes anterior) · ✓ = diferencia menor a $500
       </p>
     </div>
   );
