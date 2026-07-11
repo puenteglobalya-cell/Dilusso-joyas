@@ -7,16 +7,27 @@ export const metadata = { title: "Extractos bancarios | Dilusso Joyas" };
 
 export default async function ExtractosPage() {
   const sb = createServerClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (sb.from("bank_statements") as any)
-    .select("banco, cuenta, moneda, fecha, saldo, debito, credito")
-    .order("fecha", { ascending: false });
 
   type BankRow = {
     banco: string; cuenta: string | null; moneda: string;
     fecha: string; saldo: number | null; debito: number | null; credito: number | null;
   };
-  const rows = (data ?? []) as BankRow[];
+
+  // Paginate to avoid Supabase 1000-row default limit
+  const PAGE = 1000;
+  let rows: BankRow[] = [];
+  let from = 0;
+  while (true) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (sb.from("bank_statements") as any)
+      .select("banco, cuenta, moneda, fecha, saldo, debito, credito")
+      .order("fecha", { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    rows = rows.concat(data as BankRow[]);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
 
   // Group by banco + moneda → separate "account"
   const byKey = rows.reduce<Record<string, BankRow[]>>((acc, r) => {

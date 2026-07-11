@@ -430,7 +430,9 @@ export function parseBBVAPdf(text: string): BankRow[] {
     if (inlineM) { cuenta = inlineM[1]; break; }
   }
 
+  // Match numeric amounts; also detect trailing minus for negative saldos (e.g. "20,50-")
   const NUM_PAT = /(\d{1,3}(?:\.\d{3})*,\d{2})/g;
+  const NEG_SALDO_PAT = /(\d{1,3}(?:\.\d{3})*,\d{2})-/;
   interface Pending { date: string; moneda: string; parts: string[] }
   const pending: Pending[] = [];
   let currentMoneda = "UYU";
@@ -463,7 +465,11 @@ export function parseBBVAPdf(text: string): BankRow[] {
     const allNums = [...combined.matchAll(NUM_PAT)].map(m => m[1]);
     if (allNums.length === 0) continue;
 
-    const saldo = parseUY(allNums[allNums.length - 1]);
+    // Detect negative saldo: "20,50-" → saldo = -20.50
+    const rawSaldoStr = allNums[allNums.length - 1];
+    const negMatch = combined.match(NEG_SALDO_PAT);
+    const isNegSaldo = negMatch && negMatch[1] === rawSaldoStr;
+    const saldo = isNegSaldo ? -parseUY(rawSaldoStr) : parseUY(rawSaldoStr);
     const amount = allNums.length >= 2 ? parseUY(allNums[allNums.length - 2]) : null;
 
     // Concept: everything before first number, strip embedded "fecha valor"
