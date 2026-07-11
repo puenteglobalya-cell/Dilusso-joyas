@@ -257,12 +257,12 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
           efectivoRows.set(k, { liq: d?.efectivo ?? 0, banco: 0 });
         });
 
-        // Tarjeta
+        // Tarjeta (incluye OCA banco — ambas son cobros con tarjeta)
         const tarjetaRows = new Map<string, AuditRow>();
         allKeys.forEach(k => {
           const d = detailMap.get(k);
           const r = reconMap.get(k);
-          tarjetaRows.set(k, { liq: d?.tarjeta ?? 0, banco: r?.tarjetaCob ?? 0 });
+          tarjetaRows.set(k, { liq: d?.tarjeta ?? 0, banco: (r?.tarjetaCob ?? 0) + (r?.ocaCob ?? 0) });
         });
 
         // Fadaval
@@ -271,13 +271,6 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
           const d = detailMap.get(k);
           const r = reconMap.get(k);
           fadavalRows.set(k, { liq: d?.fadaval ?? 0, banco: r?.fadavalCob ?? 0 });
-        });
-
-        // OCA (solo banco, no se carga en liquidación)
-        const ocaRows = new Map<string, AuditRow>();
-        allKeys.forEach(k => {
-          const r = reconMap.get(k);
-          ocaRows.set(k, { liq: 0, banco: r?.ocaCob ?? 0 });
         });
 
         // Total
@@ -292,9 +285,8 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
 
         const canales: Canal[] = [
           { title: "Efectivo", color: "#586E50", rows: efectivoRows, nota: "El efectivo no transita por extracto bancario — la diferencia es el total en efectivo sin contrapartida en banco." },
-          { title: "Tarjeta", color: "#A3907A", rows: tarjetaRows },
+          { title: "Tarjeta (incluye OCA)", color: "#A3907A", rows: tarjetaRows, nota: "Banco = acreditaciones tarjeta + OCA, ambas son cobros con tarjeta." },
           { title: "Fadaval", color: "#A3907A", rows: fadavalRows },
-          { title: "OCA", color: "#7C5C3B", rows: ocaRows, nota: "OCA se registra solo en el banco (acreditación directa), no en la liquidación semanal." },
           { title: "Total general", color: "#2E2B2A", rows: totalRows },
         ];
 

@@ -101,7 +101,42 @@ export async function POST(req: NextRequest) {
   const { data, error } = await (sb.from("asientos_manuales") as any).insert(rows).select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, asiento_id, lineas: data?.length ?? rows.length });
+  // Insertar también en bank_statements para que aparezca en Negocio/Personal/Extractos
+  const BANCO_MAP: Record<string, string> = {
+    "Banco BBVA":       "BBVA",
+    "Banco Itaú":       "Itaú",
+    "Banco Scotiabank": "Scotiabank",
+    "OCA Tarjeta":      "OCA",
+    "Itaú VISA":        "Itau-Card",
+    "Caja / Efectivo":  "Efectivo",
+  };
+
+  const bsRows = body.lineas
+    .filter(l => BANCO_MAP[l.cuenta])
+    .map(l => {
+      const importe = (l.debe ?? 0) - (l.haber ?? 0); // positivo = debito, negativo = credito
+      return {
+        banco:              BANCO_MAP[l.cuenta],
+        fecha:              body.fecha,
+        descripcion:        `[Asiento] ${body.descripcion}`,
+        debito:             importe > 0 ? importe : 0,
+        credito:            importe < 0 ? Math.abs(importe) : 0,
+        moneda:             l.moneda ?? "UYU",
+        tipo:               l.tipo === "ambos" ? "negocio" : (l.tipo ?? "negocio"),
+        categoria_negocio:  l.categoria_negocio ?? null,
+        categoria_personal: l.categoria_personal ?? null,
+        clasificado:        "Si",
+        asiento_id,
+      };
+    });
+
+  if (bsRows.length) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: bsErr } = await (sb.from("bank_statements") as any).insert(bsRows);
+    if (bsErr) console.error("asiento→bank_statements:", bsErr.message);
+  }
+
+  return NextResponse.json({ ok: true, asiento_id, lineas: data?.length ?? rows.length, bank_rows: bsRows.length });
 }
 
 // DELETE /api/asientos?asiento_id=UUID

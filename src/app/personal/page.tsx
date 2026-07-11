@@ -66,9 +66,9 @@ export default async function PersonalPage({ searchParams }: Props) {
     fechaHasta = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
     periodLabel = `${monthName(mesFilter)} ${añoFilter}`;
   } else if (periodo === "año") {
-    fechaDesde = `${TODAY_DATE.getFullYear()}-01-01`;
-    fechaHasta = `${TODAY_DATE.getFullYear() + 1}-01-01`;
-    periodLabel = `Año ${TODAY_DATE.getFullYear()}`;
+    fechaDesde = `${añoFilter}-01-01`;
+    fechaHasta = `${añoFilter + 1}-01-01`;
+    periodLabel = `Año ${añoFilter}`;
   } else {
     // Default: last 12 months
     const y = TODAY_DATE.getFullYear();
