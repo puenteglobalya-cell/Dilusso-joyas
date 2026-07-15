@@ -12,7 +12,7 @@ import { GRUPOS_METRICAS, CATEGORIAS_IGNORAR, CATEGORIA_NORMALIZAR } from "@/lib
 import { PeriodToggle } from "@/components/PeriodToggle";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Movimientos de Cecilia | Dilusso Joyas" };
+export const metadata = { title: "Finanzas Personales (Cecilia) | Dilusso Joyas" };
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | undefined }>;
@@ -197,7 +197,7 @@ export default async function PersonalPage({ searchParams }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#2E2B2A" }}>Movimientos de Cecilia</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "#2E2B2A" }}>Finanzas Personales (Cecilia)</h1>
           <p className="text-sm mt-0.5" style={{ color: "#8C857B" }}>{periodLabel} · {txs.length} movimientos</p>
         </div>
         <div className="flex items-center gap-3">
