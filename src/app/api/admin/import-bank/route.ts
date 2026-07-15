@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { parseBBVAXls, parseItauXls, parseOcaPdf, parseBBVAPdf, parseScotiabankPdf, parseItauCardPdf, detectXlsBanco, BankRow } from "@/lib/bank-parsers";
 import { clasificar } from "@/lib/clasificador";
-import { getTc } from "@/lib/tipo-cambio";
+import { getTc, fetchTcMap } from "@/lib/tipo-cambio";
 import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
@@ -99,12 +99,13 @@ export async function POST(req: NextRequest) {
     .select("keyword, tipo, cat_negocio, cat_personal");
 
   // Apply auto-classification and TC conversion
+  const tcMap = await fetchTcMap(sb);
   const enriched = newRows.map((r) => {
     const isSaldoAnterior = r.descripcion === "Saldo anterior";
     const clasi = isSaldoAnterior
       ? { clasificado: "No" as const, tipo: "", categoria_negocio: "", categoria_personal: "" }
       : clasificar(r.descripcion ?? "", customRules ?? []);
-    const tc = r.moneda === "USD" ? getTc(r.fecha) : null;
+    const tc = r.moneda === "USD" ? getTc(r.fecha, tcMap) : null;
     const importe_uyu = r.moneda === "USD" && tc
       ? ((r.credito ?? 0) - (r.debito ?? 0)) * tc
       : null;

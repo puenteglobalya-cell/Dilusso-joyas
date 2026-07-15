@@ -23,10 +23,26 @@ const TC_POR_MES: Record<string, number> = {
 
 export const TC_DEFAULT = 41.50;
 
-/** Retorna el TC para una fecha YYYY-MM-DD */
-export function getTc(fecha: string): number {
+/**
+ * Retorna el TC para una fecha YYYY-MM-DD.
+ * Si se pasa `dbRates` (tasas reales del BCU, ver fetchTcMap), se prioriza
+ * la cotización real de esa fecha exacta sobre la tabla hardcodeada de arriba.
+ */
+export function getTc(fecha: string, dbRates?: Map<string, number>): number {
+  const real = dbRates?.get(fecha);
+  if (real != null) return real;
   const mes = fecha.slice(0, 7); // "YYYY-MM"
   return TC_POR_MES[mes] ?? TC_DEFAULT;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchTcMap(sb: any): Promise<Map<string, number>> {
+  const { data } = await sb.from("exchange_rates").select("date, rate");
+  const map = new Map<string, number>();
+  for (const r of data ?? []) {
+    if (r.date && r.rate != null) map.set(r.date, r.rate);
+  }
+  return map;
 }
 
 /** Agrega o actualiza un TC para un mes */
