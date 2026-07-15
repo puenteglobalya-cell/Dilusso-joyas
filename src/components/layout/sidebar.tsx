@@ -4,21 +4,22 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Upload, Table2, AlertCircle, Briefcase,
-  User, Receipt, BookOpen, DollarSign, Users, Building2, StickyNote, Search, BookMarked, FileSearch, Zap,
+  User, Receipt, BookOpen, DollarSign, Users, Building2, StickyNote, Search, BookMarked, FileSearch, Zap, Layers,
 } from "lucide-react";
 import { LogoutButton } from "./logout-button";
 
 const navContador = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin", label: "Importar", icon: Upload, badgeKey: "missingMonths" },
+  { href: "/admin", label: "Administración", icon: Upload, badgeKey: "missingMonths" },
   { href: "/buscar", label: "Buscar", icon: Search },
-  { href: "/sin-conciliar", label: "Sin conciliar", icon: AlertCircle, badgeKey: "sinClasificar" },
+  { href: "/sin-conciliar", label: "Sin clasificar", icon: AlertCircle, badgeKey: "sinClasificar" },
   { href: "/negocio", label: "Negocio", icon: Briefcase },
   { href: "/extractos", label: "Extractos bancarios", icon: Building2 },
   { href: "/personal", label: "Movimientos de Cecilia", icon: User },
+  { href: "/consolidado", label: "Consolidado", icon: Layers },
   { href: "/liquidaciones", label: "Liquidaciones", icon: Receipt },
   { href: "/admin/facturas", label: "Facturas", icon: FileSearch },
-  { href: "/admin/reglas", label: "Reglas auto", icon: Zap },
+  { href: "/admin/reglas", label: "Reglas de clasificación", icon: Zap },
   { href: "/diccionario", label: "Diccionario", icon: BookOpen },
   { href: "/asientos", label: "Asientos manuales", icon: BookMarked },
   { href: "/notas", label: "Notas", icon: StickyNote },

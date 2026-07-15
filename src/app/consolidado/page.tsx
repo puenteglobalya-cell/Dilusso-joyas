@@ -126,14 +126,15 @@ export default async function ConsolidadoPage({ searchParams }: Props) {
             {all.map((r) => {
               const esIngreso = (r.credito ?? 0) > 0;
               const cat = r.tipo === "negocio" ? r.categoria_negocio : r.categoria_personal;
+              const borderColor = r.tipo === "negocio" ? "#C5A059" : r.tipo === "personal" ? "#A3907A" : r.tipo === "ambos" ? "#6B8CA3" : "transparent";
               return (
-                <tr key={r.id} className="hover:bg-surface">
+                <tr key={r.id} className="hover:bg-surface border-l-4" style={{ borderLeftColor: borderColor }}>
                   <td className="px-4 py-3 text-muted whitespace-nowrap">{formatDate(r.fecha)}</td>
                   <td className="px-4 py-3 font-medium">{r.banco}</td>
                   <td className="px-4 py-3 text-ink max-w-xs truncate">{r.descripcion ?? "—"}</td>
                   <td className="px-4 py-3">
                     {r.tipo ? (
-                      <Badge variant={r.tipo === "negocio" ? "default" : "outline"}>{r.tipo}</Badge>
+                      <Badge variant={r.tipo === "negocio" ? "default" : r.tipo === "ambos" ? "warning" : "outline"}>{r.tipo}</Badge>
                     ) : "—"}
                   </td>
                   <td className="px-4 py-3 text-muted">{cat ?? "—"}</td>

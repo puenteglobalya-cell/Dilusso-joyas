@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ CREATE POLICY "service_role_all" ON asientos_manuales FOR ALL USING (true);
 `;
 
 export async function GET() {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   return NextResponse.json({
     instrucciones: "Copiá el SQL de abajo y ejecutalo en el SQL Editor de Supabase (una sola vez)",
     sql: MIGRATION_SQL,

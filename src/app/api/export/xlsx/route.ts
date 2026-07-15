@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireUser } from "@/lib/admin-auth";
 import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const sp = req.nextUrl.searchParams;
   const tipo = sp.get("tipo");       // "negocio" | "personal" | null (todos)
   const banco = sp.get("banco");

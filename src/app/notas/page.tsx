@@ -61,6 +61,7 @@ export default function NotasPage() {
   }
 
   async function eliminar(id: string) {
+    if (!confirm("¿Eliminar esta nota?")) return;
     setNotas(prev => prev.filter(n => n.id !== id));
     await fetch("/api/admin/notas", {
       method: "DELETE",

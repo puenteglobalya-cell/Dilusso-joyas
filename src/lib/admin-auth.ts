@@ -4,6 +4,23 @@ import { getSupabaseServerClient, createServerClient } from "./supabase";
 type AuthOk = { ok: true; userId: string };
 type AuthFail = { ok: false; response: NextResponse };
 
+/** Any logged-in user (contador or cliente) — for read endpoints that aren't admin-only. */
+export async function requireUser(): Promise<AuthOk | AuthFail> {
+  let authClient;
+  try {
+    authClient = await getSupabaseServerClient();
+  } catch {
+    return { ok: false, response: NextResponse.json({ error: "No autorizado" }, { status: 401 }) };
+  }
+
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) {
+    return { ok: false, response: NextResponse.json({ error: "No autorizado" }, { status: 401 }) };
+  }
+
+  return { ok: true, userId: user.id };
+}
+
 export async function requireAdmin(): Promise<AuthOk | AuthFail> {
   let authClient;
   try {

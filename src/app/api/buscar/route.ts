@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireUser } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 // GET /api/buscar?q=texto&banco=BBVA&desde=2025-01-01&hasta=2025-12-31&tipo=negocio
 export async function GET(req: NextRequest) {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const q = req.nextUrl.searchParams.get("q")?.trim();
   const banco = req.nextUrl.searchParams.get("banco");
   const desde = req.nextUrl.searchParams.get("desde");

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireUser } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const { searchParams } = new URL(req.url);
   const tipo = searchParams.get("tipo") as "negocio" | "personal" | null;
   const categoria = searchParams.get("categoria");
