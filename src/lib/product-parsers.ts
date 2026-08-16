@@ -59,6 +59,69 @@ function dateStr(v: unknown): string | null {
   return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : null;
 }
 
+export type SyncStatusRow = {
+  codigo_dl: string;
+  en_precios: boolean;
+  en_checklist: boolean;
+  en_zureo: boolean;
+  nombre: string | null;
+};
+
+/**
+ * Cruza las hojas CHECKLIST_JOYAS, PRECIOS_JOYAS y CARGA_ZUREO_JOYAS del archivo
+ * SISTEMA_JOYAS para detectar códigos que quedaron fuera de alguno de los 3 sistemas
+ * (ingreso físico / costeo / punto de venta).
+ */
+export function parseJoyasSyncStatus(buffer: ArrayBuffer): SyncStatusRow[] {
+  const wb = XLSX.read(buffer, { type: "array", cellDates: true });
+
+  const wsChecklist = wb.Sheets["CHECKLIST_JOYAS"];
+  const wsPrecios = wb.Sheets["PRECIOS_JOYAS"];
+  const wsZureo = wb.Sheets["CARGA_ZUREO_JOYAS"];
+  if (!wsChecklist || !wsPrecios || !wsZureo) {
+    throw new Error('Faltan hojas "CHECKLIST_JOYAS", "PRECIOS_JOYAS" o "CARGA_ZUREO_JOYAS" en el archivo.');
+  }
+
+  const checklistRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wsChecklist, { defval: null });
+  const preciosRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wsPrecios, { defval: null });
+  const zureoRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wsZureo, { defval: null });
+
+  const nombres = new Map<string, string | null>();
+  const checklistCodes = new Set<string>();
+  for (const r of checklistRows) {
+    const c = str(r["CODIGO_DL"]);
+    if (!c) continue;
+    checklistCodes.add(c);
+  }
+  const preciosCodes = new Set<string>();
+  for (const r of preciosRows) {
+    const c = str(r["CODIGO_DL"]);
+    if (!c) continue;
+    preciosCodes.add(c);
+    nombres.set(c, str(r["NOMBRE"]));
+  }
+  const zureoCodes = new Set<string>();
+  for (const r of zureoRows) {
+    const c = str(r["Codigo DL"]);
+    if (!c || c.length < 2) continue; // descarta filas basura (comas sueltas, etc.)
+    zureoCodes.add(c);
+    if (!nombres.has(c)) nombres.set(c, str(r["NOMBRE"]));
+  }
+
+  const allCodes = new Set([...checklistCodes, ...preciosCodes, ...zureoCodes]);
+  const out: SyncStatusRow[] = [];
+  for (const c of allCodes) {
+    out.push({
+      codigo_dl: c,
+      en_precios: preciosCodes.has(c),
+      en_checklist: checklistCodes.has(c),
+      en_zureo: zureoCodes.has(c),
+      nombre: nombres.get(c) ?? null,
+    });
+  }
+  return out;
+}
+
 /** Sheet "PRECIOS_JOYAS" del archivo SISTEMA_JOYAS */
 export function parseJoyas(buffer: ArrayBuffer): ProductRow[] {
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });

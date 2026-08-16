@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/admin-auth";
-import { computeAlertas, ProductAlertRow } from "@/lib/productos-alertas";
+import { computeAlertas, computeSyncAlertas, computeReposicionAlertas, ProductAlertRow, SyncAlertRow } from "@/lib/productos-alertas";
 
 export const runtime = "nodejs";
 
@@ -24,7 +24,7 @@ export async function GET() {
   while (true) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (sb.from("products") as any)
-      .select("id, tipo_producto, codigo_dl, nombre, proveedor, familia, costo_compra, costo_total, precio_venta, precio_calculado, precio_reposicion, pct_utilidad, stock, control_factores, peso, marca, medida, color_metal, color_piedra, fecha_ingreso")
+      .select("id, tipo_producto, codigo_dl, nombre, proveedor, familia, costo_compra, costo_total, precio_venta, precio_calculado, precio_reposicion, pct_utilidad, stock, control_factores, peso, marca, medida, color_metal, color_piedra, fecha_ingreso, material")
       .range(from, from + PAGE - 1);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data || data.length === 0) break;
@@ -38,6 +38,19 @@ export async function GET() {
   }
 
   const alertas = computeAlertas(rows);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: syncRows } = await (sb.from("product_sync_status") as any)
+    .select("codigo_dl, nombre, en_precios, en_checklist, en_zureo");
+  if (syncRows && syncRows.length > 0) {
+    alertas.push(...computeSyncAlertas(syncRows as SyncAlertRow[]));
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: metalPrices } = await (sb.from("metal_prices") as any).select("metal, precio_uyu_gramo");
+  if (metalPrices && metalPrices.length > 0) {
+    alertas.push(...computeReposicionAlertas(rows, metalPrices));
+  }
 
   // ── Resumen de gestión ──────────────────────────────────────────────
   const porFamilia = new Map<string, { costo: number; venta: number; stock: number; n: number }>();

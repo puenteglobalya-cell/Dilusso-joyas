@@ -16,6 +16,8 @@ export type ProductAlertRow = {
   medida: string | null;
   color_metal: string | null;
   color_piedra: string | null;
+  fecha_ingreso: string | null;
+  material: string | null;
 };
 
 export type ProductAlert = {
@@ -29,7 +31,9 @@ export type ProductAlert = {
     | "grupo_precio_inconsistente"
     | "gap_venta_calculado"
     | "marca_desviada"
-    | "sin_calculo_automatico";
+    | "sin_calculo_automatico"
+    | "stock_inmovilizado"
+    | "desincronizado_erp";
   severidad: "alta" | "media" | "baja";
   titulo: string;
   detalle: string;
@@ -203,6 +207,119 @@ export function computeAlertas(rows: ProductAlertRow[]): ProductAlert[] {
       titulo: `Marca(s) con margen sistemáticamente por encima del resto: ${marcaDesviada.map(m => `${m.marca} (+${Math.round(m.avg * 100)}%)`).join(", ")}`,
       detalle: "Todas las unidades de esta marca están vendidas por encima de lo que da la fórmula de precio — probablemente intencional, pero conviene confirmarlo.",
       productos: [],
+    });
+  }
+
+  // 8. Stock inmovilizado — ingresó hace más de 180/360 días y todavía figura con stock
+  const hoy = Date.now();
+  const DIA_MS = 24 * 60 * 60 * 1000;
+  const stockViejo = rows.filter(r => {
+    if (!r.fecha_ingreso || !r.stock || r.stock <= 0) return false;
+    const dias = (hoy - new Date(r.fecha_ingreso).getTime()) / DIA_MS;
+    return dias >= 180;
+  });
+  if (stockViejo.length > 0) {
+    const muyViejo = stockViejo.filter(r => {
+      const dias = (hoy - new Date(r.fecha_ingreso!).getTime()) / DIA_MS;
+      return dias >= 360;
+    });
+    alertas.push({
+      tipo: "stock_inmovilizado",
+      severidad: muyViejo.length > 0 ? "media" : "baja",
+      titulo: `${stockViejo.length} producto(s) con stock ingresado hace 180+ días (${muyViejo.length} hace 360+ días)`,
+      detalle: "Capital inmovilizado en vitrina sin evidencia de rotación reciente — candidatos a liquidar, rebajar o promocionar. (Aproximado: no tenemos fecha de última venta, solo fecha de ingreso.)",
+      productos: stockViejo.map(r => ({ id: r.id, codigo_dl: r.codigo_dl, nombre: r.nombre })),
+    });
+  }
+
+  return alertas;
+}
+
+const REPOSICION_UMBRAL = 0.1; // 10% de erosión de margen por suba de costo del metal
+
+export type MetalPrice = { metal: string; precio_uyu_gramo: number };
+
+/**
+ * Compara el margen histórico (costo de compra al momento de ingreso) contra el margen
+ * que quedaría si hubiera que reponer ese mismo peso de metal a la cotización actual.
+ * Solo aplica a joyas con MATERIAL == PLATA 925 / ORO 10K / ORO 18K y PESO cargado —
+ * el resto de los materiales (enchapados, combinaciones) no tiene cotización de mercado directa.
+ */
+export function computeReposicionAlertas(
+  rows: (ProductAlertRow & { peso: number | null })[],
+  metalPrices: MetalPrice[]
+): ProductAlert[] {
+  const alertas: ProductAlert[] = [];
+  const precioPorMetal = new Map(metalPrices.map(m => [m.metal, m.precio_uyu_gramo]));
+  if (precioPorMetal.size === 0) return alertas;
+
+  const erosionados: { r: ProductAlertRow; margenHistorico: number; margenReposicion: number }[] = [];
+  for (const r of rows) {
+    const precioGramo = r.material ? precioPorMetal.get(r.material) : undefined;
+    if (!precioGramo || !r.peso || !r.precio_venta || !r.costo_total) continue;
+    const costoReposicion = r.peso * precioGramo;
+    if (costoReposicion <= r.costo_total) continue; // el metal no subió lo suficiente para importar
+    const margenHistorico = (r.precio_venta - r.costo_total) / r.precio_venta;
+    const margenReposicion = (r.precio_venta - costoReposicion) / r.precio_venta;
+    if (margenHistorico - margenReposicion >= REPOSICION_UMBRAL) {
+      erosionados.push({ r, margenHistorico, margenReposicion });
+    }
+  }
+
+  if (erosionados.length > 0) {
+    alertas.push({
+      tipo: "margen_bajo",
+      severidad: "media",
+      titulo: `${erosionados.length} producto(s) con margen erosionado si hay que reponer stock a precio de metal actual`,
+      detalle: `Vendidos con margen histórico de ~${Math.round((erosionados.reduce((a, x) => a + x.margenHistorico, 0) / erosionados.length) * 100)}%, pero repondrían con ~${Math.round((erosionados.reduce((a, x) => a + x.margenReposicion, 0) / erosionados.length) * 100)}% al precio de metal cargado — se está "comiendo" capital en vez de reponerlo.`,
+      productos: erosionados.map(x => ({ id: x.r.id, codigo_dl: x.r.codigo_dl, nombre: x.r.nombre })),
+    });
+  }
+  return alertas;
+}
+
+export type SyncAlertRow = {
+  codigo_dl: string;
+  nombre: string | null;
+  en_precios: boolean;
+  en_checklist: boolean;
+  en_zureo: boolean;
+};
+
+/** Alertas de sincronización entre Checklist de ingreso, planilla de costos y carga a Zureo (ERP). */
+export function computeSyncAlertas(rows: SyncAlertRow[]): ProductAlert[] {
+  const alertas: ProductAlert[] = [];
+
+  const faltaEnZureo = rows.filter(r => r.en_checklist && !r.en_zureo);
+  if (faltaEnZureo.length > 0) {
+    alertas.push({
+      tipo: "desincronizado_erp",
+      severidad: "alta",
+      titulo: `${faltaEnZureo.length} código(s) ingresados físicamente pero no cargados en Zureo`,
+      detalle: "Van a faltar en el punto de venta y en el control de inventario del ERP hasta que se exporten manualmente.",
+      productos: faltaEnZureo.map(r => ({ id: r.codigo_dl, codigo_dl: r.codigo_dl, nombre: r.nombre })),
+    });
+  }
+
+  const faltaEnPrecios = rows.filter(r => r.en_checklist && !r.en_precios);
+  if (faltaEnPrecios.length > 0) {
+    alertas.push({
+      tipo: "desincronizado_erp",
+      severidad: "alta",
+      titulo: `${faltaEnPrecios.length} código(s) en el checklist de ingreso pero sin costeo en PRECIOS_JOYAS`,
+      detalle: "No tienen costo ni precio calculado — no se puede validar margen ni exportarlos correctamente.",
+      productos: faltaEnPrecios.map(r => ({ id: r.codigo_dl, codigo_dl: r.codigo_dl, nombre: r.nombre })),
+    });
+  }
+
+  const soloEnZureo = rows.filter(r => r.en_zureo && !r.en_checklist);
+  if (soloEnZureo.length > 0) {
+    alertas.push({
+      tipo: "desincronizado_erp",
+      severidad: "media",
+      titulo: `${soloEnZureo.length} código(s) cargados en Zureo sin registro en el checklist de ingreso`,
+      detalle: "Puede ser normal (carga histórica) o indicar que se saltearon el control de ingreso físico.",
+      productos: soloEnZureo.map(r => ({ id: r.codigo_dl, codigo_dl: r.codigo_dl, nombre: r.nombre })),
     });
   }
 

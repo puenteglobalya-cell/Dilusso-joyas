@@ -33,6 +33,65 @@ function money(n: number) {
   return n.toLocaleString("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 });
 }
 
+const METALES = ["PLATA 925", "ORO 10K", "ORO 18K"] as const;
+
+function MetalPricesBox({ onSaved }: { onSaved: () => void }) {
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/metal-prices").then(r => r.json()).then(d => {
+      const map: Record<string, string> = {};
+      for (const p of d.prices ?? []) map[p.metal] = String(p.precio_uyu_gramo);
+      setPrices(map);
+    });
+  }, []);
+
+  async function save(metal: string) {
+    const valor = parseFloat(prices[metal]);
+    if (!valor || valor <= 0) return;
+    setSaving(metal);
+    try {
+      await fetch("/api/admin/metal-prices", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metal, precio_uyu_gramo: valor }),
+      });
+      onSaved();
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border p-5">
+      <h3 className="text-sm font-semibold mb-1">Cotización de metal (precio de reposición)</h3>
+      <p className="text-xs text-muted mb-3">Cargá el precio actual del gramo en UYU para detectar productos cuyo margen se erosiona si hay que reponer stock hoy.</p>
+      <div className="grid grid-cols-3 gap-3">
+        {METALES.map(metal => (
+          <div key={metal} className="flex flex-col gap-1">
+            <label className="text-xs text-subtle">{metal} ($/g)</label>
+            <div className="flex gap-1">
+              <input
+                type="number"
+                value={prices[metal] ?? ""}
+                onChange={e => setPrices(p => ({ ...p, [metal]: e.target.value }))}
+                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+              />
+              <button
+                onClick={() => save(metal)}
+                disabled={saving === metal}
+                className="h-8 px-2 text-xs bg-brand hover:bg-brand-dark text-white rounded disabled:opacity-50"
+              >
+                {saving === metal ? "…" : "Guardar"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function UploadBox({ tipo, label }: { tipo: "joya" | "reloj"; label: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -120,6 +179,8 @@ export function ProductosPanel() {
         <UploadBox tipo="joya" label="Catálogo de Joyas (SISTEMA_JOYAS.xlsx)" />
         <UploadBox tipo="reloj" label="Catálogo de Relojes (SISTEMA_RELOJES.xlsx)" />
       </div>
+
+      <MetalPricesBox onSaved={load} />
 
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold">Diagnóstico de gestión</h2>

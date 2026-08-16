@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { parseJoyas, parseRelojes, ProductRow } from "@/lib/product-parsers";
+import { parseJoyas, parseRelojes, parseJoyasSyncStatus, ProductRow } from "@/lib/product-parsers";
 import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
@@ -47,6 +47,26 @@ export async function POST(req: NextRequest) {
     else upsertError = error.message;
   }
 
+  // Para joyas, además cruzamos CHECKLIST_JOYAS / PRECIOS_JOYAS / CARGA_ZUREO_JOYAS
+  // para detectar códigos que quedaron fuera de alguno de los 3 sistemas.
+  let syncUpserted = 0;
+  let syncError: string | null = null;
+  if (tipo === "joya") {
+    try {
+      const syncRows = parseJoyasSyncStatus(buffer);
+      const withUpdated = syncRows.map(r => ({ ...r, updated_at: new Date().toISOString() }));
+      for (let i = 0; i < withUpdated.length; i += CHUNK) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (sb.from("product_sync_status") as any)
+          .upsert(withUpdated.slice(i, i + CHUNK), { onConflict: "codigo_dl" });
+        if (!error) syncUpserted += Math.min(CHUNK, withUpdated.length - i);
+        else syncError = error.message;
+      }
+    } catch (e) {
+      syncError = e instanceof Error ? e.message : "Error al cruzar hojas de sincronización";
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     upserted,
@@ -54,5 +74,6 @@ export async function POST(req: NextRequest) {
     tipo,
     filename: file.name,
     ...(upsertError ? { upsertError } : {}),
+    ...(tipo === "joya" ? { syncUpserted, ...(syncError ? { syncError } : {}) } : {}),
   });
 }
