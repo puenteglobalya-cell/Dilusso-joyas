@@ -8,6 +8,10 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { TxTable } from "@/components/TxTable";
 import { KpiCard } from "@/components/ui/KpiDrawer";
 import { PeriodToggle } from "@/components/PeriodToggle";
+import { NegocioSubTabs } from "@/components/negocio/sub-tabs";
+import { ProductosPanel } from "@/components/admin/ProductosPanel";
+import { IndicadoresPanel } from "@/components/admin/CockpitPanel";
+import { SegmentosPanel } from "@/components/negocio/SegmentosPanel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Negocio | Dilusso Joyas" };
@@ -45,6 +49,21 @@ const TODAY_DATE = new Date();
 
 export default async function NegocioPage({ searchParams }: Props) {
   const sp = await searchParams;
+
+  if (sp.sub === "productos" || sp.sub === "indicadores" || sp.sub === "segmentos") {
+    return (
+      <div className="p-8 max-w-7xl">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold" style={{ color: "#2E2B2A" }}>Negocio</h1>
+        </div>
+        <NegocioSubTabs />
+        {sp.sub === "productos" && <ProductosPanel />}
+        {sp.sub === "indicadores" && <IndicadoresPanel />}
+        {sp.sub === "segmentos" && <SegmentosPanel />}
+      </div>
+    );
+  }
+
   const sb = createServerClient();
   const mesFilter = sp.mes ? parseInt(sp.mes) : null;
   const añoFilter = sp.año ? parseInt(sp.año) : TODAY_DATE.getFullYear();
@@ -201,6 +220,8 @@ export default async function NegocioPage({ searchParams }: Props) {
           <ExportButtons params={{ tipo: "negocio", año: String(añoFilter), ...(mesFilter ? { mes: String(mesFilter) } : {}) }} />
         </div>
       </div>
+
+      <NegocioSubTabs />
 
       <div className="mb-8">
         <TransactionFilters />
