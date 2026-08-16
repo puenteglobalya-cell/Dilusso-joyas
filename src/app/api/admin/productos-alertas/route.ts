@@ -108,5 +108,18 @@ export async function GET() {
     concentracion_proveedores: concentracionProveedores,
   };
 
-  return NextResponse.json({ alertas, resumen, total_productos: rows.length });
+  const productos = rows.map(r => ({
+    id: r.id,
+    tipo_producto: r.tipo_producto,
+    codigo_dl: r.codigo_dl,
+    nombre: r.nombre,
+    familia: r.familia,
+    proveedor: r.proveedor,
+    costo_total: r.costo_total,
+    precio_venta: r.precio_venta,
+    pct_utilidad: r.pct_utilidad,
+    stock: r.stock,
+  }));
+
+  return NextResponse.json({ alertas, resumen, total_productos: rows.length, productos });
 }

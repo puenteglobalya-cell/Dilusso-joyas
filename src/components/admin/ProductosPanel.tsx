@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { Upload, AlertTriangle, AlertCircle, Info, RefreshCw } from "lucide-react";
 
 type ProductAlert = {
@@ -8,6 +8,19 @@ type ProductAlert = {
   titulo: string;
   detalle: string;
   productos: { id: string; codigo_dl: string; nombre: string | null }[];
+};
+
+type Producto = {
+  id: string;
+  tipo_producto: "joya" | "reloj";
+  codigo_dl: string;
+  nombre: string | null;
+  familia: string | null;
+  proveedor: string | null;
+  costo_total: number | null;
+  precio_venta: number | null;
+  pct_utilidad: number | null;
+  stock: number | null;
 };
 
 type Resumen = {
@@ -31,6 +44,37 @@ const SEVERIDAD_ICON: Record<string, React.ReactNode> = {
 
 function money(n: number) {
   return n.toLocaleString("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 });
+}
+
+function ProductosDetalle({ productos }: { productos: Producto[] }) {
+  return (
+    <div className="mt-2 mb-1 overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left text-subtle border-b">
+            <th className="py-1.5 font-medium">Código</th>
+            <th className="py-1.5 font-medium">Nombre</th>
+            <th className="py-1.5 font-medium text-right">Costo</th>
+            <th className="py-1.5 font-medium text-right">Precio venta</th>
+            <th className="py-1.5 font-medium text-right">Margen</th>
+            <th className="py-1.5 font-medium text-right">Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          {productos.map(p => (
+            <tr key={p.id} className="border-b border-gray-50">
+              <td className="py-1">{p.codigo_dl}</td>
+              <td className="py-1">{p.nombre ?? "—"}</td>
+              <td className="py-1 text-right">{p.costo_total != null ? money(p.costo_total) : "—"}</td>
+              <td className="py-1 text-right">{p.precio_venta != null ? money(p.precio_venta) : "—"}</td>
+              <td className="py-1 text-right">{p.pct_utilidad != null ? `${Math.round(p.pct_utilidad * 100)}%` : "—"}</td>
+              <td className="py-1 text-right">{p.stock ?? "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 const METALES = ["PLATA 925", "ORO 10K", "ORO 18K"] as const;
@@ -146,9 +190,12 @@ function UploadBox({ tipo, label }: { tipo: "joya" | "reloj"; label: string }) {
 export function ProductosPanel() {
   const [alertas, setAlertas] = useState<ProductAlert[] | null>(null);
   const [resumen, setResumen] = useState<Resumen | null>(null);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [totalProductos, setTotalProductos] = useState(0);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [familiaAbierta, setFamiliaAbierta] = useState<string | null>(null);
+  const [proveedorAbierto, setProveedorAbierto] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -158,6 +205,7 @@ export function ProductosPanel() {
       setAlertas(data.alertas ?? []);
       setResumen(data.resumen ?? null);
       setTotalProductos(data.total_productos ?? 0);
+      setProductos(data.productos ?? []);
     } finally {
       setLoading(false);
     }
@@ -225,12 +273,24 @@ export function ProductosPanel() {
             </thead>
             <tbody>
               {resumen.margen_por_familia.map(f => (
-                <tr key={f.familia} className="border-b border-gray-50">
-                  <td className="py-1.5">{f.familia}</td>
-                  <td className="py-1.5 text-right">{f.n}</td>
-                  <td className="py-1.5 text-right">{f.margen_pct != null ? `${f.margen_pct}%` : "—"}</td>
-                  <td className="py-1.5 text-right">{money(f.valor_stock)}</td>
-                </tr>
+                <Fragment key={f.familia}>
+                  <tr
+                    className="border-b border-gray-50 cursor-pointer hover:bg-surface"
+                    onClick={() => setFamiliaAbierta(prev => prev === f.familia ? null : f.familia)}
+                  >
+                    <td className="py-1.5">{f.familia}</td>
+                    <td className="py-1.5 text-right">{f.n}</td>
+                    <td className="py-1.5 text-right">{f.margen_pct != null ? `${f.margen_pct}%` : "—"}</td>
+                    <td className="py-1.5 text-right">{money(f.valor_stock)}</td>
+                  </tr>
+                  {familiaAbierta === f.familia && (
+                    <tr>
+                      <td colSpan={4}>
+                        <ProductosDetalle productos={productos.filter(p => `${p.tipo_producto} / ${p.familia ?? "Sin familia"}` === f.familia)} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -250,11 +310,23 @@ export function ProductosPanel() {
             </thead>
             <tbody>
               {resumen.concentracion_proveedores.slice(0, 10).map(p => (
-                <tr key={p.proveedor} className="border-b border-gray-50">
-                  <td className="py-1.5">{p.proveedor}</td>
-                  <td className="py-1.5 text-right">{p.n}</td>
-                  <td className="py-1.5 text-right">{p.pct_del_total}%</td>
-                </tr>
+                <Fragment key={p.proveedor}>
+                  <tr
+                    className="border-b border-gray-50 cursor-pointer hover:bg-surface"
+                    onClick={() => setProveedorAbierto(prev => prev === p.proveedor ? null : p.proveedor)}
+                  >
+                    <td className="py-1.5">{p.proveedor}</td>
+                    <td className="py-1.5 text-right">{p.n}</td>
+                    <td className="py-1.5 text-right">{p.pct_del_total}%</td>
+                  </tr>
+                  {proveedorAbierto === p.proveedor && (
+                    <tr>
+                      <td colSpan={3}>
+                        <ProductosDetalle productos={productos.filter(prod => (prod.proveedor ?? "Sin proveedor") === p.proveedor)} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
