@@ -28,7 +28,8 @@ export type ProductAlert = {
     | "precio_bajo_reposicion"
     | "grupo_precio_inconsistente"
     | "gap_venta_calculado"
-    | "marca_desviada";
+    | "marca_desviada"
+    | "sin_calculo_automatico";
   severidad: "alta" | "media" | "baja";
   titulo: string;
   detalle: string;
@@ -147,7 +148,7 @@ export function computeAlertas(rows: ProductAlertRow[]): ProductAlert[] {
   // 6. Precio de venta muy por encima del precio calculado por fórmula (ajuste manual grande)
   const gaps = rows
     .map(r => {
-      if (!r.precio_venta || !r.precio_calculado) return null;
+      if (!r.precio_venta || r.precio_calculado === null || r.precio_calculado === 0) return null;
       const gap = (r.precio_venta - r.precio_calculado) / r.precio_calculado;
       return { r, gap };
     })
@@ -162,11 +163,20 @@ export function computeAlertas(rows: ProductAlertRow[]): ProductAlert[] {
     });
   }
 
-  // 7. Marca con desviación sistemática vs el resto (todas las unidades de esa marca por encima/debajo del cálculo)
-  const porMarca = new Map<string, { r: ProductAlertRow; gap: number }[]>();
-  for (const x of gaps.length ? gaps : []) {
-    // reuse computed gaps but need full set (not just threshold) for marca comparison — recompute below
+  // 6b. Precio calculado en 0 — la fórmula de factor no corrió (ej. factor de material no encontrado)
+  // y el precio de venta quedó 100% a criterio manual, sin ancla de costo/margen automatizada.
+  const sinCalculo = rows.filter(r => r.precio_venta && r.precio_calculado === 0);
+  if (sinCalculo.length > 0) {
+    alertas.push({
+      tipo: "sin_calculo_automatico",
+      severidad: "alta",
+      titulo: `${sinCalculo.length} producto(s) con PRECIO_CALCULADO en $0 pese a tener precio de venta cargado`,
+      detalle: "La fórmula de factor no encontró el multiplicador correspondiente (revisar FACTORES MATERIAL) — el precio de venta se cargó manualmente sin control automatizado de margen.",
+      productos: sinCalculo.map(r => ({ id: r.id, codigo_dl: r.codigo_dl, nombre: r.nombre })),
+    });
   }
+
+  // 7. Marca con desviación sistemática vs el resto (todas las unidades de esa marca por encima/debajo del cálculo)
   const allGapsByMarca = new Map<string, number[]>();
   for (const r of rows) {
     if (!r.marca || !r.precio_venta || !r.precio_calculado) continue;
