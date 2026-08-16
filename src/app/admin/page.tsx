@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FolderUp, Grid3x3, Copy, Wrench, FileCheck2, Tag } from "lucide-react";
+import { FolderUp, Grid3x3, Copy, Wrench, FileCheck2, Tag, Gem } from "lucide-react";
 
 import { BulkUploadCard } from "@/components/admin/BulkUploadCard";
 import { SingleUploadCard } from "@/components/admin/SingleUploadCard";
@@ -10,8 +10,9 @@ import { DuplicadosPanel } from "@/components/admin/DuplicadosPanel";
 import { ChequesPanel } from "@/components/admin/ChequesPanel";
 import { TcPanel, TransferPanel, AplicarReglasPanel, ExcelPanel } from "@/components/admin/HerramientasPanels";
 import { CategoriasPanel } from "@/components/admin/CategoriasPanel";
+import { ProductosPanel } from "@/components/admin/ProductosPanel";
 
-type TabId = "importar" | "cobertura" | "duplicados" | "cheques" | "herramientas" | "categorias";
+type TabId = "importar" | "cobertura" | "duplicados" | "cheques" | "herramientas" | "categorias" | "productos";
 
 const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "importar",     label: "Importar",     icon: <FolderUp className="w-4 h-4" /> },
@@ -20,6 +21,7 @@ const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "cheques",      label: "Cheques",      icon: <FileCheck2 className="w-4 h-4" /> },
   { id: "herramientas", label: "Herramientas", icon: <Wrench className="w-4 h-4" /> },
   { id: "categorias",   label: "Categorías",   icon: <Tag className="w-4 h-4" /> },
+  { id: "productos",    label: "Productos",    icon: <Gem className="w-4 h-4" /> },
 ];
 
 export default function AdminPage() {
@@ -86,6 +88,7 @@ function AdminPageInner() {
       {tab === "duplicados" && <DuplicadosPanel />}
       {tab === "cheques" && <ChequesPanel />}
       {tab === "categorias" && <CategoriasPanel />}
+      {tab === "productos" && <ProductosPanel />}
       {tab === "herramientas" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <TcPanel />
