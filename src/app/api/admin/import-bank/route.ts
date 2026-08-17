@@ -87,7 +87,10 @@ export async function POST(req: NextRequest) {
 
   type ExRow = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; moneda: string; cuenta: string | null };
   function dedupKey(r: ExRow | typeof rows[0]) {
-    return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}`;
+    // Incluye saldo: dos movimientos con igual fecha/descripción/importe pero
+    // saldo resultante distinto son transacciones reales distintas (ej. dos
+    // cheques idénticos el mismo día), no duplicados.
+    return `${r.fecha}|${r.moneda}|${"cuenta" in r ? r.cuenta ?? "" : ""}|${r.descripcion ?? ""}|${r.debito ?? ""}|${r.credito ?? ""}|${r.saldo ?? ""}`;
   }
 
   const existingKeys = new Set(((existing ?? []) as ExRow[]).map(dedupKey));
