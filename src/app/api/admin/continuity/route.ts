@@ -11,7 +11,7 @@ const BANCOS = [
   { banco: "Itaú",       moneda: "USD" as string | null, label: "Itaú USD" },
 ];
 
-type Row = { fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; created_at: string | null };
+type Row = { id: string; fecha: string; descripcion: string | null; debito: number | null; credito: number | null; saldo: number | null; created_at: string | null };
 
 interface GapInfo {
   fecha: string;
@@ -21,13 +21,20 @@ interface GapInfo {
 }
 
 function computeGaps(rows: Row[]): GapInfo[] {
-  // Sort SA-first within same date
+  // Sort SA-first within same date. Muchas filas de cargas masivas viejas
+  // comparten el mismo created_at al microsegundo, así que created_at solo
+  // no alcanza como desempate — sin un desempate final estable (id), el
+  // resultado no es determinístico entre una consulta y otra (Postgres no
+  // garantiza orden sin ORDER BY), y los "cortes" detectados cambiaban en
+  // cada recarga sin que los datos hubieran cambiado.
   const sorted = [...rows].sort((a, b) => {
     if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
     const aIsSA = a.descripcion === "Saldo anterior" ? 0 : 1;
     const bIsSA = b.descripcion === "Saldo anterior" ? 0 : 1;
     if (aIsSA !== bIsSA) return aIsSA - bIsSA;
-    return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+    const byCreated = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+    if (byCreated !== 0) return byCreated;
+    return a.id.localeCompare(b.id);
   });
 
   let running: number | null = null;
@@ -86,8 +93,10 @@ export async function GET() {
     while (true) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query = (sb.from("bank_statements") as any)
-        .select("fecha,descripcion,debito,credito,saldo,created_at")
+        .select("id,fecha,descripcion,debito,credito,saldo,created_at")
         .eq("banco", b.banco)
+        .order("fecha", { ascending: true })
+        .order("id", { ascending: true })
         .range(from, from + PAGE - 1);
       if (b.moneda) query = query.eq("moneda", b.moneda);
       const { data, error } = await query;
