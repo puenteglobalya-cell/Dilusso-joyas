@@ -40,14 +40,17 @@ export async function GET() {
   // Build set of "banco|moneda|YYYY-MM" loaded
   const loaded = new Set(rows.map(r => `${r.banco}|${r.moneda}|${r.fecha.slice(0, 7)}`));
 
-  // All months from earliest row to current month
+  // All months from earliest row to the last CLOSED month — el mes en curso todavía
+  // no tiene extracto emitido por el banco, así que no cuenta como "faltante".
   const allMonths: string[] = [];
   if (rows.length > 0) {
     const earliest = rows[0].fecha.slice(0, 7);
     const now = new Date();
-    const current = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const m = now.getMonth() === 0 ? 12 : now.getMonth();
+    const lastClosed = `${y}-${String(m).padStart(2, "0")}`;
     let cur = earliest;
-    while (cur <= current) {
+    while (cur <= lastClosed) {
       allMonths.push(cur);
       const [y, m] = cur.split("-").map(Number);
       const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;

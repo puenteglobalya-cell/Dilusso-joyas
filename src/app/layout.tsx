@@ -41,7 +41,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     if (role === "contador") {
       // Fetch badge counts in parallel (best-effort — silently ignore errors)
       const now = new Date();
-      const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      // El "mes reclamable" es el último mes CERRADO — el mes en curso todavía no
+      // tiene extracto emitido por el banco, así que no debe contar como faltante.
+      const lastClosedY = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const lastClosedM = now.getMonth() === 0 ? 12 : now.getMonth();
+      const currentYM = `${lastClosedY}-${String(lastClosedM).padStart(2, "0")}`;
 
       const [coverageRes, sinClasRes] = await Promise.allSettled([
         (async () => {
