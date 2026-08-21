@@ -8,7 +8,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
-  const allowed = ["bank_statement_id", "proveedor", "notas", "tipo", "importe", "fecha_factura"];
+  const allowed = ["bank_statement_id", "proveedor", "notas", "tipo", "importe", "fecha_factura", "moneda", "año", "mes"];
   const update: Record<string, unknown> = {};
   for (const k of allowed) if (k in body) update[k] = body[k];
 

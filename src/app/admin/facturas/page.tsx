@@ -63,6 +63,11 @@ export default function FacturasPage() {
   const [searchMatches, setSearchMatches] = useState<BankStatement[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [reglaModal, setReglaModal] = useState<{ factura: Factura; statement: BankStatement } | null>(null);
+  const [editModal, setEditModal] = useState<Factura | null>(null);
+  const [editForm, setEditForm] = useState<{ proveedor: string; fecha_factura: string; importe: string; moneda: string; tipo: Tipo; año: string; mes: string; notas: string }>({
+    proveedor: "", fecha_factura: "", importe: "", moneda: "UYU", tipo: "negocio", año: "", mes: "", notas: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (t: Tipo) => {
@@ -168,6 +173,45 @@ export default function FacturasPage() {
       body: JSON.stringify(regla),
     });
     setReglaModal(null);
+  }
+
+  function openEditModal(f: Factura) {
+    setEditForm({
+      proveedor: f.proveedor ?? "",
+      fecha_factura: f.fecha_factura ?? "",
+      importe: f.importe != null ? String(f.importe) : "",
+      moneda: f.moneda ?? "UYU",
+      tipo: (f.tipo as Tipo) ?? tipo,
+      año: String(f.año ?? ""),
+      mes: String(f.mes ?? ""),
+      notas: f.notas ?? "",
+    });
+    setEditModal(f);
+  }
+
+  async function saveEdit() {
+    if (!editModal) return;
+    setSavingEdit(true);
+    try {
+      await fetch(`/api/admin/facturas/${editModal.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proveedor: editForm.proveedor || null,
+          fecha_factura: editForm.fecha_factura || null,
+          importe: editForm.importe ? Number(editForm.importe) : null,
+          moneda: editForm.moneda,
+          tipo: editForm.tipo,
+          año: editForm.año ? Number(editForm.año) : undefined,
+          mes: editForm.mes ? Number(editForm.mes) : undefined,
+          notas: editForm.notas || null,
+        }),
+      });
+      setEditModal(null);
+      load(tipo);
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   async function deleteFactura(id: string) {
@@ -354,6 +398,17 @@ export default function FacturasPage() {
                         </p>
                       </div>
 
+                      {/* Editar */}
+                      <button
+                        onClick={() => openEditModal(f)}
+                        className="shrink-0 p-1.5 rounded-lg transition-colors hover:bg-white"
+                        title="Ajustar datos"
+                      >
+                        <svg width="14" height="14" fill="none" stroke="#8C857B" strokeWidth="1.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" />
+                        </svg>
+                      </button>
+
                       {/* Delete */}
                       <button
                         onClick={() => deleteFactura(f.id)}
@@ -449,6 +504,129 @@ export default function FacturasPage() {
                 style={{ background: "#C5A059", color: "#fff" }}
               >
                 Crear regla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Editar factura */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.4)" }}>
+          <div className="rounded-2xl w-full max-w-md" style={{ background: "#FCFBFA", border: "1px solid #E6E1DA" }}>
+            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "#E6E1DA" }}>
+              <p className="font-semibold text-sm" style={{ color: "#2E2B2A" }}>Ajustar datos de la factura</p>
+              <button onClick={() => setEditModal(null)} style={{ color: "#C4B5A0" }}>✕</button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs truncate" style={{ color: "#8C857B" }}>{editModal.filename}</p>
+
+              <div>
+                <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Proveedor</label>
+                <input
+                  value={editForm.proveedor}
+                  onChange={e => setEditForm(f => ({ ...f, proveedor: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-lg text-sm"
+                  style={{ border: "1px solid #E6E1DA" }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Fecha factura</label>
+                  <input
+                    type="date"
+                    value={editForm.fecha_factura}
+                    onChange={e => setEditForm(f => ({ ...f, fecha_factura: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-sm"
+                    style={{ border: "1px solid #E6E1DA" }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Tipo</label>
+                  <select
+                    value={editForm.tipo}
+                    onChange={e => setEditForm(f => ({ ...f, tipo: e.target.value as Tipo }))}
+                    className="w-full h-9 px-3 rounded-lg text-sm bg-white"
+                    style={{ border: "1px solid #E6E1DA" }}
+                  >
+                    <option value="negocio">Negocio</option>
+                    <option value="personal">Personal</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Importe</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editForm.importe}
+                    onChange={e => setEditForm(f => ({ ...f, importe: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-sm"
+                    style={{ border: "1px solid #E6E1DA" }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Moneda</label>
+                  <select
+                    value={editForm.moneda}
+                    onChange={e => setEditForm(f => ({ ...f, moneda: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-sm bg-white"
+                    style={{ border: "1px solid #E6E1DA" }}
+                  >
+                    <option value="UYU">UYU</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Año</label>
+                  <input
+                    type="number"
+                    value={editForm.año}
+                    onChange={e => setEditForm(f => ({ ...f, año: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-sm"
+                    style={{ border: "1px solid #E6E1DA" }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Mes</label>
+                  <select
+                    value={editForm.mes}
+                    onChange={e => setEditForm(f => ({ ...f, mes: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-sm bg-white"
+                    style={{ border: "1px solid #E6E1DA" }}
+                  >
+                    {MESES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium block mb-1" style={{ color: "#8C857B" }}>Notas</label>
+                <textarea
+                  value={editForm.notas}
+                  onChange={e => setEditForm(f => ({ ...f, notas: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ border: "1px solid #E6E1DA" }}
+                />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t flex justify-end gap-2" style={{ borderColor: "#E6E1DA" }}>
+              <button onClick={() => setEditModal(null)} className="px-4 py-2 rounded-xl text-sm" style={{ color: "#8C857B" }}>
+                Cancelar
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={savingEdit}
+                className="px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
+                style={{ background: "#C5A059", color: "#fff" }}
+              >
+                {savingEdit ? "Guardando…" : "Guardar"}
               </button>
             </div>
           </div>
