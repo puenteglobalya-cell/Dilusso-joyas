@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardValue } from "@/components/ui/card";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import type { Settlement } from "@/lib/database.types";
+import { CajaDiariaUpload } from "@/components/liquidaciones/CajaDiariaUpload";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Liquidaciones | Dilusso Joyas" };
@@ -200,21 +201,24 @@ export default async function LiquidacionesPage({ searchParams }: Props) {
     <div className="p-8">
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold">Liquidaciones</h1>
-        {/* Year selector */}
-        <div className="flex gap-1">
-          {añosDisponibles.map(a => (
-            <Link
-              key={a}
-              href={`/liquidaciones?año=${a}`}
-              className={`px-3 h-8 flex items-center text-sm font-medium rounded-lg border transition-colors ${
-                a === añoFilter
-                  ? "bg-brand text-white border-brand"
-                  : "bg-white text-ink border-gray-200 hover:bg-surface"
-              }`}
-            >
-              {a}
-            </Link>
-          ))}
+        <div className="flex items-center gap-2">
+          <CajaDiariaUpload />
+          {/* Year selector */}
+          <div className="flex gap-1">
+            {añosDisponibles.map(a => (
+              <Link
+                key={a}
+                href={`/liquidaciones?año=${a}`}
+                className={`px-3 h-8 flex items-center text-sm font-medium rounded-lg border transition-colors ${
+                  a === añoFilter
+                    ? "bg-brand text-white border-brand"
+                    : "bg-white text-ink border-gray-200 hover:bg-surface"
+                }`}
+              >
+                {a}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
       <p className="text-sm text-muted mb-6">Caja diaria — efectivo, tarjeta y Fadaval · {añoFilter}</p>
