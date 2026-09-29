@@ -25,7 +25,12 @@ export async function GET(req: NextRequest) {
   const desde = searchParams.get("desde") ?? today;
   const hasta = searchParams.get("hasta") ?? today;
 
-  const rates = await fetchTCRangeFromBCU(desde, hasta);
+  let rates: Map<string, number>;
+  try {
+    rates = await fetchTCRangeFromBCU(desde, hasta);
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+  }
 
   if (!rates.size) {
     return NextResponse.json({ ok: true, skipped: true, desde, hasta, reason: "sin cotización BCU para el rango (feriados/fines de semana)" });

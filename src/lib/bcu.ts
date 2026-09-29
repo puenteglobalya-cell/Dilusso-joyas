@@ -26,11 +26,21 @@ export async function fetchTCRangeFromBCU(desde: string, hasta: string): Promise
     body,
   });
 
-  const out = new Map<string, number>();
-  if (!res.ok) return out;
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`BCU respondió ${res.status} ${res.statusText}: ${text.slice(0, 300)}`);
+  }
 
-  const json = await res.json();
-  const cotizaciones = json?.Cotizaciones ?? [];
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(`BCU no devolvió JSON válido: ${text.slice(0, 300)}`);
+  }
+
+  const out = new Map<string, number>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cotizaciones = (json as any)?.Cotizaciones ?? [];
   for (const c of cotizaciones) {
     const { Fecha, CotizacionCompra, CotizacionVenta } = c;
     if (!Fecha || !CotizacionCompra || !CotizacionVenta) continue;
