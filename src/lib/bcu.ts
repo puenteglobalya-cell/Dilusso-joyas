@@ -28,7 +28,7 @@ const BCU_ERROR_CODES: Record<number, string> = {
 };
 
 interface BcuDato {
-  Fecha: string | null;
+  Fecha: string | Date | null;
   Moneda: number;
   TCC: number; // tipo de cambio compra
   TCV: number; // tipo de cambio venta
@@ -65,7 +65,13 @@ async function fetchChunkFromBCU(desde: string, hasta: string): Promise<Map<stri
   const out = new Map<string, number>();
   for (const d of list) {
     if (!d?.Fecha || d.TCC == null || d.TCV == null) continue;
-    const iso = String(d.Fecha).split("T")[0]; // el WSDL devuelve ISO 8601
+    // node-soap convierte los campos xsd:date en objetos Date reales; si en
+    // cambio llega como string, puede venir en ISO ("2026-08-17T...") o ya
+    // como "YYYY-MM-DD".
+    const iso = d.Fecha instanceof Date
+      ? d.Fecha.toISOString().split("T")[0]
+      : String(d.Fecha).split("T")[0];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue; // formato inesperado: descartar en vez de insertar basura
     out.set(iso, Math.round(((d.TCC + d.TCV) / 2) * 100) / 100);
   }
   return out;
