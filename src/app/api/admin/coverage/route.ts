@@ -42,9 +42,13 @@ export async function GET() {
 
   // All months from earliest row to the last CLOSED month — el mes en curso todavía
   // no tiene extracto emitido por el banco, así que no cuenta como "faltante".
+  // Piso en marzo 2025: antes de esa fecha solo BBVA tenía extractos cargados
+  // (Itaú/OCA/Scotiabank arrancan feb-abr 2025), así que esos meses siempre
+  // salían en rojo sin ser un faltante real — se excluyen del control.
+  const PISO = "2025-03";
   const allMonths: string[] = [];
   if (rows.length > 0) {
-    const earliest = rows[0].fecha.slice(0, 7);
+    const earliest = rows[0].fecha.slice(0, 7) > PISO ? rows[0].fecha.slice(0, 7) : PISO;
     const now = new Date();
     const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
     const m = now.getMonth() === 0 ? 12 : now.getMonth();

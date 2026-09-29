@@ -82,7 +82,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             { banco: "OCA", moneda: null }, { banco: "Scotiabank", moneda: null },
             { banco: "Itau-Card", moneda: null },
           ];
-          const earliest = rows.map((r: { fecha: string }) => r.fecha.slice(0, 7)).sort()[0];
+          // Piso en marzo 2025: antes de esa fecha solo BBVA tenía extractos
+          // cargados, así que esos meses no son un faltante real.
+          const PISO = "2025-03";
+          const trueEarliest = rows.map((r: { fecha: string }) => r.fecha.slice(0, 7)).sort()[0];
+          const earliest = trueEarliest > PISO ? trueEarliest : PISO;
           const allMonths: string[] = [];
           let cur = earliest;
           while (cur <= currentYM) {

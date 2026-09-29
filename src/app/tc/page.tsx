@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
 import { AddTCEntry } from "@/components/tc/add-entry";
+import { SyncTCButton } from "@/components/tc/sync-button";
 import type { ExchangeRate } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,10 @@ export default async function TCPage() {
           <h1 className="text-2xl font-bold">Tipo de cambio</h1>
           <p className="text-sm text-muted mt-1">USD / UYU</p>
         </div>
-        <AddTCEntry />
+        <div className="flex items-start gap-2">
+          <SyncTCButton />
+          <AddTCEntry />
+        </div>
       </div>
 
       {latest && (
