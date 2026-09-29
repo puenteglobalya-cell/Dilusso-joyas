@@ -83,26 +83,41 @@ export default async function ExtractoBancoPage({ params }: { params: Promise<{ 
   const catsNegocio: string[] = (catData ?? []).filter((c: { type: string }) => c.type === "negocio").map((c: { name: string }) => c.name);
   const catsPersonal: string[] = (catData ?? []).filter((c: { type: string }) => c.type === "personal").map((c: { name: string }) => c.name);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (sb.from("bank_statements") as any)
-    .select("*")
-    .eq("banco", bancoNombre)
-    .order("fecha", { ascending: true })
-    .order("created_at", { ascending: true });
+  // Supabase PostgREST caps unbounded selects at 1000 rows — paginate to
+  // fetch everything, otherwise accounts with >1000 movimientos get silently
+  // truncated (wrong totals, phantom continuity gaps past the cutoff).
+  const PAGE = 1000;
+  let rawRows: Row[] = [];
+  let from = 0;
+  while (true) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = (sb.from("bank_statements") as any)
+      .select("*")
+      .eq("banco", bancoNombre)
+      .order("fecha", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (moneda) query = query.eq("moneda", moneda);
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) break;
+    rawRows = rawRows.concat(data as Row[]);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
 
-  if (moneda) query = query.eq("moneda", moneda);
-
-
-  const { data } = await query;
   // Sort SA-first within each date so same-date regular entries (new period)
-  // don't appear before the SA and cause false continuity breaks.
-  const rawRows = (data ?? []) as Row[];
+  // don't appear before the SA and cause false continuity breaks. `id` is the
+  // final tiebreak because many bulk-imported rows share an identical
+  // created_at, which otherwise makes the sort (and the gaps found) different
+  // on every reload.
   const rows = [...rawRows].sort((a, b) => {
     if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
     const aIsSA = a.descripcion === "Saldo anterior" ? 0 : 1;
     const bIsSA = b.descripcion === "Saldo anterior" ? 0 : 1;
     if (aIsSA !== bIsSA) return aIsSA - bIsSA;
-    return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+    const byCreated = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+    if (byCreated !== 0) return byCreated;
+    return a.id.localeCompare(b.id);
   });
 
   const pageTitle = moneda ? `${bancoNombre} — ${moneda}` : bancoNombre;
