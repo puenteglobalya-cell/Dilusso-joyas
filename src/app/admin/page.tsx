@@ -8,7 +8,7 @@ import { SingleUploadCard } from "@/components/admin/SingleUploadCard";
 import { CoveragePanel } from "@/components/admin/CoveragePanel";
 import { DuplicadosPanel } from "@/components/admin/DuplicadosPanel";
 import { ChequesPanel } from "@/components/admin/ChequesPanel";
-import { TcPanel, TransferPanel, AplicarReglasPanel, ExcelPanel } from "@/components/admin/HerramientasPanels";
+import { TcPanel, TransferPanel, AplicarReglasPanel, ExcelPanel, SyncTcPanel } from "@/components/admin/HerramientasPanels";
 import { CategoriasPanel } from "@/components/admin/CategoriasPanel";
 import { ProductosPanel } from "@/components/admin/ProductosPanel";
 import { IndicadoresPanel } from "@/components/admin/CockpitPanel";
@@ -94,6 +94,7 @@ function AdminPageInner() {
       {tab === "indicadores" && <IndicadoresPanel />}
       {tab === "herramientas" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <SyncTcPanel />
           <TcPanel />
           <TransferPanel />
           <AplicarReglasPanel />

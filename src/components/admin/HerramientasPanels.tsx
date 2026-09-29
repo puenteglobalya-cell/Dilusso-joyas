@@ -47,6 +47,46 @@ export function ExcelPanel() {
   );
 }
 
+export function SyncTcPanel() {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
+
+  async function sync() {
+    setLoading(true); setMsg(null); setIsError(false);
+    try {
+      const res = await fetch("/api/admin/sync-tc", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      if (data.actualizados === 0) {
+        setMsg(data.reason === "ya está al día" ? "✓ Ya está al día" : `Sin novedades (${data.reason ?? ""})`);
+      } else {
+        setMsg(`✓ ${data.actualizados} cotización(es) actualizadas · última: ${data.ultima} = ${data.ultimoValor}`);
+      }
+    } catch (e) {
+      setIsError(true);
+      setMsg(e instanceof Error ? e.message : "Error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border p-5 flex flex-col gap-4">
+      <div>
+        <h2 className="text-base font-semibold">Cotizaciones BCU (USD/UYU)</h2>
+        <p className="text-xs text-muted mt-0.5">Trae del Banco Central las cotizaciones diarias que falten desde la última cargada hasta hoy.</p>
+      </div>
+      <button onClick={sync} disabled={loading}
+        className="flex items-center justify-center gap-1.5 h-9 px-4 bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg disabled:opacity-50 w-fit">
+        <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+        {loading ? "Actualizando…" : "Actualizar cotizaciones"}
+      </button>
+      {msg && <p className={`text-sm ${isError ? "text-terracotta" : "text-olive"}`}>{msg}</p>}
+    </div>
+  );
+}
+
 export function TcPanel() {
   const [mes, setMes] = useState(""); const [tc, setTc] = useState("");
   const [loading, setLoading] = useState(false); const [msg, setMsg] = useState<string | null>(null);
