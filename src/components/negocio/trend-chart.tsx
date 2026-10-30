@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, ReferenceLine,
@@ -16,10 +17,29 @@ function fmt(v: number) {
   return new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 }).format(v);
 }
 
+const DEFAULT_MONTHS = 6;
+
 export function NegocioTrendChart({ data }: { data: MonthMetrics[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const hasMore = data.length > DEFAULT_MONTHS;
+  const visibleData = showAll ? data : data.slice(-DEFAULT_MONTHS);
+
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <ComposedChart data={data} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+    <div>
+      {hasMore && (
+        <div className="flex justify-end mb-1.5">
+          <button
+            type="button"
+            onClick={() => setShowAll(s => !s)}
+            className="text-[11px] underline underline-offset-2"
+            style={{ color: "#A3907A" }}
+          >
+            {showAll ? "Ver últimos 6 meses" : `Ver últimos ${data.length} meses`}
+          </button>
+        </div>
+      )}
+      <ResponsiveContainer width="100%" height={300}>
+      <ComposedChart data={visibleData} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#E6E1DA" />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#8C857B" }} />
         <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#8C857B" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
@@ -37,6 +57,7 @@ export function NegocioTrendChart({ data }: { data: MonthMetrics[] }) {
         <Bar yAxisId="left" dataKey="egresos" name="Lo que se gastó" fill="#946E61" opacity={0.85} radius={[3, 3, 0, 0]} />
         <Line yAxisId="right" type="monotone" dataKey="margenNeto" name="Margen neto" stroke="#C5A059" strokeWidth={2} dot={{ r: 3 }} />
       </ComposedChart>
-    </ResponsiveContainer>
+      </ResponsiveContainer>
+    </div>
   );
 }
