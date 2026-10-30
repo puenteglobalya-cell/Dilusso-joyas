@@ -141,7 +141,7 @@ export default async function PersonalPage({ searchParams }: Props) {
 
   // Heatmap data — exclude TRASPASO
   const heatCats = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]).slice(0, 12);
-  const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort().slice(-12);
+  const heatMonths = Array.from(new Set(trendRows.map(r => r.fecha.slice(0, 7)))).sort();
   const heatMap: Record<string, Record<string, number>> = {};
   for (const r of trendRows) {
     if ((r.debito ?? 0) <= 0 || !r.categoria_personal) continue;

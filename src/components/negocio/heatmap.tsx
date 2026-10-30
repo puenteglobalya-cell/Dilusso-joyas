@@ -26,12 +26,18 @@ function heatColor(intensity: number): { bg: string; text: string } {
   return { bg: "#2E2B2A", text: "#C5A059" };
 }
 
+const DEFAULT_MONTHS = 6;
+
 export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
   const [sortByTotal, setSortByTotal] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  const hasMore = months.length > DEFAULT_MONTHS;
+  const visibleMonths = showAll ? months : months.slice(-DEFAULT_MONTHS);
 
   const withTotals = cats.map(cat => ({
     cat,
-    total: months.reduce((s, m) => s + (data[cat]?.[m] ?? 0), 0),
+    total: visibleMonths.reduce((s, m) => s + (data[cat]?.[m] ?? 0), 0),
   }));
   const sorted = sortByTotal
     ? [...withTotals].sort((a, b) => b.total - a.total)
@@ -39,16 +45,29 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
 
   const catMax: Record<string, number> = {};
   for (const cat of cats) {
-    catMax[cat] = Math.max(...months.map(m => data[cat]?.[m] ?? 0), 1);
+    catMax[cat] = Math.max(...visibleMonths.map(m => data[cat]?.[m] ?? 0), 1);
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div>
+      {hasMore && (
+        <div className="flex justify-end mb-1.5">
+          <button
+            type="button"
+            onClick={() => setShowAll(s => !s)}
+            className="text-[11px] underline underline-offset-2"
+            style={{ color: "#A3907A" }}
+          >
+            {showAll ? "Ver últimos 6 meses" : `Ver todo el historial (${months.length} meses)`}
+          </button>
+        </div>
+      )}
+      <div className="overflow-x-auto">
       <table className="text-xs w-full">
         <thead>
           <tr>
             <th className="text-left pr-3 pb-2 font-medium whitespace-nowrap min-w-[140px]" style={{ color: "#8C857B" }}>Categoría</th>
-            {months.map(m => (
+            {visibleMonths.map(m => (
               <th key={m} className="px-1 pb-2 font-normal whitespace-nowrap text-center" style={{ color: "#A3907A" }}>{fmtYM(m)}</th>
             ))}
             <th
@@ -68,9 +87,9 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
                 className={`pr-3 py-1.5 font-medium truncate max-w-[140px] ${onCellClick ? "cursor-pointer hover:underline underline-offset-2" : ""}`}
                 style={{ color: "#2E2B2A" }}
                 title={cat}
-                onClick={() => onCellClick?.(cat, months[months.length - 1])}
+                onClick={() => onCellClick?.(cat, visibleMonths[visibleMonths.length - 1])}
               >{cat.replace(/^\d+\.\s*/, "")}</td>
-              {months.map(m => {
+              {visibleMonths.map(m => {
                 const val = data[cat]?.[m] ?? 0;
                 const { bg, text } = heatColor(val / catMax[cat]);
                 return (
@@ -97,6 +116,7 @@ export function NegocioHeatmap({ cats, months, data, onCellClick }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
