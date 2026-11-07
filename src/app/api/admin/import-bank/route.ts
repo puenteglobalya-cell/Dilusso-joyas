@@ -5,6 +5,8 @@ import { clasificar } from "@/lib/clasificador";
 import { getTc, fetchTcMap } from "@/lib/tipo-cambio";
 import { requireAdmin } from "@/lib/admin-auth";
 
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB — misma cota que /import-from-base64
+
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
@@ -17,6 +19,12 @@ export async function POST(req: NextRequest) {
 
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
   if (!banco) return NextResponse.json({ error: "No banco" }, { status: 400 });
+  if (file.size > MAX_FILE_BYTES) {
+    return NextResponse.json(
+      { error: `Archivo demasiado grande (${(file.size / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 20 MB.` },
+      { status: 413 }
+    );
+  }
 
   const buffer = await file.arrayBuffer();
   let rows: BankRow[] = [];

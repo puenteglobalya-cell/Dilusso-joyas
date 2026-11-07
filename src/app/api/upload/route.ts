@@ -5,6 +5,8 @@ import { classifyTransactions } from "@/lib/classifier";
 import type { VendorDictionary } from "@/lib/database.types";
 import { requireAdmin } from "@/lib/admin-auth";
 
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
+
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
@@ -18,6 +20,12 @@ export async function POST(req: NextRequest) {
 
     if (!file || !banco) {
       return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      return NextResponse.json(
+        { error: `Archivo demasiado grande (${(file.size / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 20 MB.` },
+        { status: 413 }
+      );
     }
 
     const buffer = await file.arrayBuffer();
